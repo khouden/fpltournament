@@ -10,7 +10,7 @@ datasource db {
 model Tournament {
   id           String   @id @default(cuid())
   name         String
-  season       String
+  season       Int
   adminFplId   Int
   status       String   @default("DRAFT") // DRAFT, PUBLISHED, FINISHED
   createdAt    DateTime @default(now())
@@ -28,11 +28,14 @@ model Group {
   tournamentId String
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   name         String
+  fplLeagueId  Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   members      GroupMember[]
-  matches      Match[]
+  homeMatches  Match[] @relation("HomeGroup")
+  awayMatches  Match[] @relation("AwayGroup")
+  wonMatches   Match[] @relation("WinnerGroup")
 
   @@index([tournamentId])
 }
@@ -42,6 +45,7 @@ model GroupMember {
   groupId      String
   group        Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   fplName      String
+  fplTeamName  String?
   fplId        Int
   isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
@@ -56,6 +60,7 @@ model Round {
   id           String   @id @default(cuid())
   tournamentId String
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String?
   roundNumber  Int
   gameweek     Int
   createdAt    DateTime @default(now())
@@ -71,27 +76,34 @@ model Match {
   id              String   @id @default(cuid())
   roundId         String
   round           Round    @relation(fields: [roundId], references: [id], onDelete: Cascade)
-  groupId         String
-  group           Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   matchNumber     Int
   status          String   @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED, FINALIZED
-  
-  participant1Id  String?   // Can be group member ID or winner-reference
-  participant1Type String @default("GROUP_MEMBER") // GROUP_MEMBER or WINNER_REF
-  
-  participant2Id  String?   // Can be group member ID or winner-reference
-  participant2Type String @default("GROUP_MEMBER") // GROUP_MEMBER or WINNER_REF
-  
-  winnerParticipantId String? // ID of the winner
-  winnerType      String? // GROUP_MEMBER or WINNER_REF
-  
+
+  // Group-vs-group: home and away sides
+  homeGroupId     String?
+  homeGroup       Group?   @relation("HomeGroup", fields: [homeGroupId], references: [id])
+  awayGroupId     String?
+  awayGroup       Group?   @relation("AwayGroup", fields: [awayGroupId], references: [id])
+
+  // For knockout rounds: reference to the match whose winner fills this slot
+  homeWinnerOfMatchId  String?  // "Winner of Match X" — match ID
+  awayWinnerOfMatchId  String?  // "Winner of Match Y" — match ID
+
+  // Scores
+  homeScore       Float?
+  awayScore       Float?
+
+  // Result
+  winnerId        String?
+  winner          Group?   @relation("WinnerGroup", fields: [winnerId], references: [id])
+  result          String?  // HOME_WIN, AWAY_WIN, DRAW
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   scores          MatchMemberScore[]
 
   @@index([roundId])
-  @@index([groupId])
   @@index([status])
 }
 
@@ -101,11 +113,10 @@ model MatchMemberScore {
   match        Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
   memberId     String
   member       GroupMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  
-  groupScore   Float?
-  benchScore   Float?
-  totalScore   Float
-  
+
+  gameweekPoints Int     @default(0)
+  isExcluded   Boolean  @default(false) // true for admin members
+
   isFinal      Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

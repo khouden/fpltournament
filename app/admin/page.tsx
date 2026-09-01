@@ -1,19 +1,19 @@
 import { prisma } from "@/lib/db";
-import { FPLVerifier } from "@/components/fpl-verifier";
 import Link from "next/link";
-import type { FPLManager } from "@/lib/fpl";
+import { TournamentActions } from "@/components/tournament-actions";
 
 export default async function AdminDashboard() {
   const tournaments = await prisma.tournament.findMany({
     include: {
       groups: true,
+      rounds: {
+        include: {
+          matches: true,
+        },
+      },
     },
+    orderBy: { createdAt: "desc" },
   });
-
-  const handleFPLVerified = (manager: FPLManager) => {
-    // This will be used when creating tournaments
-    console.log("Manager verified:", manager);
-  };
 
   return (
     <div className="space-y-8">
@@ -29,65 +29,75 @@ export default async function AdminDashboard() {
             {tournaments.length}
           </p>
         </div>
+        <div className="rounded-lg bg-white p-6 shadow">
+          <p className="text-sm text-gray-600">Published</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {tournaments.filter((t) => t.status === "PUBLISHED").length}
+          </p>
+        </div>
+        <div className="rounded-lg bg-white p-6 shadow">
+          <p className="text-sm text-gray-600">Draft</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {tournaments.filter((t) => t.status === "DRAFT").length}
+          </p>
+        </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="rounded-lg bg-white p-6 shadow">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold text-gray-900">Tournaments</h3>
-            <Link
-              href="/admin/tournaments/new"
-              className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700"
-            >
-              Create Tournament
-            </Link>
-          </div>
-
-          {tournaments.length === 0 ? (
-            <p className="mt-4 text-gray-600">No tournaments yet.</p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {tournaments.map((tournament) => (
-                <div
-                  key={tournament.id}
-                  className="flex items-center justify-between rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
-                >
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {tournament.name}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Season {tournament.season} · {tournament.groups.length} groups
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                        tournament.status === "DRAFT"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : tournament.status === "PUBLISHED"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {tournament.status}
-                    </span>
-                    <div className="flex gap-1">
-                      <button className="rounded px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200">
-                        Edit
-                      </button>
-                      <button className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="rounded-lg bg-white p-6 shadow">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold text-gray-900">Tournaments</h3>
+          <Link
+            href="/admin/tournaments/new"
+            className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700"
+          >
+            Create Tournament
+          </Link>
         </div>
 
-        <FPLVerifier onVerified={handleFPLVerified} />
+        {tournaments.length === 0 ? (
+          <p className="mt-4 text-gray-600">No tournaments yet. Create your first tournament to get started.</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {tournaments.map((tournament) => (
+              <div
+                key={tournament.id}
+                className="space-y-2 rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Link
+                      href={`/admin/tournaments/${tournament.id}/groups`}
+                      className="font-semibold text-gray-900 hover:text-indigo-600"
+                    >
+                      {tournament.name}
+                    </Link>
+                    <p className="text-sm text-gray-600">
+                      Season {tournament.season} · {tournament.groups.length}{" "}
+                      groups · {tournament.rounds.reduce((acc, r) => acc + r.matches.length, 0)} matches
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                      tournament.status === "DRAFT"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : tournament.status === "PUBLISHED"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {tournament.status}
+                  </span>
+                </div>
+                <TournamentActions
+                  tournamentId={tournament.id}
+                  tournamentName={tournament.name}
+                  status={tournament.status as "DRAFT" | "PUBLISHED" | "FINISHED"}
+                  hasGroups={tournament.groups.length > 0}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

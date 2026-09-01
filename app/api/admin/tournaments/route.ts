@@ -88,25 +88,41 @@ export async function DELETE(request: NextRequest) {
       throw new Error("Tournament ID is required");
     }
 
-    // Check if tournament has groups or matches
+    // Check if tournament exists
     const tournament = await prisma.tournament.findUnique({
       where: { id },
-      include: { groups: true },
+      include: {
+        rounds: { include: { matches: true } },
+        groups: true,
+      },
     });
 
     if (!tournament) {
       throw new Error("Tournament not found");
     }
 
-    if (tournament.groups.length > 0) {
-      throw new Error(
-        "Cannot delete tournament with existing groups. Delete all groups first."
-      );
-    }
+    const matchIds = tournament.rounds.flatMap((r) => r.matches.map((m) => m.id));
 
-    await prisma.tournament.delete({
-      where: { id },
-    });
+    await prisma.$transaction([
+      prisma.matchMemberScore.deleteMany({
+        where: { matchId: { in: matchIds } },
+      }),
+      prisma.match.deleteMany({
+        where: { id: { in: matchIds } },
+      }),
+      prisma.round.deleteMany({
+        where: { tournamentId: id },
+      }),
+      prisma.groupMember.deleteMany({
+        where: { group: { tournamentId: id } },
+      }),
+      prisma.group.deleteMany({
+        where: { tournamentId: id },
+      }),
+      prisma.tournament.delete({
+        where: { id },
+      }),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

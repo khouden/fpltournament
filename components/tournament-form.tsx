@@ -10,7 +10,7 @@ interface TournamentFormProps {
     id: string;
     name: string;
     season: number;
-    adminFplId: number;
+    adminFplId: number | string;
   };
 }
 

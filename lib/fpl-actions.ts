@@ -2,6 +2,7 @@
 
 import {
   getManager,
+  getManagerLeagues,
   getLeague,
   verifyManagerInLeague,
   type FPLManager,
@@ -36,7 +37,7 @@ export async function getManagerLeaguesAction(
   entryId: string
 ): Promise<{
   success: boolean;
-  leagues?: (FPLLeague & { members: FPLLeagueEntry[] })[];
+  leagues?: FPLLeague[];
   error?: string;
 }> {
   try {
@@ -45,12 +46,10 @@ export async function getManagerLeaguesAction(
       return { success: false, error: "Invalid entry ID" };
     }
 
-    const manager = await getManager(id);
-    const leaguesData = await getLeague(id as any);
-
+    const leagues = await getManagerLeagues(id);
     return {
       success: true,
-      leagues: [leaguesData.league as any],
+      leagues,
     };
   } catch (error) {
     return {
