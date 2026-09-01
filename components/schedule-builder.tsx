@@ -3,12 +3,12 @@
 import { useState } from "react";
 import {
   createRoundAction,
-  updateRoundAction,
   deleteRoundAction,
   createMatchAction,
   updateMatchAction,
   deleteMatchAction,
   validateScheduleAction,
+  generateRoundRobinScheduleAction,
 } from "@/lib/schedule-actions";
 import {
   recalculateMatchAction,
@@ -27,8 +27,6 @@ interface Match {
   status: string;
   homeGroupId: string | null;
   awayGroupId: string | null;
-  homeWinnerOfMatchId: string | null;
-  awayWinnerOfMatchId: string | null;
   homeScore: number | null;
   awayScore: number | null;
   result: string | null;
@@ -58,28 +56,50 @@ export function ScheduleBuilder({
   const [loading, setLoading] = useState<string | null>(null);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
 
+  // Auto-generate round-robin state
+  const [showAutoGenerate, setShowAutoGenerate] = useState(false);
+  const [startGW, setStartGW] = useState(1);
+
   // New round form
   const [newRoundName, setNewRoundName] = useState("");
   const [newRoundGW, setNewRoundGW] = useState(1);
   const [showAddRound, setShowAddRound] = useState(false);
-
-  // Collect all match IDs for "Winner of Match X" references
-  const allMatches = rounds.flatMap((r) => r.matches);
 
   const groupNameById = (id: string | null) => {
     if (!id) return "TBD";
     return groups.find((g) => g.id === id)?.name || "Unknown";
   };
 
-  const matchLabelById = (matchId: string | null) => {
-    if (!matchId) return "TBD";
-    const m = allMatches.find((m) => m.id === matchId);
-    return m ? `Winner of Match ${m.matchNumber}` : "Unknown Match";
-  };
-
   const showMsg = (msg: string) => {
     setSuccess(msg);
-    setTimeout(() => setSuccess(""), 3000);
+    setTimeout(() => setSuccess(""), 3500);
+  };
+
+  // ---- Auto-Generate Round-Robin Schedule ----
+  const handleAutoGenerate = async () => {
+    if (
+      rounds.length > 0 &&
+      !confirm(
+        "Auto-generating will replace all existing rounds and matches with a fresh round-robin schedule. Continue?"
+      )
+    ) {
+      return;
+    }
+
+    setLoading("auto-generate");
+    setError("");
+    const result = await generateRoundRobinScheduleAction(
+      tournamentId,
+      startGW
+    );
+    if (result.success) {
+      showMsg(result.message || "Round-robin schedule generated!");
+      setShowAutoGenerate(false);
+      window.location.reload();
+    } else {
+      setError(result.error || "Failed to generate schedule");
+    }
+    setLoading(null);
   };
 
   // ---- Round CRUD ----
@@ -139,20 +159,13 @@ export function ScheduleBuilder({
   const handleUpdateMatch = async (
     matchId: string,
     side: "home" | "away",
-    type: "group" | "winner",
-    value: string
+    groupId: string
   ) => {
     setError("");
-    const data: Record<string, string | null> = {};
-    if (type === "group") {
-      data[side === "home" ? "homeGroupId" : "awayGroupId"] = value || null;
-      data[side === "home" ? "homeWinnerOfMatchId" : "awayWinnerOfMatchId"] =
-        null;
-    } else {
-      data[side === "home" ? "homeWinnerOfMatchId" : "awayWinnerOfMatchId"] =
-        value || null;
-      data[side === "home" ? "homeGroupId" : "awayGroupId"] = null;
-    }
+    const data =
+      side === "home"
+        ? { homeGroupId: groupId || null }
+        : { awayGroupId: groupId || null };
 
     const result = await updateMatchAction(matchId, tournamentId, data);
     if (result.success && result.match) {
@@ -218,13 +231,11 @@ export function ScheduleBuilder({
   };
 
   const handleFinalize = async (matchId: string) => {
-    if (!confirm("Finalize this match? This will propagate the winner."))
-      return;
+    if (!confirm("Finalize this match?")) return;
     setLoading(`fin-${matchId}`);
     setError("");
     const result = await finalizeMatchAction(matchId, tournamentId);
     if (result.success) {
-      // Refresh page to get propagated winners
       window.location.reload();
     } else {
       setError(result.error || "Failed to finalize");
@@ -270,14 +281,23 @@ export function ScheduleBuilder({
       )}
 
       {/* Actions Bar */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={handleValidate}
-          disabled={loading === "validate"}
-          className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
-        >
-          {loading === "validate" ? "Validating..." : "Validate Schedule"}
-        </button>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setShowAutoGenerate(!showAutoGenerate)}
+            className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+          >
+            <span>⚡</span> Auto-Generate Round-Robin Fixtures
+          </button>
+          <button
+            onClick={handleValidate}
+            disabled={loading === "validate"}
+            className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+          >
+            {loading === "validate" ? "Validating..." : "Validate Schedule"}
+          </button>
+        </div>
+
         <button
           onClick={handleRecalculateAll}
           disabled={loading === "recalc-all"}
@@ -288,6 +308,72 @@ export function ScheduleBuilder({
             : "Recalculate All Scores"}
         </button>
       </div>
+
+      {/* Auto-Generate Panel */}
+      {showAutoGenerate && (
+        <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50/70 p-5 shadow-sm space-y-4">
+          <div>
+            <h4 className="text-base font-bold text-indigo-950 flex items-center gap-2">
+              <span>⚡</span> Generate Round-Robin League Fixtures
+            </h4>
+            <p className="text-xs text-indigo-700 mt-1">
+              Automatically creates all Gameweek rounds and matches so every
+              group plays against every other group in the tournament.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-indigo-900">
+                Starting Gameweek (GW)
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={38}
+                value={startGW}
+                onChange={(e) => setStartGW(parseInt(e.target.value) || 1)}
+                className="mt-1 w-32 rounded border border-indigo-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+            <div className="text-xs text-indigo-700">
+              {groups.length < 2 ? (
+                <span className="text-red-600 font-semibold">
+                  ⚠️ Need at least 2 groups imported to generate fixtures.
+                </span>
+              ) : (
+                <span>
+                  Will generate{" "}
+                  <strong>
+                    {groups.length % 2 === 0
+                      ? groups.length - 1
+                      : groups.length}{" "}
+                    Gameweek rounds
+                  </strong>{" "}
+                  for {groups.length} participating groups.
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleAutoGenerate}
+                disabled={loading === "auto-generate" || groups.length < 2}
+                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {loading === "auto-generate"
+                  ? "Generating..."
+                  : "Generate Fixtures Now"}
+              </button>
+              <button
+                onClick={() => setShowAutoGenerate(false)}
+                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Validation Issues */}
       {validationIssues.length > 0 && (
@@ -303,252 +389,206 @@ export function ScheduleBuilder({
         </div>
       )}
 
-      {/* Rounds */}
-      {rounds
-        .sort((a, b) => a.roundNumber - b.roundNumber)
-        .map((round) => (
-          <div
-            key={round.id}
-            className="rounded-lg border border-gray-200 bg-white shadow-sm"
-          >
-            {/* Round Header */}
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-              <div>
-                <h3 className="font-semibold text-gray-900">
-                  {round.name || `Round ${round.roundNumber}`}
-                </h3>
-                <p className="text-xs text-gray-500">
-                  Gameweek {round.gameweek}
-                </p>
+      {/* Rounds List */}
+      {rounds.length === 0 ? (
+        <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-8 text-center">
+          <h3 className="text-base font-bold text-gray-700">
+            No Fixtures Scheduled Yet
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Use the "Auto-Generate Round-Robin Fixtures" button above or create
+            rounds manually below.
+          </p>
+        </div>
+      ) : (
+        rounds
+          .sort((a, b) => a.roundNumber - b.roundNumber)
+          .map((round) => (
+            <div
+              key={round.id}
+              className="rounded-lg border border-gray-200 bg-white shadow-sm"
+            >
+              {/* Round Header */}
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 bg-gray-50/50">
+                <div>
+                  <h3 className="font-bold text-gray-900">
+                    {round.name || `Round ${round.roundNumber}`}
+                  </h3>
+                  <p className="text-xs text-gray-500 font-medium">
+                    Gameweek {round.gameweek} · {round.matches.length} matches
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleAddMatch(round.id)}
+                    className="rounded bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                  >
+                    + Add Match
+                  </button>
+                  <button
+                    onClick={() => handleDeleteRound(round.id)}
+                    className="rounded px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 font-medium"
+                  >
+                    Delete Round
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => handleAddMatch(round.id)}
-                  className="rounded bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100"
-                >
-                  + Match
-                </button>
-                <button
-                  onClick={() => handleDeleteRound(round.id)}
-                  className="rounded px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                >
-                  Delete Round
-                </button>
-              </div>
-            </div>
 
-            {/* Matches */}
-            <div className="divide-y divide-gray-50 p-4">
-              {round.matches.length === 0 ? (
-                <p className="text-sm text-gray-400 italic">
-                  No matches yet. Add a match to get started.
-                </p>
-              ) : (
-                round.matches
-                  .sort((a, b) => a.matchNumber - b.matchNumber)
-                  .map((match) => (
-                    <div key={match.id} className="py-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-500">
-                          Match {match.matchNumber}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          {/* Status Badge */}
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                              match.status === "FINALIZED"
-                                ? "bg-green-100 text-green-800"
-                                : match.status === "COMPLETED"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-gray-100 text-gray-600"
-                            }`}
-                          >
-                            {match.status}
+              {/* Matches */}
+              <div className="divide-y divide-gray-100 p-4">
+                {round.matches.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic py-2">
+                    No matches in this round. Click "+ Add Match" to schedule.
+                  </p>
+                ) : (
+                  round.matches
+                    .sort((a, b) => a.matchNumber - b.matchNumber)
+                    .map((match) => (
+                      <div key={match.id} className="py-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                            Match {match.matchNumber}
                           </span>
-                          <button
-                            onClick={() =>
-                              handleDeleteMatch(match.id, round.id)
-                            }
-                            className="rounded px-1.5 py-0.5 text-xs text-red-500 hover:bg-red-50"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Match Configuration */}
-                      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                        {/* Home Side */}
-                        <select
-                          value={
-                            match.homeGroupId ||
-                            (match.homeWinnerOfMatchId
-                              ? `winner:${match.homeWinnerOfMatchId}`
-                              : "")
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val.startsWith("winner:")) {
-                              handleUpdateMatch(
-                                match.id,
-                                "home",
-                                "winner",
-                                val.replace("winner:", "")
-                              );
-                            } else {
-                              handleUpdateMatch(
-                                match.id,
-                                "home",
-                                "group",
-                                val
-                              );
-                            }
-                          }}
-                          className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-                        >
-                          <option value="">Select Home...</option>
-                          <optgroup label="Groups">
-                            {groups.map((g) => (
-                              <option key={g.id} value={g.id}>
-                                {g.name}
-                              </option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="Winner of Match">
-                            {allMatches
-                              .filter((m) => m.id !== match.id)
-                              .map((m) => (
-                                <option key={m.id} value={`winner:${m.id}`}>
-                                  Winner Match {m.matchNumber}
-                                </option>
-                              ))}
-                          </optgroup>
-                        </select>
-
-                        <span className="text-sm font-bold text-gray-400">
-                          VS
-                        </span>
-
-                        {/* Away Side */}
-                        <select
-                          value={
-                            match.awayGroupId ||
-                            (match.awayWinnerOfMatchId
-                              ? `winner:${match.awayWinnerOfMatchId}`
-                              : "")
-                          }
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val.startsWith("winner:")) {
-                              handleUpdateMatch(
-                                match.id,
-                                "away",
-                                "winner",
-                                val.replace("winner:", "")
-                              );
-                            } else {
-                              handleUpdateMatch(
-                                match.id,
-                                "away",
-                                "group",
-                                val
-                              );
-                            }
-                          }}
-                          className="rounded border border-gray-300 px-2 py-1.5 text-sm"
-                        >
-                          <option value="">Select Away...</option>
-                          <optgroup label="Groups">
-                            {groups.map((g) => (
-                              <option key={g.id} value={g.id}>
-                                {g.name}
-                              </option>
-                            ))}
-                          </optgroup>
-                          <optgroup label="Winner of Match">
-                            {allMatches
-                              .filter((m) => m.id !== match.id)
-                              .map((m) => (
-                                <option key={m.id} value={`winner:${m.id}`}>
-                                  Winner Match {m.matchNumber}
-                                </option>
-                              ))}
-                          </optgroup>
-                        </select>
-                      </div>
-
-                      {/* Score Display */}
-                      {match.homeScore !== null && match.awayScore !== null && (
-                        <div className="flex items-center justify-center gap-4 rounded-md bg-gray-50 py-2">
-                          <span className="font-bold text-gray-900">
-                            {match.homeGroupId
-                              ? groupNameById(match.homeGroupId)
-                              : matchLabelById(match.homeWinnerOfMatchId)}
-                          </span>
-                          <span className="text-lg font-bold text-indigo-600">
-                            {match.homeScore} - {match.awayScore}
-                          </span>
-                          <span className="font-bold text-gray-900">
-                            {match.awayGroupId
-                              ? groupNameById(match.awayGroupId)
-                              : matchLabelById(match.awayWinnerOfMatchId)}
-                          </span>
-                          {match.result && (
+                          <div className="flex items-center gap-1.5">
+                            {/* Status Badge */}
                             <span
-                              className={`rounded px-2 py-0.5 text-xs font-bold ${
-                                match.result === "DRAW"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-green-100 text-green-700"
+                              className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                                match.status === "FINALIZED"
+                                  ? "bg-green-100 text-green-800"
+                                  : match.status === "COMPLETED"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : "bg-gray-100 text-gray-600"
                               }`}
                             >
-                              {match.result === "DRAW"
-                                ? "DRAW"
-                                : match.result === "HOME_WIN"
-                                  ? groupNameById(match.homeGroupId)
-                                  : groupNameById(match.awayGroupId)}
+                              {match.status}
                             </span>
-                          )}
+                            <button
+                              onClick={() =>
+                                handleDeleteMatch(match.id, round.id)
+                              }
+                              className="rounded px-1.5 py-0.5 text-xs text-red-500 hover:bg-red-50"
+                              title="Delete match"
+                            >
+                              ×
+                            </button>
+                          </div>
                         </div>
-                      )}
 
-                      {/* Match Actions */}
-                      <div className="flex gap-1">
-                        {(match.homeGroupId || match.homeWinnerOfMatchId) &&
-                          (match.awayGroupId ||
-                            match.awayWinnerOfMatchId) && (
+                        {/* Match Configuration: Direct Group vs Group */}
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                          {/* Home Group */}
+                          <select
+                            value={match.homeGroupId || ""}
+                            onChange={(e) =>
+                              handleUpdateMatch(
+                                match.id,
+                                "home",
+                                e.target.value
+                              )
+                            }
+                            className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none"
+                          >
+                            <option value="">Select Home Group...</option>
+                            {groups.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {g.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          <span className="text-sm font-black text-indigo-500 px-2">
+                            VS
+                          </span>
+
+                          {/* Away Group */}
+                          <select
+                            value={match.awayGroupId || ""}
+                            onChange={(e) =>
+                              handleUpdateMatch(
+                                match.id,
+                                "away",
+                                e.target.value
+                              )
+                            }
+                            className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none"
+                          >
+                            <option value="">Select Away Group...</option>
+                            {groups.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {g.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Score Display */}
+                        {match.homeScore !== null &&
+                          match.awayScore !== null && (
+                            <div className="flex items-center justify-center gap-4 rounded-md bg-gray-50 py-2 border border-gray-100">
+                              <span className="font-bold text-gray-900">
+                                {groupNameById(match.homeGroupId)}
+                              </span>
+                              <span className="text-lg font-mono font-black text-indigo-600">
+                                {match.homeScore} - {match.awayScore}
+                              </span>
+                              <span className="font-bold text-gray-900">
+                                {groupNameById(match.awayGroupId)}
+                              </span>
+                              {match.result && (
+                                <span
+                                  className={`rounded px-2 py-0.5 text-xs font-bold ${
+                                    match.result === "DRAW"
+                                      ? "bg-yellow-100 text-yellow-700"
+                                      : "bg-green-100 text-green-700"
+                                  }`}
+                                >
+                                  {match.result === "DRAW"
+                                    ? "DRAW"
+                                    : match.result === "HOME_WIN"
+                                      ? `${groupNameById(match.homeGroupId)} WIN`
+                                      : `${groupNameById(match.awayGroupId)} WIN`}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                        {/* Match Actions */}
+                        <div className="flex gap-2 pt-1">
+                          {match.homeGroupId && match.awayGroupId && (
                             <button
                               onClick={() => handleRecalculate(match.id)}
                               disabled={loading === `calc-${match.id}`}
-                              className="rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                              className="rounded bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50"
                             >
                               {loading === `calc-${match.id}`
                                 ? "Calculating..."
                                 : "Calculate Score"}
                             </button>
                           )}
-                        {match.status === "COMPLETED" && (
-                          <button
-                            onClick={() => handleFinalize(match.id)}
-                            disabled={loading === `fin-${match.id}`}
-                            className="rounded bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 disabled:opacity-50"
-                          >
-                            {loading === `fin-${match.id}`
-                              ? "Finalizing..."
-                              : "Finalize"}
-                          </button>
-                        )}
+                          {match.status === "COMPLETED" && (
+                            <button
+                              onClick={() => handleFinalize(match.id)}
+                              disabled={loading === `fin-${match.id}`}
+                              className="rounded bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
+                            >
+                              {loading === `fin-${match.id}`
+                                ? "Finalizing..."
+                                : "Finalize"}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
-              )}
+                    ))
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+      )}
 
-      {/* Add Round */}
+      {/* Manual Add Round */}
       {showAddRound ? (
         <div className="rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 p-4">
-          <h4 className="font-semibold text-indigo-900">New Round</h4>
+          <h4 className="font-bold text-indigo-900">Add New Round</h4>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-medium text-indigo-700">
@@ -558,7 +598,7 @@ export function ScheduleBuilder({
                 type="text"
                 value={newRoundName}
                 onChange={(e) => setNewRoundName(e.target.value)}
-                placeholder="e.g., Semi-Finals"
+                placeholder="e.g., Round 1"
                 className="mt-1 w-full rounded border border-indigo-200 px-2 py-1.5 text-sm"
               />
             </div>
@@ -595,11 +635,12 @@ export function ScheduleBuilder({
       ) : (
         <button
           onClick={() => setShowAddRound(true)}
-          className="w-full rounded-lg border-2 border-dashed border-gray-300 py-4 text-sm font-medium text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
+          className="w-full rounded-lg border-2 border-dashed border-gray-300 py-3 text-sm font-medium text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
         >
-          + Add Round
+          + Add Round Manually
         </button>
       )}
     </div>
   );
 }
+

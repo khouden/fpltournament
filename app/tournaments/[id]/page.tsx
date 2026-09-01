@@ -52,11 +52,8 @@ export default async function TournamentPage(
   // Calculate live league standings (+3 Win, +1 Draw, 0 Loss)
   const standings = await calculateLeagueStandings(tournament.id);
 
-  // Collect all matches for winner references
-  const allMatches = tournament.rounds.flatMap((r) => r.matches);
-
   const resolveGroupName = (
-    match: (typeof allMatches)[0],
+    match: (typeof tournament.rounds)[0]["matches"][0],
     side: "home" | "away"
   ): string => {
     const group = side === "home" ? match.homeGroup : match.awayGroup;
@@ -68,22 +65,6 @@ export default async function TournamentPage(
       if (found) return found.name;
     }
 
-    const winnerRef =
-      side === "home"
-        ? match.homeWinnerOfMatchId
-        : match.awayWinnerOfMatchId;
-    if (winnerRef) {
-      const parent = allMatches.find((m) => m.id === winnerRef);
-      if (parent) {
-        if (parent.winnerId) {
-          const winnerGroup = tournament.groups.find(
-            (g) => g.id === parent.winnerId
-          );
-          if (winnerGroup) return winnerGroup.name;
-        }
-        return `Winner Match ${parent.matchNumber}`;
-      }
-    }
     return "TBD";
   };
 

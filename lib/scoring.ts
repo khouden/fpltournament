@@ -192,38 +192,11 @@ export async function calculateMatchScore(
     };
   }
 
-  let resolvedHomeGroupId = match.homeGroupId;
-  let resolvedAwayGroupId = match.awayGroupId;
+  const resolvedHomeGroupId = match.homeGroupId;
+  const resolvedAwayGroupId = match.awayGroupId;
 
-  // Resolve dynamic winner references if needed
-  if (!resolvedHomeGroupId && match.homeWinnerOfMatchId) {
-    const parentMatch = await prisma.match.findUnique({
-      where: { id: match.homeWinnerOfMatchId },
-    });
-    if (parentMatch?.winnerId) {
-      resolvedHomeGroupId = parentMatch.winnerId;
-    }
-  }
-
-  if (!resolvedAwayGroupId && match.awayWinnerOfMatchId) {
-    const parentMatch = await prisma.match.findUnique({
-      where: { id: match.awayWinnerOfMatchId },
-    });
-    if (parentMatch?.winnerId) {
-      resolvedAwayGroupId = parentMatch.winnerId;
-    }
-  }
-
-  // If either participant is still unknown, we cannot calculate match score yet
+  // If either participant is missing, we cannot calculate match score yet
   if (!resolvedHomeGroupId || !resolvedAwayGroupId) {
-    await prisma.match.update({
-      where: { id: match.id },
-      data: {
-        homeGroupId: resolvedHomeGroupId,
-        awayGroupId: resolvedAwayGroupId,
-      },
-    });
-
     return {
       matchId: match.id,
       matchNumber: match.matchNumber,
