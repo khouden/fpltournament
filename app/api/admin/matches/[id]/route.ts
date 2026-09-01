@@ -22,8 +22,6 @@ export async function PATCH(
     const result = await updateMatchAction(id, match.round.tournamentId, {
       homeGroupId: body.homeGroupId,
       awayGroupId: body.awayGroupId,
-      homeWinnerOfMatchId: body.homeWinnerOfMatchId,
-      awayWinnerOfMatchId: body.awayWinnerOfMatchId,
     });
 
     if (!result.success) {

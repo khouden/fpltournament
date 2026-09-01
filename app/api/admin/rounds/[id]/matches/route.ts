@@ -21,8 +21,6 @@ export async function POST(
     const result = await createMatchAction(id, round.tournamentId, {
       homeGroupId: body.homeGroupId,
       awayGroupId: body.awayGroupId,
-      homeWinnerOfMatchId: body.homeWinnerOfMatchId,
-      awayWinnerOfMatchId: body.awayWinnerOfMatchId,
       matchNumber: body.matchNumber ? Number(body.matchNumber) : undefined,
     });
 

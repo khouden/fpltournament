@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Trophy, ArrowLeft, Sparkles, Handshake } from "lucide-react";
 
 export async function generateMetadata(
   props: PageProps<"/matches/[id]">
@@ -84,8 +85,9 @@ export default async function MatchPage(
       {/* Header */}
       <header className="border-b border-white/10 bg-black/20 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link href="/tournaments" className="text-xl font-bold text-white">
-            ⚽ FPL Tournament
+          <Link href="/tournaments" className="flex items-center gap-2 text-xl font-bold text-white hover:text-indigo-300 transition">
+            <Trophy className="h-5 w-5 text-indigo-400" />
+            <span>FPL Tournament</span>
           </Link>
         </div>
       </header>
@@ -94,16 +96,16 @@ export default async function MatchPage(
         {/* Back Link */}
         <Link
           href={`/tournaments/${tournament.id}`}
-          className="text-sm text-indigo-400 hover:text-indigo-300"
+          className="inline-flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300 transition"
         >
-          ← {tournament.name}
+          <ArrowLeft className="h-4 w-4" />
+          <span>{tournament.name}</span>
         </Link>
 
         {/* Match Header */}
         <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-6 text-center">
           <p className="text-sm text-gray-400">
-            {match.round.name || `Round ${match.round.roundNumber}`} ·
-            Gameweek {match.round.gameweek}
+            {match.round.name || `Round ${match.round.roundNumber}`} · Gameweek {match.round.gameweek}
           </p>
 
           <div className="mt-6 flex items-center justify-center gap-6">
@@ -119,12 +121,20 @@ export default async function MatchPage(
                 {match.homeGroup?.name || "TBD"}
               </h2>
               {match.result && (
-                <span className="mt-1 inline-block text-xs font-black">
-                  {match.result === "HOME_WIN"
-                    ? "🎉 +3 PTS (Win)"
-                    : match.result === "DRAW"
-                      ? "🤝 +1 PT (Draw)"
-                      : "0 PTS (Loss)"}
+                <span className="mt-1 inline-flex items-center gap-1 text-xs font-black">
+                  {match.result === "HOME_WIN" ? (
+                    <>
+                      <Sparkles className="h-3 w-3 text-emerald-400" />
+                      <span className="text-emerald-400">+3 PTS (Win)</span>
+                    </>
+                  ) : match.result === "DRAW" ? (
+                    <>
+                      <Handshake className="h-3 w-3 text-yellow-400" />
+                      <span className="text-yellow-400">+1 PT (Draw)</span>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">0 PTS (Loss)</span>
+                  )}
                 </span>
               )}
             </div>
@@ -154,12 +164,20 @@ export default async function MatchPage(
                 {match.awayGroup?.name || "TBD"}
               </h2>
               {match.result && (
-                <span className="mt-1 inline-block text-xs font-black">
-                  {match.result === "AWAY_WIN"
-                    ? "🎉 +3 PTS (Win)"
-                    : match.result === "DRAW"
-                      ? "🤝 +1 PT (Draw)"
-                      : "0 PTS (Loss)"}
+                <span className="mt-1 inline-flex items-center gap-1 text-xs font-black">
+                  {match.result === "AWAY_WIN" ? (
+                    <>
+                      <Sparkles className="h-3 w-3 text-emerald-400" />
+                      <span className="text-emerald-400">+3 PTS (Win)</span>
+                    </>
+                  ) : match.result === "DRAW" ? (
+                    <>
+                      <Handshake className="h-3 w-3 text-yellow-400" />
+                      <span className="text-yellow-400">+1 PT (Draw)</span>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">0 PTS (Loss)</span>
+                  )}
                 </span>
               )}
             </div>
@@ -168,17 +186,28 @@ export default async function MatchPage(
           {/* Result */}
           {match.result && (
             <p
-              className={`mt-4 text-lg font-bold ${
+              className={`mt-4 inline-flex items-center justify-center gap-2 text-lg font-bold ${
                 match.result === "DRAW"
                   ? "text-yellow-400"
                   : "text-emerald-400"
               }`}
             >
-              {match.result === "DRAW"
-                ? "🤝 MATCH DRAW (1 PT each)"
-                : match.result === "HOME_WIN"
-                  ? `🏆 ${match.homeGroup?.name} WINS (+3 PTS)`
-                  : `🏆 ${match.awayGroup?.name} WINS (+3 PTS)`}
+              {match.result === "DRAW" ? (
+                <>
+                  <Handshake className="h-5 w-5 text-yellow-400" />
+                  <span>MATCH DRAW (1 PT each)</span>
+                </>
+              ) : match.result === "HOME_WIN" ? (
+                <>
+                  <Trophy className="h-5 w-5 text-emerald-400" />
+                  <span>{match.homeGroup?.name} WINS (+3 PTS)</span>
+                </>
+              ) : (
+                <>
+                  <Trophy className="h-5 w-5 text-emerald-400" />
+                  <span>{match.awayGroup?.name} WINS (+3 PTS)</span>
+                </>
+              )}
             </p>
           )}
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { verifyFPLEntryAction } from "@/lib/fpl-actions";
 import type { FPLManager } from "@/lib/fpl";
+import { CheckCircle2, ShieldCheck, AlertCircle, Loader2 } from "lucide-react";
 
 interface FPLVerifierProps {
   onVerified?: (manager: FPLManager) => void;
@@ -42,24 +43,29 @@ export function FPLVerifier({ onVerified }: FPLVerifierProps) {
 
   return (
     <div className="rounded-lg bg-white p-6 shadow">
-      <h3 className="text-lg font-bold text-gray-900">Verify FPL Entry</h3>
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="h-5 w-5 text-indigo-600" />
+        <h3 className="text-lg font-bold text-gray-900">Verify FPL Entry</h3>
+      </div>
       <p className="mt-2 text-sm text-gray-600">
         Enter your FPL manager ID to verify and import your leagues
       </p>
 
       <div className="mt-6 space-y-4">
         {error && (
-          <div className="rounded-md bg-red-50 p-4">
+          <div className="flex items-center gap-2 rounded-md bg-red-50 p-4 border border-red-200">
+            <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
             <p className="text-sm text-red-800">{error}</p>
           </div>
         )}
 
         {manager && (
           <div className="rounded-md bg-green-50 p-4 border border-green-200">
-            <p className="text-sm font-semibold text-green-900">
-              ✓ Verified: {manager.player_first_name} {manager.player_last_name}
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-green-900">
+              <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+              <span>Verified: {manager.player_first_name} {manager.player_last_name}</span>
             </p>
-            <p className="text-xs text-green-700 mt-0.5">
+            <p className="text-xs text-green-700 mt-1 ml-5">
               Team: <strong>{manager.name}</strong> • Manager ID: <strong>{manager.id}</strong>
               {manager.summary_overall_points !== undefined && ` • Total Points: ${manager.summary_overall_points}`}
             </p>
@@ -95,9 +101,10 @@ export function FPLVerifier({ onVerified }: FPLVerifierProps) {
           type="button"
           onClick={handleVerify}
           disabled={loading || !entryId.trim()}
-          className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400 cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400 cursor-pointer transition"
         >
-          {loading ? "Verifying..." : "Verify Entry"}
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          <span>{loading ? "Verifying..." : "Verify Entry"}</span>
         </button>
       </div>
     </div>

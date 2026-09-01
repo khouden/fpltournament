@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ScheduleBuilder } from "@/components/schedule-builder";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 
 export default async function SchedulePage(
   props: PageProps<"/admin/tournaments/[id]/schedule">
@@ -55,9 +56,10 @@ export default async function SchedulePage(
         <div className="flex gap-2">
           <Link
             href={`/admin/tournaments/${id}/groups`}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
           >
-            ← Groups
+            <ArrowLeft className="h-4 w-4" />
+            <span>Groups</span>
           </Link>
         </div>
       </div>
@@ -88,12 +90,13 @@ export default async function SchedulePage(
 
       {/* Groups Warning */}
       {tournament.groups.length < 2 && (
-        <div className="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-          <p className="text-sm text-yellow-800">
-            ⚠ You need at least 2 groups to create matches.{" "}
+        <div className="flex items-center gap-2 rounded-md bg-yellow-50 border border-yellow-200 p-4 text-sm text-yellow-800">
+          <AlertTriangle className="h-5 w-5 text-yellow-600 shrink-0" />
+          <p>
+            You need at least 2 groups to create matches.{" "}
             <Link
               href={`/admin/tournaments/${id}/groups`}
-              className="font-medium underline"
+              className="font-medium underline hover:text-yellow-900"
             >
               Import groups first
             </Link>

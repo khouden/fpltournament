@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { TournamentActions } from "@/components/tournament-actions";
+import { Trophy, Plus, Layers, FileText, CheckCircle2 } from "lucide-react";
 
 export default async function AdminDashboard() {
   const tournaments = await prisma.tournament.findMany({
@@ -23,23 +24,40 @@ export default async function AdminDashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="rounded-lg bg-white p-6 shadow">
-          <p className="text-sm text-gray-600">Total Tournaments</p>
-          <p className="text-3xl font-bold text-gray-900">
-            {tournaments.length}
-          </p>
+        <div className="rounded-lg bg-white p-6 shadow flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-600">Total Tournaments</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">
+              {tournaments.length}
+            </p>
+          </div>
+          <div className="p-3 bg-indigo-50 rounded-xl">
+            <Trophy className="h-6 w-6 text-indigo-600" />
+          </div>
         </div>
-        <div className="rounded-lg bg-white p-6 shadow">
-          <p className="text-sm text-gray-600">Published</p>
-          <p className="text-3xl font-bold text-gray-900">
-            {tournaments.filter((t) => t.status === "PUBLISHED").length}
-          </p>
+
+        <div className="rounded-lg bg-white p-6 shadow flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-600">Published</p>
+            <p className="text-3xl font-bold text-emerald-600 mt-1">
+              {tournaments.filter((t) => t.status === "PUBLISHED").length}
+            </p>
+          </div>
+          <div className="p-3 bg-emerald-50 rounded-xl">
+            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+          </div>
         </div>
-        <div className="rounded-lg bg-white p-6 shadow">
-          <p className="text-sm text-gray-600">Draft</p>
-          <p className="text-3xl font-bold text-gray-900">
-            {tournaments.filter((t) => t.status === "DRAFT").length}
-          </p>
+
+        <div className="rounded-lg bg-white p-6 shadow flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-gray-600">Draft</p>
+            <p className="text-3xl font-bold text-amber-600 mt-1">
+              {tournaments.filter((t) => t.status === "DRAFT").length}
+            </p>
+          </div>
+          <div className="p-3 bg-amber-50 rounded-xl">
+            <FileText className="h-6 w-6 text-amber-600" />
+          </div>
         </div>
       </div>
 
@@ -48,9 +66,10 @@ export default async function AdminDashboard() {
           <h3 className="text-lg font-bold text-gray-900">Tournaments</h3>
           <Link
             href="/admin/tournaments/new"
-            className="rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700"
+            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
           >
-            Create Tournament
+            <Plus className="h-4 w-4" />
+            <span>Create Tournament</span>
           </Link>
         </div>
 
@@ -61,13 +80,13 @@ export default async function AdminDashboard() {
             {tournaments.map((tournament) => (
               <div
                 key={tournament.id}
-                className="space-y-2 rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
+                className="space-y-2 rounded-lg border border-gray-200 p-4 hover:bg-gray-50 transition"
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <Link
                       href={`/admin/tournaments/${tournament.id}`}
-                      className="font-semibold text-gray-900 hover:text-indigo-600"
+                      className="font-semibold text-gray-900 hover:text-indigo-600 transition"
                     >
                       {tournament.name}
                     </Link>

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Trophy, ArrowRight, Check, X, Shield, Award, Users, Calendar } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "FPL Tournaments — Custom Fantasy Premier League Knockout Tournaments",
@@ -31,8 +32,9 @@ export default async function Home() {
       {/* Top Navbar */}
       <header className="border-b border-white/10 bg-black/30 backdrop-blur sticky top-0 z-50">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <Link href="/" className="flex items-center gap-2 text-xl font-black tracking-tight text-white hover:text-indigo-300 transition">
-            <span className="text-2xl">⚽</span> FPL TOURNAMENTS
+          <Link href="/" className="flex items-center gap-2.5 text-xl font-black tracking-tight text-white hover:text-indigo-300 transition">
+            <Trophy className="h-6 w-6 text-indigo-400" />
+            <span>FPL TOURNAMENTS</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link
@@ -54,8 +56,8 @@ export default async function Home() {
       {/* Hero Section */}
       <section className="relative overflow-hidden border-b border-white/10 py-16 sm:py-24">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <span className="inline-block rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-300 border border-indigo-500/30 mb-4">
-            Fantasy Premier League Tournament Engine
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-300 border border-indigo-500/30 mb-4">
+            <Trophy className="h-3.5 w-3.5" /> Fantasy Premier League Tournament Engine
           </span>
           <h1 className="text-4xl font-black sm:text-6xl tracking-tight text-white">
             Custom Knockout Tournaments for FPL Leagues
@@ -67,9 +69,10 @@ export default async function Home() {
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
               href="/tournaments"
-              className="rounded-xl bg-indigo-600 px-6 py-3 font-bold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 hover:scale-105 transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 font-bold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 hover:scale-105 transition"
             >
-              Browse Tournaments →
+              <span>Browse Tournaments</span>
+              <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               href="/admin"
@@ -105,8 +108,9 @@ export default async function Home() {
           {active.length === 0 ? (
             <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur">
               <p className="text-gray-400">No active tournaments published at the moment.</p>
-              <Link href="/admin/tournaments/new" className="mt-3 inline-block text-sm text-indigo-400 hover:underline">
-                Create a tournament in Admin →
+              <Link href="/admin/tournaments/new" className="mt-3 inline-flex items-center gap-1.5 text-sm text-indigo-400 hover:underline">
+                <span>Create a tournament in Admin</span>
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           ) : (
@@ -230,9 +234,15 @@ function TournamentCard({
           >
             {tournament.status === "PUBLISHED" ? "ACTIVE" : "FINISHED"}
           </span>
-          <span className="text-[10px] text-gray-400 font-mono">
-            {`BB: ${tournament.allowBenchBoost ? "✓" : "✗"} | TC: ${tournament.allowTripleCaptain ? "✓" : "✗"}`}
-          </span>
+          <div className="flex items-center gap-2 text-[10px] text-gray-400 font-mono">
+            <span className="flex items-center gap-0.5">
+              BB: {tournament.allowBenchBoost ? <Check className="h-3 w-3 text-emerald-400" /> : <X className="h-3 w-3 text-rose-400" />}
+            </span>
+            <span>|</span>
+            <span className="flex items-center gap-0.5">
+              TC: {tournament.allowTripleCaptain ? <Check className="h-3 w-3 text-emerald-400" /> : <X className="h-3 w-3 text-rose-400" />}
+            </span>
+          </div>
         </div>
       </div>
       <div className="mt-4 flex gap-4 text-xs text-gray-400">
@@ -242,8 +252,9 @@ function TournamentCard({
         </span>
         <span>{tournament.rounds.length} Rounds</span>
       </div>
-      <div className="mt-4 text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
-        View Tournament →
+      <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
+        <span>View Tournament</span>
+        <ArrowRight className="h-4 w-4" />
       </div>
     </Link>
   );

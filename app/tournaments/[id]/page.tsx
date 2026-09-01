@@ -4,6 +4,18 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { LeagueTable } from "@/components/league-table";
 import { calculateLeagueStandings } from "@/lib/scoring";
+import {
+  Trophy,
+  Calendar,
+  Users,
+  ArrowLeft,
+  ArrowRight,
+  Armchair,
+  Crown,
+  Ban,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 
 export async function generateMetadata(
   props: PageProps<"/tournaments/[id]">
@@ -73,14 +85,16 @@ export default async function TournamentPage(
       {/* Header */}
       <header className="border-b border-white/10 bg-black/20 backdrop-blur sticky top-0 z-50">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link href="/tournaments" className="text-xl font-bold text-white hover:text-indigo-300 transition">
-            ⚽ FPL LEAGUES
+          <Link href="/tournaments" className="flex items-center gap-2 text-xl font-bold text-white hover:text-indigo-300 transition">
+            <Trophy className="h-5 w-5 text-indigo-400" />
+            <span>FPL LEAGUES</span>
           </Link>
           <Link
             href="/tournaments"
-            className="text-xs text-indigo-300 hover:text-white"
+            className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white transition"
           >
-            ← All Leagues
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>All Leagues</span>
           </Link>
         </div>
       </header>
@@ -104,11 +118,13 @@ export default async function TournamentPage(
             >
               {tournament.status === "PUBLISHED" ? "ACTIVE LEAGUE" : "FINISHED"}
             </span>
-            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-gray-300 border border-white/10">
-              {tournament.allowBenchBoost ? "💺 Bench Boost: On" : "🚫 Bench Boost: Off"}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-gray-300 border border-white/10">
+              <Armchair className="h-3.5 w-3.5 text-indigo-300" />
+              <span>{tournament.allowBenchBoost ? "Bench Boost: On" : "Bench Boost: Off"}</span>
             </span>
-            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-gray-300 border border-white/10">
-              {tournament.allowTripleCaptain ? "👑 Triple Captain: On (3x)" : "🚫 Triple Captain: Reduced (2x)"}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-gray-300 border border-white/10">
+              <Crown className="h-3.5 w-3.5 text-amber-400" />
+              <span>{tournament.allowTripleCaptain ? "Triple Captain: On (3x)" : "Triple Captain: Reduced (2x)"}</span>
             </span>
           </div>
         </div>
@@ -117,7 +133,8 @@ export default async function TournamentPage(
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <span>🏆</span> League Standings
+              <Trophy className="h-5 w-5 text-amber-400" />
+              <span>League Standings</span>
             </h2>
           </div>
           <LeagueTable standings={standings} />
@@ -127,7 +144,8 @@ export default async function TournamentPage(
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <span>📅</span> Fixtures & Results
+              <Calendar className="h-5 w-5 text-indigo-400" />
+              <span>Fixtures & Results</span>
             </h2>
             <span className="text-xs text-gray-400">
               {tournament.rounds.length} Gameweek Rounds
@@ -260,8 +278,9 @@ export default async function TournamentPage(
                           </div>
                         )}
 
-                        <p className="mt-2 text-center text-xs text-indigo-400 opacity-0 transition group-hover:opacity-100">
-                          View Match & Player Breakdown →
+                        <p className="mt-2 text-center text-xs text-indigo-400 opacity-0 transition group-hover:opacity-100 inline-flex items-center justify-center w-full gap-1">
+                          <span>View Match & Player Breakdown</span>
+                          <ArrowRight className="h-3.5 w-3.5" />
                         </p>
                       </Link>
                     );
@@ -275,7 +294,8 @@ export default async function TournamentPage(
         {/* 3. Participating Teams */}
         <section>
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <span>👥</span> Participating Teams ({tournament.groups.length})
+            <Users className="h-5 w-5 text-indigo-400" />
+            <span>Participating Teams ({tournament.groups.length})</span>
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {tournament.groups.map((group) => (

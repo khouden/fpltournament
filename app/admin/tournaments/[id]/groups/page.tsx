@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { GroupManager } from "@/components/group-manager";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 
 export default async function GroupsPage(
   props: PageProps<"/admin/tournaments/[id]/groups">
@@ -32,7 +33,11 @@ export default async function GroupsPage(
               Dashboard
             </Link>
             <span>/</span>
-            <span>{tournament.name}</span>
+            <Link href={`/admin/tournaments/${id}`} className="hover:text-indigo-600">
+              {tournament.name}
+            </Link>
+            <span>/</span>
+            <span>Groups</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold text-gray-900">
             Manage Groups
@@ -41,9 +46,10 @@ export default async function GroupsPage(
         <div className="flex gap-2">
           <Link
             href={`/admin/tournaments/${id}/schedule`}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
           >
-            Schedule →
+            <span>Schedule</span>
+            <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </div>

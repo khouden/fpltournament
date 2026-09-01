@@ -4,6 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FPLVerifier } from "./fpl-verifier";
 import type { FPLManager } from "@/lib/fpl";
+import {
+  Zap,
+  Armchair,
+  Crown,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 
 interface TournamentFormProps {
   initialData?: {
@@ -93,7 +101,8 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 p-4">
+        <div className="flex items-center gap-2 rounded-md bg-red-50 p-4 border border-red-200">
+          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
           <p className="text-sm text-red-800">{error}</p>
         </div>
       )}
@@ -139,8 +148,9 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
 
       {/* Chip Rules Section with Two Distinct Settings */}
       <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 space-y-4">
-        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
-          ⚡ FPL Chips Configuration
+        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide flex items-center gap-2">
+          <Zap className="h-4 w-4 text-indigo-600" />
+          <span>FPL Chips Configuration</span>
         </h3>
         <p className="text-xs text-gray-500">
           Control which FPL chip bonuses count towards match scores. Free Hit & Wildcard are always allowed.
@@ -154,7 +164,8 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
                 htmlFor="allowBenchBoost"
                 className="text-sm font-semibold text-gray-900 cursor-pointer flex items-center gap-2"
               >
-                <span>💺 Bench Boost</span>
+                <Armchair className="h-4 w-4 text-indigo-600" />
+                <span>Bench Boost</span>
                 <span
                   className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
                     allowBenchBoost
@@ -190,7 +201,8 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
                 htmlFor="allowTripleCaptain"
                 className="text-sm font-semibold text-gray-900 cursor-pointer flex items-center gap-2"
               >
-                <span>👑 Triple Captain</span>
+                <Crown className="h-4 w-4 text-amber-500" />
+                <span>Triple Captain</span>
                 <span
                   className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
                     allowTripleCaptain
@@ -232,13 +244,16 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
       </div>
 
       {verifiedManager && (
-        <div className="rounded-md bg-green-50 p-4">
-          <p className="text-sm font-medium text-green-800">
-            ✓ Admin Account Verified
-          </p>
-          <p className="text-xs text-green-700">
-            {verifiedManager.player_first_name} {verifiedManager.player_last_name} (ID: {verifiedManager.id})
-          </p>
+        <div className="flex items-center gap-2 rounded-md bg-green-50 p-4 border border-green-200">
+          <CheckCircle2 className="h-4 w-4 text-green-700 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-green-800">
+              Admin Account Verified
+            </p>
+            <p className="text-xs text-green-700">
+              {verifiedManager.player_first_name} {verifiedManager.player_last_name} (ID: {verifiedManager.id})
+            </p>
+          </div>
         </div>
       )}
 
@@ -246,15 +261,16 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
         <button
           type="submit"
           disabled={loading || !verifiedManager}
-          className="flex-1 rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400"
+          className="inline-flex items-center justify-center gap-2 flex-1 rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400 cursor-pointer transition"
         >
-          {loading ? "Saving..." : initialData ? "Update Tournament" : "Create Tournament"}
+          {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+          <span>{loading ? "Saving..." : initialData ? "Update Tournament" : "Create Tournament"}</span>
         </button>
         <button
           type="button"
           onClick={() => router.back()}
           disabled={loading}
-          className="rounded-md border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 disabled:bg-gray-100"
+          className="rounded-md border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 disabled:bg-gray-100 cursor-pointer"
         >
           Cancel
         </button>

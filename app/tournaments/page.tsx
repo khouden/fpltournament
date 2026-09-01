@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Trophy, ArrowRight, ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Tournaments — FPL Tournament",
@@ -31,8 +32,16 @@ export default async function TournamentsPage() {
       {/* Header */}
       <header className="border-b border-white/10 bg-black/20 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link href="/" className="text-xl font-bold text-white">
-            ⚽ FPL Tournament
+          <Link href="/" className="flex items-center gap-2 text-xl font-bold text-white hover:text-indigo-300 transition">
+            <Trophy className="h-5 w-5 text-indigo-400" />
+            <span>FPL Tournament</span>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 text-xs text-indigo-300 hover:text-white transition"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>Home</span>
           </Link>
         </div>
       </header>
@@ -138,8 +147,9 @@ function TournamentCard({
         </span>
         <span>{tournament.rounds.length} Rounds</span>
       </div>
-      <div className="mt-4 text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
-        View Tournament →
+      <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
+        <span>View Tournament</span>
+        <ArrowRight className="h-4 w-4" />
       </div>
     </Link>
   );

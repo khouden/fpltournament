@@ -15,6 +15,19 @@ import {
   finalizeMatchAction,
   recalculateAllScoresAction,
 } from "@/lib/scoring-actions";
+import {
+  Zap,
+  CheckCircle2,
+  RefreshCw,
+  AlertTriangle,
+  AlertCircle,
+  Plus,
+  Trash2,
+  X,
+  Loader2,
+  Calendar,
+  Check,
+} from "lucide-react";
 
 interface Group {
   id: string;
@@ -262,7 +275,7 @@ export function ScheduleBuilder({
     const result = await validateScheduleAction(tournamentId);
     setValidationIssues(result.issues);
     if (result.isValid) {
-      showMsg("✓ Schedule is valid — ready to publish!");
+      showMsg("Schedule is valid — ready to publish!");
     }
     setLoading(null);
   };
@@ -270,12 +283,14 @@ export function ScheduleBuilder({
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 p-3">
+        <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 border border-red-200">
+          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
           <p className="text-sm text-red-800">{error}</p>
         </div>
       )}
       {success && (
-        <div className="rounded-md bg-green-50 p-3">
+        <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 border border-green-200">
+          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
           <p className="text-sm text-green-800">{success}</p>
         </div>
       )}
@@ -285,27 +300,38 @@ export function ScheduleBuilder({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setShowAutoGenerate(!showAutoGenerate)}
-            className="flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition cursor-pointer"
           >
-            <span>⚡</span> Auto-Generate Round-Robin Fixtures
+            <Zap className="h-4 w-4" />
+            <span>Auto-Generate Round-Robin Fixtures</span>
           </button>
           <button
             onClick={handleValidate}
             disabled={loading === "validate"}
-            className="rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100"
+            className="inline-flex items-center gap-1.5 rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition cursor-pointer disabled:opacity-50"
           >
-            {loading === "validate" ? "Validating..." : "Validate Schedule"}
+            {loading === "validate" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+            <span>{loading === "validate" ? "Validating..." : "Validate Schedule"}</span>
           </button>
         </div>
 
         <button
           onClick={handleRecalculateAll}
           disabled={loading === "recalc-all"}
-          className="rounded-md border border-green-300 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-100"
+          className="inline-flex items-center gap-1.5 rounded-md border border-green-300 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-100 transition cursor-pointer disabled:opacity-50"
         >
-          {loading === "recalc-all"
-            ? "Recalculating..."
-            : "Recalculate All Scores"}
+          {loading === "recalc-all" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
+          <span>
+            {loading === "recalc-all" ? "Recalculating..." : "Recalculate All Scores"}
+          </span>
         </button>
       </div>
 
@@ -314,7 +340,8 @@ export function ScheduleBuilder({
         <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50/70 p-5 shadow-sm space-y-4">
           <div>
             <h4 className="text-base font-bold text-indigo-950 flex items-center gap-2">
-              <span>⚡</span> Generate Round-Robin League Fixtures
+              <Zap className="h-4 w-4 text-indigo-700" />
+              <span>Generate Round-Robin League Fixtures</span>
             </h4>
             <p className="text-xs text-indigo-700 mt-1">
               Automatically creates all Gameweek rounds and matches so every
@@ -338,8 +365,9 @@ export function ScheduleBuilder({
             </div>
             <div className="text-xs text-indigo-700">
               {groups.length < 2 ? (
-                <span className="text-red-600 font-semibold">
-                  ⚠️ Need at least 2 groups imported to generate fixtures.
+                <span className="inline-flex items-center gap-1 text-red-600 font-semibold">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span>Need at least 2 groups imported to generate fixtures.</span>
                 </span>
               ) : (
                 <span>
@@ -358,15 +386,18 @@ export function ScheduleBuilder({
               <button
                 onClick={handleAutoGenerate}
                 disabled={loading === "auto-generate" || groups.length < 2}
-                className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
               >
-                {loading === "auto-generate"
-                  ? "Generating..."
-                  : "Generate Fixtures Now"}
+                {loading === "auto-generate" && <Loader2 className="h-4 w-4 animate-spin" />}
+                <span>
+                  {loading === "auto-generate"
+                    ? "Generating..."
+                    : "Generate Fixtures Now"}
+                </span>
               </button>
               <button
                 onClick={() => setShowAutoGenerate(false)}
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer"
               >
                 Cancel
               </button>
@@ -378,10 +409,13 @@ export function ScheduleBuilder({
       {/* Validation Issues */}
       {validationIssues.length > 0 && (
         <div className="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-          <h4 className="font-semibold text-yellow-800">
-            {validationIssues.length} issue(s) found:
-          </h4>
-          <ul className="mt-2 space-y-1 text-sm text-yellow-700">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-700 shrink-0" />
+            <h4 className="font-semibold text-yellow-800">
+              {validationIssues.length} issue(s) found:
+            </h4>
+          </div>
+          <ul className="mt-2 space-y-1 text-sm text-yellow-700 ml-7">
             {validationIssues.map((issue, i) => (
               <li key={i}>• {issue}</li>
             ))}
@@ -392,6 +426,7 @@ export function ScheduleBuilder({
       {/* Rounds List */}
       {rounds.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-8 text-center">
+          <Calendar className="h-8 w-8 text-gray-400 mx-auto mb-2" />
           <h3 className="text-base font-bold text-gray-700">
             No Fixtures Scheduled Yet
           </h3>
@@ -421,15 +456,17 @@ export function ScheduleBuilder({
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleAddMatch(round.id)}
-                    className="rounded bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                    className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 cursor-pointer"
                   >
-                    + Add Match
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add Match</span>
                   </button>
                   <button
                     onClick={() => handleDeleteRound(round.id)}
-                    className="rounded px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 font-medium"
+                    className="inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 font-medium cursor-pointer"
                   >
-                    Delete Round
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Delete Round</span>
                   </button>
                 </div>
               </div>
@@ -466,10 +503,10 @@ export function ScheduleBuilder({
                               onClick={() =>
                                 handleDeleteMatch(match.id, round.id)
                               }
-                              className="rounded px-1.5 py-0.5 text-xs text-red-500 hover:bg-red-50"
+                              className="rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
                               title="Delete match"
                             >
-                              ×
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
                         </div>
@@ -496,7 +533,7 @@ export function ScheduleBuilder({
                             ))}
                           </select>
 
-                          <span className="text-sm font-black text-indigo-500 px-2">
+                          <span className="text-sm font-black text-indigo-500 px-2 text-center">
                             VS
                           </span>
 
@@ -558,22 +595,28 @@ export function ScheduleBuilder({
                             <button
                               onClick={() => handleRecalculate(match.id)}
                               disabled={loading === `calc-${match.id}`}
-                              className="rounded bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50"
+                              className="inline-flex items-center gap-1 rounded bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 cursor-pointer"
                             >
-                              {loading === `calc-${match.id}`
-                                ? "Calculating..."
-                                : "Calculate Score"}
+                              {loading === `calc-${match.id}` && <Loader2 className="h-3 w-3 animate-spin" />}
+                              <span>
+                                {loading === `calc-${match.id}`
+                                  ? "Calculating..."
+                                  : "Calculate Score"}
+                              </span>
                             </button>
                           )}
                           {match.status === "COMPLETED" && (
                             <button
                               onClick={() => handleFinalize(match.id)}
                               disabled={loading === `fin-${match.id}`}
-                              className="rounded bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50"
+                              className="inline-flex items-center gap-1 rounded bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50 cursor-pointer"
                             >
-                              {loading === `fin-${match.id}`
-                                ? "Finalizing..."
-                                : "Finalize"}
+                              {loading === `fin-${match.id}` && <Loader2 className="h-3 w-3 animate-spin" />}
+                              <span>
+                                {loading === `fin-${match.id}`
+                                  ? "Finalizing..."
+                                  : "Finalize"}
+                              </span>
                             </button>
                           )}
                         </div>
@@ -620,13 +663,14 @@ export function ScheduleBuilder({
             <button
               onClick={handleAddRound}
               disabled={loading === "add-round"}
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400"
+              className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400 cursor-pointer"
             >
-              {loading === "add-round" ? "Creating..." : "Create Round"}
+              {loading === "add-round" && <Loader2 className="h-4 w-4 animate-spin" />}
+              <span>{loading === "add-round" ? "Creating..." : "Create Round"}</span>
             </button>
             <button
               onClick={() => setShowAddRound(false)}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
             >
               Cancel
             </button>
@@ -635,12 +679,12 @@ export function ScheduleBuilder({
       ) : (
         <button
           onClick={() => setShowAddRound(true)}
-          className="w-full rounded-lg border-2 border-dashed border-gray-300 py-3 text-sm font-medium text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
+          className="inline-flex items-center justify-center gap-1.5 w-full rounded-lg border-2 border-dashed border-gray-300 py-3 text-sm font-medium text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition cursor-pointer"
         >
-          + Add Round Manually
+          <Plus className="h-4 w-4" />
+          <span>Add Round Manually</span>
         </button>
       )}
     </div>
   );
 }
-

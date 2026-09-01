@@ -1,6 +1,7 @@
 "use client";
 
 import type { GroupStanding } from "@/lib/scoring";
+import { Crown } from "lucide-react";
 
 interface LeagueTableProps {
   standings: GroupStanding[];
@@ -97,8 +98,9 @@ export function LeagueTable({ standings }: LeagueTableProps) {
                         {team.groupName}
                       </span>
                       {isLeader && (
-                        <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-300 border border-amber-400/30">
-                          LEADER
+                        <span className="inline-flex items-center gap-1 rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-300 border border-amber-400/30">
+                          <Crown className="h-3 w-3" />
+                          <span>LEADER</span>
                         </span>
                       )}
                     </div>
