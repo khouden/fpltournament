@@ -118,12 +118,21 @@ export default async function MatchPage(
               >
                 {match.homeGroup?.name || "TBD"}
               </h2>
+              {match.result && (
+                <span className="mt-1 inline-block text-xs font-black">
+                  {match.result === "HOME_WIN"
+                    ? "🎉 +3 PTS (Win)"
+                    : match.result === "DRAW"
+                      ? "🤝 +1 PT (Draw)"
+                      : "0 PTS (Loss)"}
+                </span>
+              )}
             </div>
 
             {/* Score */}
             {hasScore ? (
               <div>
-                <p className="text-4xl font-bold text-white">
+                <p className="text-4xl font-bold text-white font-mono">
                   {match.homeScore}{" "}
                   <span className="text-gray-500">-</span>{" "}
                   {match.awayScore}
@@ -144,6 +153,15 @@ export default async function MatchPage(
               >
                 {match.awayGroup?.name || "TBD"}
               </h2>
+              {match.result && (
+                <span className="mt-1 inline-block text-xs font-black">
+                  {match.result === "AWAY_WIN"
+                    ? "🎉 +3 PTS (Win)"
+                    : match.result === "DRAW"
+                      ? "🤝 +1 PT (Draw)"
+                      : "0 PTS (Loss)"}
+                </span>
+              )}
             </div>
           </div>
 
@@ -157,10 +175,10 @@ export default async function MatchPage(
               }`}
             >
               {match.result === "DRAW"
-                ? "DRAW"
+                ? "🤝 MATCH DRAW (1 PT each)"
                 : match.result === "HOME_WIN"
-                  ? match.homeGroup?.name
-                  : match.awayGroup?.name}
+                  ? `🏆 ${match.homeGroup?.name} WINS (+3 PTS)`
+                  : `🏆 ${match.awayGroup?.name} WINS (+3 PTS)`}
             </p>
           )}
 

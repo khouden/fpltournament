@@ -365,3 +365,170 @@ export async function recalculateTournamentScores(
 
   return results;
 }
+
+export interface GroupStanding {
+  rank: number;
+  groupId: string;
+  groupName: string;
+  fplLeagueId: number | null;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointsDiff: number;
+  leaguePoints: number; // won * 3 + drawn * 1
+  form: ("W" | "D" | "L")[];
+}
+
+/**
+ * Calculate live Head-to-Head League Standings for a tournament.
+ * Standard football league rules:
+ * - Win: +3 PTS
+ * - Draw: +1 PT
+ * - Loss: 0 PTS
+ * Tiebreakers:
+ * 1. PTS (leaguePoints)
+ * 2. Diff (pointsDiff = pointsFor - pointsAgainst)
+ * 3. PF (pointsFor)
+ * 4. Group Name (alphabetical)
+ */
+export async function calculateLeagueStandings(
+  tournamentId: string
+): Promise<GroupStanding[]> {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      groups: true,
+      rounds: {
+        include: {
+          matches: {
+            include: {
+              homeGroup: true,
+              awayGroup: true,
+            },
+            orderBy: { matchNumber: "asc" },
+          },
+        },
+        orderBy: { roundNumber: "asc" },
+      },
+    },
+  });
+
+  if (!tournament) {
+    throw new Error(`Tournament ${tournamentId} not found`);
+  }
+
+  // Initialize standings map for every group in the tournament
+  const map = new Map<
+    string,
+    {
+      groupId: string;
+      groupName: string;
+      fplLeagueId: number | null;
+      played: number;
+      won: number;
+      drawn: number;
+      lost: number;
+      pointsFor: number;
+      pointsAgainst: number;
+      pointsDiff: number;
+      leaguePoints: number;
+      form: ("W" | "D" | "L")[];
+    }
+  >();
+
+  for (const group of tournament.groups) {
+    map.set(group.id, {
+      groupId: group.id,
+      groupName: group.name,
+      fplLeagueId: group.fplLeagueId,
+      played: 0,
+      won: 0,
+      drawn: 0,
+      lost: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      pointsDiff: 0,
+      leaguePoints: 0,
+      form: [],
+    });
+  }
+
+  // Iterate chronologically through all completed or finalized matches
+  for (const round of tournament.rounds) {
+    for (const match of round.matches) {
+      if (
+        (match.status === "COMPLETED" || match.status === "FINALIZED") &&
+        match.homeGroupId &&
+        match.awayGroupId &&
+        match.homeScore !== null &&
+        match.awayScore !== null
+      ) {
+        const home = map.get(match.homeGroupId);
+        const away = map.get(match.awayGroupId);
+
+        if (home && away) {
+          home.played += 1;
+          away.played += 1;
+
+          home.pointsFor += match.homeScore;
+          home.pointsAgainst += match.awayScore;
+          home.pointsDiff = home.pointsFor - home.pointsAgainst;
+
+          away.pointsFor += match.awayScore;
+          away.pointsAgainst += match.homeScore;
+          away.pointsDiff = away.pointsFor - away.pointsAgainst;
+
+          if (match.result === "HOME_WIN") {
+            home.won += 1;
+            home.leaguePoints += 3;
+            home.form.push("W");
+
+            away.lost += 1;
+            away.form.push("L");
+          } else if (match.result === "AWAY_WIN") {
+            away.won += 1;
+            away.leaguePoints += 3;
+            away.form.push("W");
+
+            home.lost += 1;
+            home.form.push("L");
+          } else if (match.result === "DRAW") {
+            home.drawn += 1;
+            home.leaguePoints += 1;
+            home.form.push("D");
+
+            away.drawn += 1;
+            away.leaguePoints += 1;
+            away.form.push("D");
+          }
+        }
+      }
+    }
+  }
+
+  // Convert map to array and sort by standard league tiebreakers
+  const list = Array.from(map.values()).sort((a, b) => {
+    // 1. Points
+    if (b.leaguePoints !== a.leaguePoints) {
+      return b.leaguePoints - a.leaguePoints;
+    }
+    // 2. Points Difference
+    if (b.pointsDiff !== a.pointsDiff) {
+      return b.pointsDiff - a.pointsDiff;
+    }
+    // 3. Points For
+    if (b.pointsFor !== a.pointsFor) {
+      return b.pointsFor - a.pointsFor;
+    }
+    // 4. Alphabetical by name
+    return a.groupName.localeCompare(b.groupName);
+  });
+
+  return list.map((item, index) => ({
+    ...item,
+    rank: index + 1,
+  }));
+}

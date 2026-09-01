@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { TournamentActions } from "@/components/tournament-actions";
+import { calculateLeagueStandings } from "@/lib/scoring";
+import { LeagueTable } from "@/components/league-table";
 
 export default async function TournamentManagementPage(
   props: PageProps<"/admin/tournaments/[id]">
@@ -34,6 +36,7 @@ export default async function TournamentManagementPage(
     notFound();
   }
 
+  const standings = await calculateLeagueStandings(tournament.id);
   const allMatches = tournament.rounds.flatMap((r) => r.matches);
   const completedMatches = allMatches.filter(
     (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
@@ -128,15 +131,15 @@ export default async function TournamentManagementPage(
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase">Rounds</p>
+          <p className="text-xs font-medium text-gray-500 uppercase">Gameweek Rounds</p>
           <p className="mt-1 text-xl font-bold text-gray-900">
             {tournament.rounds.length}
           </p>
-          <p className="text-xs text-gray-500">Knockout stages</p>
+          <p className="text-xs text-gray-500">Scheduled rounds</p>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase">Matches</p>
+          <p className="text-xs font-medium text-gray-500 uppercase">Fixtures</p>
           <p className="mt-1 text-xl font-bold text-gray-900">
             {completedMatches.length} / {allMatches.length}
           </p>
@@ -144,6 +147,21 @@ export default async function TournamentManagementPage(
             {allMatches.filter((m) => m.status === "FINALIZED").length} finalized
           </p>
         </div>
+      </div>
+
+      {/* Live League Standings Table */}
+      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <span>🏆</span> Live League Standings
+            </h2>
+            <p className="text-xs text-gray-500">
+              Live points table: +3 PTS for Win, +1 PT for Draw, 0 PTS for Loss.
+            </p>
+          </div>
+        </div>
+        <LeagueTable standings={standings} />
       </div>
 
       {/* Navigation & Management Hub Cards */}

@@ -1,5 +1,10 @@
 import { prisma } from "./lib/db";
-import { calculateGroupScore, calculateMatchScore, recalculateTournamentScores } from "./lib/scoring";
+import {
+  calculateGroupScore,
+  calculateMatchScore,
+  recalculateTournamentScores,
+  calculateLeagueStandings,
+} from "./lib/scoring";
 import { validateScheduleAction } from "./lib/schedule-actions";
 
 async function runScoringTest() {
@@ -138,17 +143,47 @@ async function runScoringTest() {
   }
   console.log("✅ TEST 6 PASSED: Both chips counted fully!");
 
-  // TEST 7: Recalculate Tournament Scores
-  console.log("\n--- TEST 7: Full Tournament Recalculation ---");
-  const allResults = await recalculateTournamentScores(tournament.id, true);
-  console.log(`Recalculated ${allResults.length} matches across all rounds`);
-  allResults.forEach((res) => {
-    console.log(`  Match ${res.matchNumber} (GW${res.gameweek}): ${res.homeGroup?.groupName || "TBD"} (${res.homeScore ?? "-"}) vs ${res.awayGroup?.groupName || "TBD"} (${res.awayScore ?? "-"}) -> [${res.result || "PENDING"}]`);
+  // TEST 8: Head-to-Head League Standings Calculation (+3 Win, +1 Draw, 0 Loss)
+  console.log("\n--- TEST 8: Head-to-Head League Standings (+3 Win, +1 Draw, 0 Loss) ---");
+  const standings = await calculateLeagueStandings(tournament.id);
+  console.log("Current League Standings Table:");
+  console.log("Rank | Team | MP | W | D | L | PF | PA | +/- | PTS");
+  console.log("--------------------------------------------------");
+  standings.forEach((s) => {
+    console.log(
+      `  ${s.rank}  | ${s.groupName.padEnd(12)} | ${s.played}  | ${s.won} | ${s.drawn} | ${s.lost} | ${s.pointsFor} | ${s.pointsAgainst} | ${s.pointsDiff >= 0 ? "+" : ""}${s.pointsDiff} | ${s.leaguePoints} PTS`
+    );
   });
-  console.log("✅ TEST 7 PASSED: Full tournament calculation executed successfully!");
+
+  const barcelona = standings.find((s) => s.groupName === "Barcelona");
+  const realMadridStanding = standings.find((s) => s.groupName === "Real Madrid");
+  const napoliStanding = standings.find((s) => s.groupName === "Napoli");
+  const liverpool = standings.find((s) => s.groupName === "Liverpool");
+
+  // Barcelona won Match 2 (244 vs 215) -> 3 PTS, +29 Diff, 1st place
+  if (barcelona?.leaguePoints !== 3 || barcelona?.rank !== 1 || barcelona?.pointsDiff !== 29) {
+    throw new Error(`Barcelona standings check failed: expected 3 PTS (+29 Diff, Rank 1), got ${barcelona?.leaguePoints} PTS (Diff: ${barcelona?.pointsDiff}, Rank: ${barcelona?.rank})`);
+  }
+
+  // Real Madrid drew Match 1 (160 vs 160) -> 1 PT, 0 Diff
+  if (realMadridStanding?.leaguePoints !== 1 || realMadridStanding?.pointsDiff !== 0) {
+    throw new Error(`Real Madrid standings check failed: expected 1 PT (0 Diff), got ${realMadridStanding?.leaguePoints} PTS`);
+  }
+
+  // Napoli drew Match 1 (160 vs 160) -> 1 PT, 0 Diff
+  if (napoliStanding?.leaguePoints !== 1 || napoliStanding?.pointsDiff !== 0) {
+    throw new Error(`Napoli standings check failed: expected 1 PT (0 Diff), got ${napoliStanding?.leaguePoints} PTS`);
+  }
+
+  // Liverpool lost Match 2 (215 vs 244) -> 0 PTS, -29 Diff, 4th place
+  if (liverpool?.leaguePoints !== 0 || liverpool?.rank !== 4 || liverpool?.pointsDiff !== -29) {
+    throw new Error(`Liverpool standings check failed: expected 0 PTS (-29 Diff, Rank 4), got ${liverpool?.leaguePoints} PTS`);
+  }
+
+  console.log("✅ TEST 8 PASSED: League standings computed correctly with +3 Win, +1 Draw, 0 Loss and standard tiebreakers!");
 
   console.log("\n==================================================");
-  console.log("ALL SCORING & BUSINESS RULE TESTS PASSED (7/7) 🎉");
+  console.log("ALL SCORING & LEAGUE RULE TESTS PASSED (8/8) 🎉");
   console.log("==================================================");
 }
 

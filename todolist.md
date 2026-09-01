@@ -122,14 +122,27 @@ Goal: deliver the full MVP workflow from admin setup to public match results.
 - [x] Display distinct chip rule badges on tournament cards, match details, public tournament page, and admin dashboard
 - [x] Add automated test coverage in `test-scoring.ts` (verified all 4 combinations and 7/7 tests passed)
 
+## Format Enhancement — Points-Based Head-to-Head League System
+- [x] Implement `calculateLeagueStandings(tournamentId)` in `lib/scoring.ts` with standard football league rules:
+  - **Win**: +3 PTS
+  - **Draw**: +1 PT
+  - **Loss**: 0 PTS
+  - Tiebreakers: PTS -> Points Difference (PF - PA) -> Total Points For (PF) -> Team Name
+- [x] Create responsive, rich `LeagueTable` component (`components/league-table.tsx`) displaying Rank `#`, MP, W, D, L, PF, PA, +/-, PTS, and recent Form pills
+- [x] Update public tournament page (`app/tournaments/[id]/page.tsx`) to showcase Live League Standings table and Gameweek Fixtures with +3 PTS / +1 PT tags
+- [x] Update match details page (`app/matches/[id]/page.tsx`) to display league match points gained (+3 PTS / +1 PT / 0 PTS)
+- [x] Embed live League Standings preview inside Admin Tournament Hub (`app/admin/tournaments/[id]/page.tsx`)
+- [x] Add REST API endpoint `GET /api/tournaments/:id/standings`
+- [x] Add automated test coverage in `test-scoring.ts` (8/8 tests passed) and `test-api-routes.ts` (10/10 tests passed)
+
 ## Cross-Cutting API & Quality Tasks
-- [x] Implement public API routes for tournaments, rounds, matches, and details (`/api/tournaments`, `/api/tournaments/:id`, `/api/tournaments/:id/rounds`, `/api/matches/:id`)
+- [x] Implement public API routes for tournaments, rounds, matches, and standings (`/api/tournaments`, `/api/tournaments/:id`, `/api/tournaments/:id/rounds`, `/api/tournaments/:id/standings`, `/api/matches/:id`)
 - [x] Implement admin API routes for tournament management and publishing (`/api/admin/tournaments`, `/api/admin/tournaments/:id`, `/api/admin/tournaments/:id/publish`, `/api/admin/tournaments/:id/unpublish`)
 - [x] Implement FPL admin API routes for verification/import operations (`/api/admin/fpl/manager/:id`, `/api/admin/fpl/manager/:id/leagues`, `/api/admin/fpl/league/:id`)
 - [x] Implement group and schedule API routes (`/api/admin/tournaments/:id/groups`, `/api/admin/groups/:id`, `/api/admin/tournaments/:id/rounds`, `/api/admin/rounds/:id`, `/api/admin/rounds/:id/matches`, `/api/admin/matches/:id`, `/api/admin/matches/:id/recalculate`, `/api/admin/matches/:id/finalize`)
-- [x] Implement Tournament Management Hub at `/admin/tournaments/[id]`
-- [x] Implement interactive Tournament Knockout Bracket component on public tournament page
-- [x] Add automated REST API test suite (`test-api-routes.ts` - 9/9 passed)
+- [x] Implement Tournament Management Hub at `/admin/tournaments/[id]` with Live Standings
+- [x] Implement League Table component and Fixtures breakdown on public tournament page
+- [x] Add automated REST API test suite (`test-api-routes.ts` - 10/10 passed)
 - [x] Add consistent input validation for all admin actions
 - [x] Add secure authorization checks on all admin-only endpoints
 - [x] Add robust error messages for known scenarios (invalid FPL ID, API unavailable, missing GW, invalid match)

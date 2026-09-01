@@ -58,6 +58,7 @@ async function runApiTests() {
   await testEndpoint("GET /api/tournaments", "/api/tournaments");
   await testEndpoint(`GET /api/tournaments/${tournament.id}`, `/api/tournaments/${tournament.id}`);
   await testEndpoint(`GET /api/tournaments/${tournament.id}/rounds`, `/api/tournaments/${tournament.id}/rounds`);
+  await testEndpoint(`GET /api/tournaments/${tournament.id}/standings`, `/api/tournaments/${tournament.id}/standings`);
   if (match1) {
     await testEndpoint(`GET /api/matches/${match1.id}`, `/api/matches/${match1.id}`);
   }

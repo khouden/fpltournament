@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { calculateLeagueStandings } from "@/lib/scoring";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -45,7 +46,9 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ tournament });
+    const standings = await calculateLeagueStandings(id);
+
+    return NextResponse.json({ tournament, standings });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to fetch tournament";
