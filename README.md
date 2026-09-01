@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fantasy Leagues MVP
 
-## Getting Started
+A Next.js application for managing fantasy football tournament brackets and match scoring.
 
-First, run the development server:
+## Local Setup
 
+### Prerequisites
+- Node.js 20+
+- npm
+
+### Installation
+
+1. **Clone the repository and install dependencies:**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Set up the database:**
+```bash
+npm run db:push
+npm run db:seed
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This creates a SQLite database (`dev.db`) with test data.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Development
 
-## Learn More
+Start the development server:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Database Commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `npm run db:seed` - Populate the database with test data
+- `npm run db:reset` - Reset database to initial state (deletes all data)
 
-## Deploy on Vercel
+## Project Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+├── app/                 # Next.js app directory (pages, layouts)
+├── components/          # React components
+│   └── ui/             # Base UI components
+├── lib/                 # Utilities and services
+│   └── db.ts           # Prisma client
+├── prisma/             # Database schema and migrations
+│   ├── schema.prisma   # Data model
+│   └── seed.ts         # Test data seed script
+├── types/              # TypeScript type definitions
+└── public/             # Static assets
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Features
+
+- **Admin authentication** for tournament management
+- **FPL integration** to import league managers
+- **Tournament scheduling** with multiple rounds and matches
+- **Match scoring** with member breakdowns
+- **Public tournament display** with bracket progression
+
+## Environment Variables
+
+See `.env.example` for all required variables. For development, the `.env` file is pre-configured.
+
+## Deployment
+
+Production deployment uses Turso for the database. See `.env.example` for production setup.

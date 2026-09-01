@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tournament {
+  id           String   @id @default(cuid())
+  name         String
+  season       String
+  adminFplId   Int
+  status       String   @default("DRAFT") // DRAFT, PUBLISHED, FINISHED
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  groups       Group[]
+  rounds       Round[]
+
+  @@index([status])
+  @@index([adminFplId])
+}
+
+model Group {
+  id           String   @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  members      GroupMember[]
+  matches      Match[]
+
+  @@index([tournamentId])
+}
+
+model GroupMember {
+  id           String   @id @default(cuid())
+  groupId      String
+  group        Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fplName      String
+  fplId        Int
+  isAdmin      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  matchScores  MatchMemberScore[]
+
+  @@index([groupId])
+  @@unique([groupId, fplId])
+}
+
+model Round {
+  id           String   @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  roundNumber  Int
+  gameweek     Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  matches      Match[]
+
+  @@index([tournamentId])
+  @@unique([tournamentId, roundNumber])
+}
+
+model Match {
+  id              String   @id @default(cuid())
+  roundId         String
+  round           Round    @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  groupId         String
+  group           Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  matchNumber     Int
+  status          String   @default("SCHEDULED") // SCHEDULED, IN_PROGRESS, COMPLETED, FINALIZED
+  
+  participant1Id  String?   // Can be group member ID or winner-reference
+  participant1Type String @default("GROUP_MEMBER") // GROUP_MEMBER or WINNER_REF
+  
+  participant2Id  String?   // Can be group member ID or winner-reference
+  participant2Type String @default("GROUP_MEMBER") // GROUP_MEMBER or WINNER_REF
+  
+  winnerParticipantId String? // ID of the winner
+  winnerType      String? // GROUP_MEMBER or WINNER_REF
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  scores          MatchMemberScore[]
+
+  @@index([roundId])
+  @@index([groupId])
+  @@index([status])
+}
+
+model MatchMemberScore {
+  id           String   @id @default(cuid())
+  matchId      String
+  match        Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  memberId     String
+  member       GroupMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  groupScore   Float?
+  benchScore   Float?
+  totalScore   Float
+  
+  isFinal      Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([matchId])
+  @@index([memberId])
+  @@unique([matchId, memberId])
+}
