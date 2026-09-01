@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
         name: body.name,
         season: body.season,
         adminFplId: body.adminFplId,
-        allowChips: body.allowChips ?? true,
+        allowBenchBoost: body.allowBenchBoost ?? true,
+        allowTripleCaptain: body.allowTripleCaptain ?? true,
         status: "DRAFT",
       },
     });
@@ -89,7 +90,8 @@ export async function PUT(request: NextRequest) {
         name: body.name,
         season: body.season,
         adminFplId: body.adminFplId,
-        allowChips: body.allowChips ?? true,
+        allowBenchBoost: body.allowBenchBoost ?? true,
+        allowTripleCaptain: body.allowTripleCaptain ?? true,
       },
     });
 

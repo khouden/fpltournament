@@ -75,7 +75,7 @@ export default async function AdminDashboard() {
                       Season {tournament.season} · {tournament.groups.length}{" "}
                       groups · {tournament.rounds.reduce((acc, r) => acc + r.matches.length, 0)} matches ·{" "}
                       <span className="font-medium text-xs text-indigo-600">
-                        {tournament.allowChips ? "Chips On" : "Chips Off"}
+                        {`BB: ${tournament.allowBenchBoost ? "On" : "Off"} · TC: ${tournament.allowTripleCaptain ? "On" : "Off"}`}
                       </span>
                     </p>
                   </div>

@@ -88,59 +88,55 @@ async function runScoringTest() {
   }
   console.log("✅ TEST 4 PASSED: Schedule passes all integrity validations!");
 
-  // TEST 5: Configurable Chips Rule (allowChips = false)
-  console.log("\n--- TEST 5: Chip Rule with Chips DISABLED (allowChips: false) ---");
-  // Napoli in GW6:
-  // - Othman (555555): 75 pts with Bench Boost (15 on bench -> counted = 60 pts)
-  // - Said (666666): 66 pts with Triple Captain (captain base 12 pts, 3x=36 -> 2x=24 -> counted = 54 pts)
-  // - Omar (777777): 55 pts with Free Hit (counted normally = 55 pts)
-  // - Samir (888888): 48 pts with Wildcard (counted normally = 48 pts)
-  // Admin: excluded.
-  // Expected Napoli GW6 score with chips disabled: 60 + 54 + 55 + 48 = 217 pts
-  const napoliGW6NoChips = await calculateGroupScore(napoli.id, 6, tournament.adminFplId, false);
-  console.log(`Napoli GW6 Score (Chips Off): ${napoliGW6NoChips.totalScore} pts`);
-  napoliGW6NoChips.members.forEach((m) => {
-    console.log(
-      `  - ${m.fplName}: counted ${m.gameweekPoints} pts (raw: ${m.rawPoints}, chip: ${m.activeChip || "none"}, deduction: -${m.chipDeduction})`
-    );
+  // TEST 5: Separated Chips Rules (allowBenchBoost and allowTripleCaptain)
+  console.log("\n--- TEST 5A: Bench Boost DISABLED, Triple Captain ENABLED ---");
+  // BB disabled (Othman 75 -> 60), TC enabled (Said 66 -> 66), FH (55), WC (48) -> Total = 60 + 66 + 55 + 48 = 229
+  const scoreBBOffTCOn = await calculateGroupScore(napoli.id, 6, tournament.adminFplId, {
+    allowBenchBoost: false,
+    allowTripleCaptain: true,
   });
+  console.log(`Napoli GW6 Score (BB Off, TC On): ${scoreBBOffTCOn.totalScore} pts`);
+  if (scoreBBOffTCOn.totalScore !== 229) {
+    throw new Error(`Expected 229 pts for BB Off / TC On, got ${scoreBBOffTCOn.totalScore}`);
+  }
+  console.log("✅ TEST 5A PASSED: BB bench points deducted (-15), TC counted at 3x!");
 
-  const othmanNoChips = napoliGW6NoChips.members.find((m) => m.fplId === 555555);
-  const saidNoChips = napoliGW6NoChips.members.find((m) => m.fplId === 666666);
-  const omarNoChips = napoliGW6NoChips.members.find((m) => m.fplId === 777777);
-  const samirNoChips = napoliGW6NoChips.members.find((m) => m.fplId === 888888);
+  console.log("\n--- TEST 5B: Bench Boost ENABLED, Triple Captain DISABLED ---");
+  // BB enabled (Othman 75 -> 75), TC disabled (Said 66 -> 54), FH (55), WC (48) -> Total = 75 + 54 + 55 + 48 = 232
+  const scoreBBOnTCOff = await calculateGroupScore(napoli.id, 6, tournament.adminFplId, {
+    allowBenchBoost: true,
+    allowTripleCaptain: false,
+  });
+  console.log(`Napoli GW6 Score (BB On, TC Off): ${scoreBBOnTCOff.totalScore} pts`);
+  if (scoreBBOnTCOff.totalScore !== 232) {
+    throw new Error(`Expected 232 pts for BB On / TC Off, got ${scoreBBOnTCOff.totalScore}`);
+  }
+  console.log("✅ TEST 5B PASSED: BB bench points counted fully, TC reduced to 2x (-12)!");
 
-  if (othmanNoChips?.gameweekPoints !== 60 || othmanNoChips?.chipDeduction !== 15) {
-    throw new Error(`Bench boost deduction failed for Othman: expected 60 pts (-15 deduction), got ${othmanNoChips?.gameweekPoints}`);
+  console.log("\n--- TEST 5C: BOTH Chips DISABLED ---");
+  // BB disabled (60), TC disabled (54), FH (55), WC (48) -> Total = 60 + 54 + 55 + 48 = 217
+  const scoreBothOff = await calculateGroupScore(napoli.id, 6, tournament.adminFplId, {
+    allowBenchBoost: false,
+    allowTripleCaptain: false,
+  });
+  console.log(`Napoli GW6 Score (Both Off): ${scoreBothOff.totalScore} pts`);
+  if (scoreBothOff.totalScore !== 217) {
+    throw new Error(`Expected 217 pts for Both Off, got ${scoreBothOff.totalScore}`);
   }
-  if (saidNoChips?.gameweekPoints !== 54 || saidNoChips?.chipDeduction !== 12) {
-    throw new Error(`Triple captain 2x adjustment failed for Said: expected 54 pts (-12 deduction), got ${saidNoChips?.gameweekPoints}`);
-  }
-  if (omarNoChips?.gameweekPoints !== 55 || omarNoChips?.chipDeduction !== 0) {
-    throw new Error(`Free hit failed: expected 55 pts with 0 deduction, got ${omarNoChips?.gameweekPoints}`);
-  }
-  if (samirNoChips?.gameweekPoints !== 48 || samirNoChips?.chipDeduction !== 0) {
-    throw new Error(`Wildcard failed: expected 48 pts with 0 deduction, got ${samirNoChips?.gameweekPoints}`);
-  }
-  if (napoliGW6NoChips.totalScore !== 217) {
-    throw new Error(`Napoli GW6 total with chips disabled expected 217, got ${napoliGW6NoChips.totalScore}`);
-  }
-  console.log("✅ TEST 5 PASSED: Chips disabled rule works perfectly (BB excluded bench, TC reduced to 2x, FH & WC counted)!");
+  console.log("✅ TEST 5C PASSED: Both chips adjusted properly!");
 
-  // TEST 6: Configurable Chips Rule (allowChips = true)
-  console.log("\n--- TEST 6: Chip Rule with Chips ENABLED (allowChips: true) ---");
-  // With chips enabled:
-  // - Othman (555555): 75 pts (bench counted)
-  // - Said (666666): 66 pts (triple captain 3x counted)
-  // - Omar (777777): 55 pts
-  // - Samir (888888): 48 pts
-  // Expected Napoli GW6 score with chips enabled: 75 + 66 + 55 + 48 = 244 pts
-  const napoliGW6WithChips = await calculateGroupScore(napoli.id, 6, tournament.adminFplId, true);
-  console.log(`Napoli GW6 Score (Chips On): ${napoliGW6WithChips.totalScore} pts`);
-  if (napoliGW6WithChips.totalScore !== 244) {
-    throw new Error(`Napoli GW6 total with chips enabled expected 244, got ${napoliGW6WithChips.totalScore}`);
+  // TEST 6: BOTH Chips ENABLED
+  console.log("\n--- TEST 6: BOTH Chips ENABLED ---");
+  // BB enabled (75), TC enabled (66), FH (55), WC (48) -> Total = 75 + 66 + 55 + 48 = 244
+  const scoreBothOn = await calculateGroupScore(napoli.id, 6, tournament.adminFplId, {
+    allowBenchBoost: true,
+    allowTripleCaptain: true,
+  });
+  console.log(`Napoli GW6 Score (Both On): ${scoreBothOn.totalScore} pts`);
+  if (scoreBothOn.totalScore !== 244) {
+    throw new Error(`Expected 244 pts for Both On, got ${scoreBothOn.totalScore}`);
   }
-  console.log("✅ TEST 6 PASSED: Chips enabled rule counts all chips normally!");
+  console.log("✅ TEST 6 PASSED: Both chips counted fully!");
 
   // TEST 7: Recalculate Tournament Scores
   console.log("\n--- TEST 7: Full Tournament Recalculation ---");

@@ -439,18 +439,22 @@ export async function getLivePlayerPoints(
 }
 
 /**
- * Get a manager's gameweek score (points minus transfer costs, with chip rule adjustments).
- * RULE:
- * If allowChips is false:
- * - Bench Boost: points_on_bench are deducted (only starting 11 count).
- * - Triple Captain: captain points are doubled (2x) instead of tripled (3x), so 1x base points deducted.
- * - Free Hit & Wildcard: counted normally.
+ * Get a manager's gameweek score (points minus transfer costs, with separated chip rule adjustments).
+ * RULES:
+ * - If allowBenchBoost is false & chip is Bench Boost: points_on_bench are deducted (only starting 11 count).
+ * - If allowTripleCaptain is false & chip is Triple Captain: captain points are doubled (2x) instead of tripled (3x), so 1x base points deducted.
+ * - Free Hit & Wildcard: always counted normally.
  */
 export async function getManagerGameweekPoints(
   entryId: number,
   gameweek: number,
-  allowChips = true
+  options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true
 ): Promise<FPLGameweekScore> {
+  const allowBenchBoost =
+    typeof options === "boolean" ? options : options.allowBenchBoost ?? true;
+  const allowTripleCaptain =
+    typeof options === "boolean" ? options : options.allowTripleCaptain ?? true;
+
   const key = `${entryId}_${gameweek}`;
 
   // Check mock data for predictable testing
@@ -459,10 +463,10 @@ export async function getManagerGameweekPoints(
     const mockChip = MOCK_GW_CHIPS[key];
     let chipDeduction = 0;
 
-    if (!allowChips && mockChip) {
-      if (mockChip.activeChip === "bboost") {
+    if (mockChip) {
+      if (mockChip.activeChip === "bboost" && !allowBenchBoost) {
         chipDeduction = mockChip.benchPoints || 0;
-      } else if (mockChip.activeChip === "3xc") {
+      } else if (mockChip.activeChip === "3xc" && !allowTripleCaptain) {
         // Deduct 1x captain points so captain is 2x instead of 3x
         chipDeduction = mockChip.captainBasePoints || 0;
       }
@@ -511,22 +515,20 @@ export async function getManagerGameweekPoints(
 
       let chipDeduction = 0;
 
-      if (!allowChips && activeChip) {
-        if (activeChip === "bboost") {
-          // Exclude bench points
-          chipDeduction = benchPoints;
-        } else if (activeChip === "3xc") {
-          // Identify captain element to deduct 1x base points (reducing 3x to 2x)
-          const captainPick = picksData.picks?.find(
-            (p) => p.multiplier === 3 || (p.is_captain && p.multiplier > 1)
+      if (activeChip === "bboost" && !allowBenchBoost) {
+        // Exclude bench points
+        chipDeduction = benchPoints;
+      } else if (activeChip === "3xc" && !allowTripleCaptain) {
+        // Identify captain element to deduct 1x base points (reducing 3x to 2x)
+        const captainPick = picksData.picks?.find(
+          (p) => p.multiplier === 3 || (p.is_captain && p.multiplier > 1)
+        );
+        if (captainPick) {
+          const captainBasePoints = await getLivePlayerPoints(
+            gameweek,
+            captainPick.element
           );
-          if (captainPick) {
-            const captainBasePoints = await getLivePlayerPoints(
-              gameweek,
-              captainPick.element
-            );
-            chipDeduction = captainBasePoints;
-          }
+          chipDeduction = captainBasePoints;
         }
       }
 

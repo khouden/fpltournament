@@ -64,7 +64,14 @@ export async function PATCH(
         name: body.name !== undefined ? body.name : undefined,
         season: body.season !== undefined ? body.season : undefined,
         adminFplId: body.adminFplId !== undefined ? Number(body.adminFplId) : undefined,
-        allowChips: body.allowChips !== undefined ? Boolean(body.allowChips) : undefined,
+        allowBenchBoost:
+          body.allowBenchBoost !== undefined
+            ? Boolean(body.allowBenchBoost)
+            : undefined,
+        allowTripleCaptain:
+          body.allowTripleCaptain !== undefined
+            ? Boolean(body.allowTripleCaptain)
+            : undefined,
         status: body.status !== undefined ? body.status : undefined,
       },
     });

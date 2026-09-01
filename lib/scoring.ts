@@ -37,15 +37,16 @@ export interface MatchScoreResult {
  * Calculate a group's score for a given Gameweek.
  * CRITICAL BUSINESS RULES:
  * 1. The Admin FPL Entry ID must ALWAYS be excluded from scoring.
- * 2. If allowChips is false:
+ * 2. If allowBenchBoost is false:
  *    - Bench Boost points_on_bench are excluded.
+ * 3. If allowTripleCaptain is false:
  *    - Triple Captain is reduced to 2x (1x captain points deducted).
  */
 export async function calculateGroupScore(
   groupId: string,
   gameweek: number,
   adminFplId: number,
-  allowChips = true
+  options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true
 ): Promise<GroupScoreResult> {
   const group = await prisma.group.findUnique({
     where: { id: groupId },
@@ -64,7 +65,7 @@ export async function calculateGroupScore(
     const scoreData = await getManagerGameweekPoints(
       member.fplId,
       gameweek,
-      allowChips
+      options
     );
     const countedPoints = scoreData.adjustedNetPoints;
 
@@ -121,9 +122,15 @@ export async function calculateMatchScore(
           tournament: true,
         },
       },
-      homeGroup: { include: { members: true } },
-      awayGroup: { include: { members: true } },
-      scores: { include: { member: true } },
+      homeGroup: {
+        include: { members: true },
+      },
+      awayGroup: {
+        include: { members: true },
+      },
+      scores: {
+        include: { member: true },
+      },
     },
   });
 
@@ -232,20 +239,24 @@ export async function calculateMatchScore(
   }
 
   const adminFplId = match.round.tournament.adminFplId;
-  const allowChips = match.round.tournament.allowChips ?? true;
+  const chipOptions = {
+    allowBenchBoost: match.round.tournament.allowBenchBoost ?? true,
+    allowTripleCaptain: match.round.tournament.allowTripleCaptain ?? true,
+  };
   const gameweek = match.round.gameweek;
 
   const homeResult = await calculateGroupScore(
     resolvedHomeGroupId,
     gameweek,
     adminFplId,
-    allowChips
+    chipOptions
   );
+
   const awayResult = await calculateGroupScore(
     resolvedAwayGroupId,
     gameweek,
     adminFplId,
-    allowChips
+    chipOptions
   );
 
   // Determine Match Result

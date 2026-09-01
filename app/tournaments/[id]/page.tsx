@@ -120,7 +120,10 @@ export default async function TournamentPage(
               {tournament.status === "PUBLISHED" ? "ACTIVE" : "FINISHED"}
             </span>
             <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-gray-300 border border-white/10">
-              {tournament.allowChips ? "⚡ Chips Allowed" : "🚫 Chips Disabled (BB/TC Adjusted)"}
+              {tournament.allowBenchBoost ? "💺 Bench Boost: On" : "🚫 Bench Boost: Off"}
+            </span>
+            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-gray-300 border border-white/10">
+              {tournament.allowTripleCaptain ? "👑 Triple Captain: On (3x)" : "🚫 Triple Captain: Reduced (2x)"}
             </span>
           </div>
         </div>

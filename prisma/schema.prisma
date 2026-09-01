@@ -8,17 +8,18 @@ datasource db {
 }
 
 model Tournament {
-  id           String   @id @default(cuid())
-  name         String
-  season       Int
-  adminFplId   Int
-  allowChips   Boolean  @default(true) // Whether FPL chips (TC, BB) count fully or are adjusted
-  status       String   @default("DRAFT") // DRAFT, PUBLISHED, FINISHED
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  name                String
+  season              Int
+  adminFplId          Int
+  allowBenchBoost     Boolean  @default(true) // Whether Bench Boost points on bench are counted
+  allowTripleCaptain  Boolean  @default(true) // Whether Triple Captain 3x multiplier is counted or reduced to 2x
+  status              String   @default("DRAFT") // DRAFT, PUBLISHED, FINISHED
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  groups       Group[]
-  rounds       Round[]
+  groups              Group[]
+  rounds              Round[]
 
   @@index([status])
   @@index([adminFplId])

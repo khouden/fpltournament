@@ -11,7 +11,8 @@ interface TournamentFormProps {
     name: string;
     season: number;
     adminFplId: number | string;
-    allowChips?: boolean;
+    allowBenchBoost?: boolean;
+    allowTripleCaptain?: boolean;
   };
 }
 
@@ -20,7 +21,12 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
   const [name, setName] = useState(initialData?.name || "");
   const [season, setSeason] = useState(initialData?.season || new Date().getFullYear());
   const [adminFplId, setAdminFplId] = useState(initialData?.adminFplId || 0);
-  const [allowChips, setAllowChips] = useState(initialData?.allowChips ?? true);
+  const [allowBenchBoost, setAllowBenchBoost] = useState(
+    initialData?.allowBenchBoost ?? true
+  );
+  const [allowTripleCaptain, setAllowTripleCaptain] = useState(
+    initialData?.allowTripleCaptain ?? true
+  );
   const [verifiedManager, setVerifiedManager] = useState<FPLManager | null>(
     initialData?.adminFplId
       ? {
@@ -65,7 +71,8 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
           name,
           season,
           adminFplId: verifiedManager.id,
-          allowChips,
+          allowBenchBoost,
+          allowTripleCaptain,
         }),
       });
 
@@ -130,31 +137,86 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
         />
       </div>
 
-      {/* Chip Rules Setting */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <label
-              htmlFor="allowChips"
-              className="text-sm font-semibold text-gray-900 cursor-pointer"
-            >
-              Allow FPL Chips (Triple Captain & Bench Boost)
-            </label>
-            <p className="mt-1 text-xs text-gray-600">
-              {allowChips
-                ? "Chips are enabled: Triple Captain (3x) and Bench Boost bench points count fully towards match scores."
-                : "Chips are disabled: If a manager plays Bench Boost, bench points are excluded. If Triple Captain is played, captain points are doubled (2x) instead of tripled (3x). Free Hit & Wildcard are always allowed."}
-            </p>
+      {/* Chip Rules Section with Two Distinct Settings */}
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 space-y-4">
+        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+          ⚡ FPL Chips Configuration
+        </h3>
+        <p className="text-xs text-gray-500">
+          Control which FPL chip bonuses count towards match scores. Free Hit & Wildcard are always allowed.
+        </p>
+
+        <div className="space-y-3 pt-1">
+          {/* 1. Bench Boost Setting */}
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm">
+            <div className="pr-4">
+              <label
+                htmlFor="allowBenchBoost"
+                className="text-sm font-semibold text-gray-900 cursor-pointer flex items-center gap-2"
+              >
+                <span>💺 Bench Boost</span>
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                    allowBenchBoost
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {allowBenchBoost ? "ENABLED" : "DISABLED"}
+                </span>
+              </label>
+              <p className="mt-1 text-xs text-gray-600">
+                {allowBenchBoost
+                  ? "Bench points count fully towards match score when a manager plays Bench Boost."
+                  : "Bench points are excluded from the score (only starting 11 players count)."}
+              </p>
+            </div>
+            <div className="flex items-center">
+              <input
+                id="allowBenchBoost"
+                type="checkbox"
+                checked={allowBenchBoost}
+                onChange={(e) => setAllowBenchBoost(e.target.checked)}
+                disabled={loading}
+                className="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+            </div>
           </div>
-          <div className="ml-4 flex h-6 items-center">
-            <input
-              id="allowChips"
-              type="checkbox"
-              checked={allowChips}
-              onChange={(e) => setAllowChips(e.target.checked)}
-              disabled={loading}
-              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-            />
+
+          {/* 2. Triple Captain Setting */}
+          <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3.5 shadow-sm">
+            <div className="pr-4">
+              <label
+                htmlFor="allowTripleCaptain"
+                className="text-sm font-semibold text-gray-900 cursor-pointer flex items-center gap-2"
+              >
+                <span>👑 Triple Captain</span>
+                <span
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                    allowTripleCaptain
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {allowTripleCaptain ? "ENABLED" : "DISABLED"}
+                </span>
+              </label>
+              <p className="mt-1 text-xs text-gray-600">
+                {allowTripleCaptain
+                  ? "Triple Captain multiplier (3x) counts fully towards match score."
+                  : "Triple Captain is reduced to 2x (captain points are doubled instead of tripled)."}
+              </p>
+            </div>
+            <div className="flex items-center">
+              <input
+                id="allowTripleCaptain"
+                type="checkbox"
+                checked={allowTripleCaptain}
+                onChange={(e) => setAllowTripleCaptain(e.target.checked)}
+                disabled={loading}
+                className="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+              />
+            </div>
           </div>
         </div>
       </div>

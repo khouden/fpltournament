@@ -186,7 +186,8 @@ function TournamentCard({
     id: string;
     name: string;
     season: number;
-    allowChips: boolean;
+    allowBenchBoost: boolean;
+    allowTripleCaptain: boolean;
     status: string;
     groups: { id: string }[];
     rounds: { roundNumber: number; gameweek: number; matches: { status: string }[] }[];
@@ -229,8 +230,8 @@ function TournamentCard({
           >
             {tournament.status === "PUBLISHED" ? "ACTIVE" : "FINISHED"}
           </span>
-          <span className="text-[10px] text-gray-400">
-            {tournament.allowChips ? "⚡ Chips On" : "🚫 Chips Off"}
+          <span className="text-[10px] text-gray-400 font-mono">
+            {`BB: ${tournament.allowBenchBoost ? "✓" : "✗"} | TC: ${tournament.allowTripleCaptain ? "✓" : "✗"}`}
           </span>
         </div>
       </div>

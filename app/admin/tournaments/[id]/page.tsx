@@ -68,14 +68,21 @@ export default async function TournamentManagementPage(
             </span>
             <span
               className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                tournament.allowChips
+                tournament.allowBenchBoost
                   ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
                   : "bg-amber-50 text-amber-800 border border-amber-200"
               }`}
             >
-              {tournament.allowChips
-                ? "⚡ Chips Allowed"
-                : "🚫 Chips Disabled (BB/TC Adjusted)"}
+              {tournament.allowBenchBoost ? "💺 BB: Allowed" : "🚫 BB: Disabled"}
+            </span>
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                tournament.allowTripleCaptain
+                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                  : "bg-amber-50 text-amber-800 border border-amber-200"
+              }`}
+            >
+              {tournament.allowTripleCaptain ? "👑 TC: Allowed (3x)" : "🚫 TC: Reduced (2x)"}
             </span>
           </div>
         </div>

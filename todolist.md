@@ -111,14 +111,16 @@ Goal: deliver the full MVP workflow from admin setup to public match results.
 - [x] Validate end-to-end workflow (verified in test suite & browser)
 
 ## Business Rule Enhancement — Configurable Chips
-- [x] Add `allowChips` boolean field to `Tournament` model in Prisma schema
-- [x] Add UI toggle in tournament creation and edit forms for enabling/disabling chips
+- [x] Add separate `allowBenchBoost` and `allowTripleCaptain` boolean fields to `Tournament` model in Prisma schema
+- [x] Add two distinct UI toggle buttons in tournament creation and edit forms:
+  - 💺 Enable / Disable Bench Boost
+  - 👑 Enable / Disable Triple Captain
 - [x] Implement chip scoring engine adjustments:
-  - When disabled: Bench Boost (`bboost`) excludes `points_on_bench`
-  - When disabled: Triple Captain (`3xc`) doubles captain points instead of tripling (deducts 1x base points)
-  - Free Hit (`freehit`) and Wildcard (`wildcard`) count normally
-- [x] Display chip rule badges on tournament cards, match details, and admin dashboard
-- [x] Add automated test coverage in `test-scoring.ts` (verified 7/7 tests passed)
+  - When Bench Boost disabled: Bench Boost (`bboost`) excludes `points_on_bench`
+  - When Triple Captain disabled: Triple Captain (`3xc`) doubles captain points instead of tripling (deducts 1x base points)
+  - Free Hit (`freehit`) and Wildcard (`wildcard`) always count normally
+- [x] Display distinct chip rule badges on tournament cards, match details, public tournament page, and admin dashboard
+- [x] Add automated test coverage in `test-scoring.ts` (verified all 4 combinations and 7/7 tests passed)
 
 ## Cross-Cutting API & Quality Tasks
 - [x] Implement public API routes for tournaments, rounds, matches, and details (`/api/tournaments`, `/api/tournaments/:id`, `/api/tournaments/:id/rounds`, `/api/matches/:id`)
