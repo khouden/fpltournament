@@ -29,6 +29,26 @@ async function validateTournament(data: {
   }
 }
 
+export async function GET() {
+  try {
+    const tournaments = await prisma.tournament.findMany({
+      include: {
+        groups: true,
+        rounds: {
+          include: { matches: true },
+          orderBy: { roundNumber: "asc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json({ tournaments });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch tournaments";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -40,6 +60,7 @@ export async function POST(request: NextRequest) {
         name: body.name,
         season: body.season,
         adminFplId: body.adminFplId,
+        allowChips: body.allowChips ?? true,
         status: "DRAFT",
       },
     });
@@ -68,6 +89,7 @@ export async function PUT(request: NextRequest) {
         name: body.name,
         season: body.season,
         adminFplId: body.adminFplId,
+        allowChips: body.allowChips ?? true,
       },
     });
 

@@ -66,27 +66,32 @@ export default async function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <Link
-                      href={`/admin/tournaments/${tournament.id}/groups`}
+                      href={`/admin/tournaments/${tournament.id}`}
                       className="font-semibold text-gray-900 hover:text-indigo-600"
                     >
                       {tournament.name}
                     </Link>
                     <p className="text-sm text-gray-600">
                       Season {tournament.season} · {tournament.groups.length}{" "}
-                      groups · {tournament.rounds.reduce((acc, r) => acc + r.matches.length, 0)} matches
+                      groups · {tournament.rounds.reduce((acc, r) => acc + r.matches.length, 0)} matches ·{" "}
+                      <span className="font-medium text-xs text-indigo-600">
+                        {tournament.allowChips ? "Chips On" : "Chips Off"}
+                      </span>
                     </p>
                   </div>
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                      tournament.status === "DRAFT"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : tournament.status === "PUBLISHED"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    {tournament.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                        tournament.status === "DRAFT"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : tournament.status === "PUBLISHED"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {tournament.status}
+                    </span>
+                  </div>
                 </div>
                 <TournamentActions
                   tournamentId={tournament.id}

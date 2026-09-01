@@ -29,6 +29,7 @@ export default async function EditTournamentPage(
             name: tournament.name,
             season: tournament.season,
             adminFplId: Number(tournament.adminFplId),
+            allowChips: tournament.allowChips,
           }}
         />
       </div>

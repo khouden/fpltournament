@@ -110,12 +110,26 @@ Goal: deliver the full MVP workflow from admin setup to public match results.
 - [ ] Deploy application (GitHub → Vercel)
 - [x] Validate end-to-end workflow (verified in test suite & browser)
 
+## Business Rule Enhancement — Configurable Chips
+- [x] Add `allowChips` boolean field to `Tournament` model in Prisma schema
+- [x] Add UI toggle in tournament creation and edit forms for enabling/disabling chips
+- [x] Implement chip scoring engine adjustments:
+  - When disabled: Bench Boost (`bboost`) excludes `points_on_bench`
+  - When disabled: Triple Captain (`3xc`) doubles captain points instead of tripling (deducts 1x base points)
+  - Free Hit (`freehit`) and Wildcard (`wildcard`) count normally
+- [x] Display chip rule badges on tournament cards, match details, and admin dashboard
+- [x] Add automated test coverage in `test-scoring.ts` (verified 7/7 tests passed)
+
 ## Cross-Cutting API & Quality Tasks
-- [x] Implement public API routes for tournaments, rounds, matches, and details
-- [x] Implement admin API routes for tournament management and publishing
-- [x] Implement FPL admin API routes for verification/import operations
+- [x] Implement public API routes for tournaments, rounds, matches, and details (`/api/tournaments`, `/api/tournaments/:id`, `/api/tournaments/:id/rounds`, `/api/matches/:id`)
+- [x] Implement admin API routes for tournament management and publishing (`/api/admin/tournaments`, `/api/admin/tournaments/:id`, `/api/admin/tournaments/:id/publish`, `/api/admin/tournaments/:id/unpublish`)
+- [x] Implement FPL admin API routes for verification/import operations (`/api/admin/fpl/manager/:id`, `/api/admin/fpl/manager/:id/leagues`, `/api/admin/fpl/league/:id`)
+- [x] Implement group and schedule API routes (`/api/admin/tournaments/:id/groups`, `/api/admin/groups/:id`, `/api/admin/tournaments/:id/rounds`, `/api/admin/rounds/:id`, `/api/admin/rounds/:id/matches`, `/api/admin/matches/:id`, `/api/admin/matches/:id/recalculate`, `/api/admin/matches/:id/finalize`)
+- [x] Implement Tournament Management Hub at `/admin/tournaments/[id]`
+- [x] Implement interactive Tournament Knockout Bracket component on public tournament page
+- [x] Add automated REST API test suite (`test-api-routes.ts` - 9/9 passed)
 - [x] Add consistent input validation for all admin actions
 - [x] Add secure authorization checks on all admin-only endpoints
 - [x] Add robust error messages for known scenarios (invalid FPL ID, API unavailable, missing GW, invalid match)
-- [x] Verify full Definition of Done workflow from admin login to public result display
+- [x] Verify full Definition of Done workflow from admin login to public result display (verified in browser subagent)
 

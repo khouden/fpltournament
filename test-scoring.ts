@@ -88,17 +88,71 @@ async function runScoringTest() {
   }
   console.log("✅ TEST 4 PASSED: Schedule passes all integrity validations!");
 
-  // TEST 5: Recalculate Tournament Scores
-  console.log("\n--- TEST 5: Full Tournament Recalculation ---");
+  // TEST 5: Configurable Chips Rule (allowChips = false)
+  console.log("\n--- TEST 5: Chip Rule with Chips DISABLED (allowChips: false) ---");
+  // Napoli in GW6:
+  // - Othman (555555): 75 pts with Bench Boost (15 on bench -> counted = 60 pts)
+  // - Said (666666): 66 pts with Triple Captain (captain base 12 pts, 3x=36 -> 2x=24 -> counted = 54 pts)
+  // - Omar (777777): 55 pts with Free Hit (counted normally = 55 pts)
+  // - Samir (888888): 48 pts with Wildcard (counted normally = 48 pts)
+  // Admin: excluded.
+  // Expected Napoli GW6 score with chips disabled: 60 + 54 + 55 + 48 = 217 pts
+  const napoliGW6NoChips = await calculateGroupScore(napoli.id, 6, tournament.adminFplId, false);
+  console.log(`Napoli GW6 Score (Chips Off): ${napoliGW6NoChips.totalScore} pts`);
+  napoliGW6NoChips.members.forEach((m) => {
+    console.log(
+      `  - ${m.fplName}: counted ${m.gameweekPoints} pts (raw: ${m.rawPoints}, chip: ${m.activeChip || "none"}, deduction: -${m.chipDeduction})`
+    );
+  });
+
+  const othmanNoChips = napoliGW6NoChips.members.find((m) => m.fplId === 555555);
+  const saidNoChips = napoliGW6NoChips.members.find((m) => m.fplId === 666666);
+  const omarNoChips = napoliGW6NoChips.members.find((m) => m.fplId === 777777);
+  const samirNoChips = napoliGW6NoChips.members.find((m) => m.fplId === 888888);
+
+  if (othmanNoChips?.gameweekPoints !== 60 || othmanNoChips?.chipDeduction !== 15) {
+    throw new Error(`Bench boost deduction failed for Othman: expected 60 pts (-15 deduction), got ${othmanNoChips?.gameweekPoints}`);
+  }
+  if (saidNoChips?.gameweekPoints !== 54 || saidNoChips?.chipDeduction !== 12) {
+    throw new Error(`Triple captain 2x adjustment failed for Said: expected 54 pts (-12 deduction), got ${saidNoChips?.gameweekPoints}`);
+  }
+  if (omarNoChips?.gameweekPoints !== 55 || omarNoChips?.chipDeduction !== 0) {
+    throw new Error(`Free hit failed: expected 55 pts with 0 deduction, got ${omarNoChips?.gameweekPoints}`);
+  }
+  if (samirNoChips?.gameweekPoints !== 48 || samirNoChips?.chipDeduction !== 0) {
+    throw new Error(`Wildcard failed: expected 48 pts with 0 deduction, got ${samirNoChips?.gameweekPoints}`);
+  }
+  if (napoliGW6NoChips.totalScore !== 217) {
+    throw new Error(`Napoli GW6 total with chips disabled expected 217, got ${napoliGW6NoChips.totalScore}`);
+  }
+  console.log("✅ TEST 5 PASSED: Chips disabled rule works perfectly (BB excluded bench, TC reduced to 2x, FH & WC counted)!");
+
+  // TEST 6: Configurable Chips Rule (allowChips = true)
+  console.log("\n--- TEST 6: Chip Rule with Chips ENABLED (allowChips: true) ---");
+  // With chips enabled:
+  // - Othman (555555): 75 pts (bench counted)
+  // - Said (666666): 66 pts (triple captain 3x counted)
+  // - Omar (777777): 55 pts
+  // - Samir (888888): 48 pts
+  // Expected Napoli GW6 score with chips enabled: 75 + 66 + 55 + 48 = 244 pts
+  const napoliGW6WithChips = await calculateGroupScore(napoli.id, 6, tournament.adminFplId, true);
+  console.log(`Napoli GW6 Score (Chips On): ${napoliGW6WithChips.totalScore} pts`);
+  if (napoliGW6WithChips.totalScore !== 244) {
+    throw new Error(`Napoli GW6 total with chips enabled expected 244, got ${napoliGW6WithChips.totalScore}`);
+  }
+  console.log("✅ TEST 6 PASSED: Chips enabled rule counts all chips normally!");
+
+  // TEST 7: Recalculate Tournament Scores
+  console.log("\n--- TEST 7: Full Tournament Recalculation ---");
   const allResults = await recalculateTournamentScores(tournament.id, true);
   console.log(`Recalculated ${allResults.length} matches across all rounds`);
   allResults.forEach((res) => {
     console.log(`  Match ${res.matchNumber} (GW${res.gameweek}): ${res.homeGroup?.groupName || "TBD"} (${res.homeScore ?? "-"}) vs ${res.awayGroup?.groupName || "TBD"} (${res.awayScore ?? "-"}) -> [${res.result || "PENDING"}]`);
   });
-  console.log("✅ TEST 5 PASSED: Full tournament calculation executed successfully!");
+  console.log("✅ TEST 7 PASSED: Full tournament calculation executed successfully!");
 
   console.log("\n==================================================");
-  console.log("ALL SCORING & BUSINESS RULE TESTS PASSED (5/5) 🎉");
+  console.log("ALL SCORING & BUSINESS RULE TESTS PASSED (7/7) 🎉");
   console.log("==================================================");
 }
 

@@ -231,6 +231,8 @@ function ScoreBreakdown({
     id: string;
     gameweekPoints: number;
     isExcluded: boolean;
+    activeChip?: string | null;
+    chipDeduction?: number;
     member: {
       fplName: string;
       fplTeamName: string | null;
@@ -254,21 +256,37 @@ function ScoreBreakdown({
       </div>
 
       {/* Included Members */}
-      <div className="space-y-1">
+      <div className="space-y-2">
         {included.map((s) => (
           <div
             key={s.id}
-            className="flex items-center justify-between text-sm"
+            className="flex items-center justify-between text-sm py-0.5 border-b border-white/5 last:border-0"
           >
             <div>
-              <span className="text-white">{s.member.fplName}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium">{s.member.fplName}</span>
+                {s.activeChip && (
+                  <span className="rounded bg-indigo-500/20 px-1.5 py-0.2 text-[10px] font-bold text-indigo-300 uppercase">
+                    {s.activeChip === "bboost"
+                      ? "Bench Boost"
+                      : s.activeChip === "3xc"
+                        ? "Triple Captain"
+                        : s.activeChip}
+                  </span>
+                )}
+              </div>
               {s.member.fplTeamName && (
-                <span className="ml-2 text-xs text-gray-500">
+                <p className="text-xs text-gray-500">
                   {s.member.fplTeamName}
-                </span>
+                  {s.chipDeduction && s.chipDeduction > 0 ? (
+                    <span className="text-amber-400/90 ml-2">
+                      (-{s.chipDeduction} pts chip adjustment)
+                    </span>
+                  ) : null}
+                </p>
               )}
             </div>
-            <span className="font-mono font-bold text-white">
+            <span className="font-mono font-bold text-white text-base">
               {s.gameweekPoints}
             </span>
           </div>
@@ -278,7 +296,7 @@ function ScoreBreakdown({
       {/* Total */}
       <div className="mt-3 border-t border-white/10 pt-2 flex items-center justify-between">
         <span className="text-sm font-bold text-gray-400">TOTAL</span>
-        <span className="font-mono font-bold text-indigo-400">{total}</span>
+        <span className="font-mono font-bold text-indigo-400 text-xl">{total}</span>
       </div>
 
       {/* Excluded (Admin) */}

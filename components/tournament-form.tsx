@@ -11,6 +11,7 @@ interface TournamentFormProps {
     name: string;
     season: number;
     adminFplId: number | string;
+    allowChips?: boolean;
   };
 }
 
@@ -19,7 +20,17 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
   const [name, setName] = useState(initialData?.name || "");
   const [season, setSeason] = useState(initialData?.season || new Date().getFullYear());
   const [adminFplId, setAdminFplId] = useState(initialData?.adminFplId || 0);
-  const [verifiedManager, setVerifiedManager] = useState<FPLManager | null>(null);
+  const [allowChips, setAllowChips] = useState(initialData?.allowChips ?? true);
+  const [verifiedManager, setVerifiedManager] = useState<FPLManager | null>(
+    initialData?.adminFplId
+      ? {
+          id: Number(initialData.adminFplId),
+          player_first_name: "Verified",
+          player_last_name: "Admin",
+          name: "Admin Team",
+        }
+      : null
+  );
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +65,7 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
           name,
           season,
           adminFplId: verifiedManager.id,
+          allowChips,
         }),
       });
 
@@ -116,6 +128,35 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:bg-gray-50"
           required
         />
+      </div>
+
+      {/* Chip Rules Setting */}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <label
+              htmlFor="allowChips"
+              className="text-sm font-semibold text-gray-900 cursor-pointer"
+            >
+              Allow FPL Chips (Triple Captain & Bench Boost)
+            </label>
+            <p className="mt-1 text-xs text-gray-600">
+              {allowChips
+                ? "Chips are enabled: Triple Captain (3x) and Bench Boost bench points count fully towards match scores."
+                : "Chips are disabled: If a manager plays Bench Boost, bench points are excluded. If Triple Captain is played, captain points are doubled (2x) instead of tripled (3x). Free Hit & Wildcard are always allowed."}
+            </p>
+          </div>
+          <div className="ml-4 flex h-6 items-center">
+            <input
+              id="allowChips"
+              type="checkbox"
+              checked={allowChips}
+              onChange={(e) => setAllowChips(e.target.checked)}
+              disabled={loading}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50 p-4">

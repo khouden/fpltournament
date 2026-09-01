@@ -12,6 +12,7 @@ model Tournament {
   name         String
   season       Int
   adminFplId   Int
+  allowChips   Boolean  @default(true) // Whether FPL chips (TC, BB) count fully or are adjusted
   status       String   @default("DRAFT") // DRAFT, PUBLISHED, FINISHED
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -116,6 +117,8 @@ model MatchMemberScore {
 
   gameweekPoints Int     @default(0)
   isExcluded   Boolean  @default(false) // true for admin members
+  activeChip   String?  // bboost, 3xc, wildcard, freehit
+  chipDeduction Int     @default(0) // points deducted if chips are disabled
 
   isFinal      Boolean  @default(false)
   createdAt    DateTime @default(now())

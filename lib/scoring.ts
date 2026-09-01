@@ -6,8 +6,11 @@ export interface MemberScoreBreakdown {
   fplName: string;
   fplTeamName: string | null;
   fplId: number;
-  gameweekPoints: number;
+  gameweekPoints: number; // final counted points
+  rawPoints: number; // raw FPL points before chip deductions
   isExcluded: boolean;
+  activeChip?: string | null;
+  chipDeduction: number;
 }
 
 export interface GroupScoreResult {
@@ -32,13 +35,17 @@ export interface MatchScoreResult {
 
 /**
  * Calculate a group's score for a given Gameweek.
- * CRITICAL BUSINESS RULE:
- * The Admin FPL Entry ID must ALWAYS be excluded from scoring.
+ * CRITICAL BUSINESS RULES:
+ * 1. The Admin FPL Entry ID must ALWAYS be excluded from scoring.
+ * 2. If allowChips is false:
+ *    - Bench Boost points_on_bench are excluded.
+ *    - Triple Captain is reduced to 2x (1x captain points deducted).
  */
 export async function calculateGroupScore(
   groupId: string,
   gameweek: number,
-  adminFplId: number
+  adminFplId: number,
+  allowChips = true
 ): Promise<GroupScoreResult> {
   const group = await prisma.group.findUnique({
     where: { id: groupId },
@@ -54,11 +61,15 @@ export async function calculateGroupScore(
 
   for (const member of group.members) {
     const isExcluded = member.isAdmin || member.fplId === adminFplId;
-    const scoreData = await getManagerGameweekPoints(member.fplId, gameweek);
-    const points = scoreData.netPoints;
+    const scoreData = await getManagerGameweekPoints(
+      member.fplId,
+      gameweek,
+      allowChips
+    );
+    const countedPoints = scoreData.adjustedNetPoints;
 
     if (!isExcluded) {
-      totalScore += points;
+      totalScore += countedPoints;
     }
 
     members.push({
@@ -66,8 +77,11 @@ export async function calculateGroupScore(
       fplName: member.fplName,
       fplTeamName: member.fplTeamName,
       fplId: member.fplId,
-      gameweekPoints: points,
+      gameweekPoints: countedPoints,
+      rawPoints: scoreData.points,
       isExcluded,
+      activeChip: scoreData.activeChip || null,
+      chipDeduction: scoreData.chipDeduction || 0,
     });
   }
 
@@ -136,7 +150,10 @@ export async function calculateMatchScore(
                 fplTeamName: s.member.fplTeamName,
                 fplId: s.member.fplId,
                 gameweekPoints: s.gameweekPoints,
+                rawPoints: s.gameweekPoints + (s.chipDeduction || 0),
                 isExcluded: s.isExcluded,
+                activeChip: s.activeChip || null,
+                chipDeduction: s.chipDeduction || 0,
               })),
           }
         : null,
@@ -153,7 +170,10 @@ export async function calculateMatchScore(
                 fplTeamName: s.member.fplTeamName,
                 fplId: s.member.fplId,
                 gameweekPoints: s.gameweekPoints,
+                rawPoints: s.gameweekPoints + (s.chipDeduction || 0),
                 isExcluded: s.isExcluded,
+                activeChip: s.activeChip || null,
+                chipDeduction: s.chipDeduction || 0,
               })),
           }
         : null,
@@ -212,13 +232,27 @@ export async function calculateMatchScore(
   }
 
   const adminFplId = match.round.tournament.adminFplId;
+  const allowChips = match.round.tournament.allowChips ?? true;
   const gameweek = match.round.gameweek;
 
-  const homeResult = await calculateGroupScore(resolvedHomeGroupId, gameweek, adminFplId);
-  const awayResult = await calculateGroupScore(resolvedAwayGroupId, gameweek, adminFplId);
+  const homeResult = await calculateGroupScore(
+    resolvedHomeGroupId,
+    gameweek,
+    adminFplId,
+    allowChips
+  );
+  const awayResult = await calculateGroupScore(
+    resolvedAwayGroupId,
+    gameweek,
+    adminFplId,
+    allowChips
+  );
 
   // Determine Match Result
-  const result = determineMatchResult(homeResult.totalScore, awayResult.totalScore);
+  const result = determineMatchResult(
+    homeResult.totalScore,
+    awayResult.totalScore
+  );
   const winnerId =
     result === "HOME_WIN"
       ? resolvedHomeGroupId
@@ -241,6 +275,8 @@ export async function calculateMatchScore(
           memberId: m.memberId,
           gameweekPoints: m.gameweekPoints,
           isExcluded: m.isExcluded,
+          activeChip: m.activeChip || null,
+          chipDeduction: m.chipDeduction || 0,
           isFinal: match.status === "FINALIZED",
         },
       });
@@ -254,6 +290,8 @@ export async function calculateMatchScore(
           memberId: m.memberId,
           gameweekPoints: m.gameweekPoints,
           isExcluded: m.isExcluded,
+          activeChip: m.activeChip || null,
+          chipDeduction: m.chipDeduction || 0,
           isFinal: match.status === "FINALIZED",
         },
       });

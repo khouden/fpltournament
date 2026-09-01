@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { TournamentBracket } from "@/components/tournament-bracket";
 
 export async function generateMetadata(
   props: PageProps<"/tournaments/[id]">
@@ -56,6 +57,13 @@ export default async function TournamentPage(
   ): string => {
     const group = side === "home" ? match.homeGroup : match.awayGroup;
     if (group) return group.name;
+
+    const groupId = side === "home" ? match.homeGroupId : match.awayGroupId;
+    if (groupId) {
+      const found = tournament.groups.find((g) => g.id === groupId);
+      if (found) return found.name;
+    }
+
     const winnerRef =
       side === "home"
         ? match.homeWinnerOfMatchId
@@ -63,12 +71,10 @@ export default async function TournamentPage(
     if (winnerRef) {
       const parent = allMatches.find((m) => m.id === winnerRef);
       if (parent) {
-        // If the parent match has a winner, show the winner's name
         if (parent.winnerId) {
-          const winnerGroup =
-            parent.homeGroup?.id === parent.winnerId
-              ? parent.homeGroup
-              : parent.awayGroup;
+          const winnerGroup = tournament.groups.find(
+            (g) => g.id === parent.winnerId
+          );
           if (winnerGroup) return winnerGroup.name;
         }
         return `Winner Match ${parent.matchNumber}`;
@@ -80,10 +86,16 @@ export default async function TournamentPage(
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
       {/* Header */}
-      <header className="border-b border-white/10 bg-black/20 backdrop-blur">
+      <header className="border-b border-white/10 bg-black/20 backdrop-blur sticky top-0 z-50">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link href="/tournaments" className="text-xl font-bold text-white">
+          <Link href="/tournaments" className="text-xl font-bold text-white hover:text-indigo-300 transition">
             ⚽ FPL Tournament
+          </Link>
+          <Link
+            href="/tournaments"
+            className="text-xs text-indigo-300 hover:text-white"
+          >
+            ← All Tournaments
           </Link>
         </div>
       </header>
@@ -91,21 +103,15 @@ export default async function TournamentPage(
       <main className="mx-auto max-w-5xl px-4 py-10">
         {/* Tournament Header */}
         <div className="mb-8">
-          <Link
-            href="/tournaments"
-            className="text-sm text-indigo-400 hover:text-indigo-300"
-          >
-            ← All Tournaments
-          </Link>
-          <h1 className="mt-2 text-4xl font-bold text-white">
+          <h1 className="text-4xl font-bold text-white">
             {tournament.name}
           </h1>
-          <div className="mt-2 flex items-center gap-3">
-            <span className="text-lg text-gray-400">
-              Season {tournament.season}/{tournament.season + 1}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-gray-300">
+              Season {tournament.season}
             </span>
             <span
-              className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
                 tournament.status === "PUBLISHED"
                   ? "bg-emerald-500/20 text-emerald-400"
                   : "bg-gray-500/20 text-gray-400"
@@ -113,13 +119,29 @@ export default async function TournamentPage(
             >
               {tournament.status === "PUBLISHED" ? "ACTIVE" : "FINISHED"}
             </span>
+            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-gray-300 border border-white/10">
+              {tournament.allowChips ? "⚡ Chips Allowed" : "🚫 Chips Disabled (BB/TC Adjusted)"}
+            </span>
           </div>
         </div>
 
+        {/* Tournament Bracket Section */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-indigo-300 uppercase tracking-wider">
+              🏆 Tournament Bracket
+            </h2>
+          </div>
+          <TournamentBracket
+            rounds={tournament.rounds}
+            groups={tournament.groups}
+          />
+        </section>
+
         {/* Groups */}
-        <section className="mb-10">
+        <section className="mb-12">
           <h2 className="text-lg font-semibold text-indigo-300 uppercase tracking-wider mb-4">
-            Participating Groups
+            👥 Participating Groups ({tournament.groups.length})
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {tournament.groups.map((group) => (
@@ -128,14 +150,14 @@ export default async function TournamentPage(
                 className="rounded-lg border border-white/10 bg-white/5 p-4"
               >
                 <h3 className="font-bold text-white">{group.name}</h3>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 mt-1">
                   {
                     group.members.filter(
                       (m) =>
                         !m.isAdmin && m.fplId !== tournament.adminFplId
                     ).length
                   }{" "}
-                  players
+                  active players
                 </p>
               </div>
             ))}
