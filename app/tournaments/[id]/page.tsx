@@ -64,20 +64,20 @@ export default async function TournamentPage(
   // Calculate live league standings (+3 Win, +1 Draw, 0 Loss)
   const standings = await calculateLeagueStandings(tournament.id);
 
-  const resolveGroupName = (
+  const resolveGroup = (
     match: (typeof tournament.rounds)[0]["matches"][0],
     side: "home" | "away"
-  ): string => {
+  ): { name: string; logo: string | null } => {
     const group = side === "home" ? match.homeGroup : match.awayGroup;
-    if (group) return group.name;
+    if (group) return { name: group.name, logo: group.logo || null };
 
     const groupId = side === "home" ? match.homeGroupId : match.awayGroupId;
     if (groupId) {
       const found = tournament.groups.find((g) => g.id === groupId);
-      if (found) return found.name;
+      if (found) return { name: found.name, logo: found.logo || null };
     }
 
-    return "TBD";
+    return { name: "TBD", logo: null };
   };
 
   return (
@@ -169,8 +169,8 @@ export default async function TournamentPage(
 
                 <div className="space-y-3">
                   {round.matches.map((match) => {
-                    const homeName = resolveGroupName(match, "home");
-                    const awayName = resolveGroupName(match, "away");
+                    const home = resolveGroup(match, "home");
+                    const away = resolveGroup(match, "away");
                     const hasScore =
                       match.homeScore !== null && match.awayScore !== null;
                     const isHomeWin = match.result === "HOME_WIN";
@@ -201,18 +201,7 @@ export default async function TournamentPage(
                         {hasScore ? (
                           <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3 text-center">
                             {/* Home Side */}
-                            <div className="flex items-center justify-center md:justify-end gap-2">
-                              <span
-                                className={`text-base font-bold ${
-                                  isHomeWin
-                                    ? "text-emerald-400"
-                                    : isDraw
-                                      ? "text-gray-200"
-                                      : "text-gray-400"
-                                }`}
-                              >
-                                {homeName}
-                              </span>
+                            <div className="flex items-center justify-center md:justify-end gap-2.5">
                               {isHomeWin && (
                                 <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-black text-emerald-400">
                                   +3 PTS
@@ -222,6 +211,26 @@ export default async function TournamentPage(
                                 <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-black text-yellow-400">
                                   +1 PT
                                 </span>
+                              )}
+                              <span
+                                className={`text-base font-bold ${
+                                  isHomeWin
+                                    ? "text-emerald-400"
+                                    : isDraw
+                                      ? "text-gray-200"
+                                      : "text-gray-400"
+                                }`}
+                              >
+                                {home.name}
+                              </span>
+                              {home.logo && (
+                                <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 p-0.5 border border-white/10">
+                                  <img
+                                    src={home.logo}
+                                    alt={home.name}
+                                    className="h-5 w-5 object-contain"
+                                  />
+                                </div>
                               )}
                             </div>
 
@@ -234,22 +243,21 @@ export default async function TournamentPage(
                                 {isDraw
                                   ? "DRAW"
                                   : isHomeWin
-                                    ? `${homeName} WIN`
-                                    : `${awayName} WIN`}
+                                    ? `${home.name} WIN`
+                                    : `${away.name} WIN`}
                               </div>
                             </div>
 
                             {/* Away Side */}
-                            <div className="flex items-center justify-center md:justify-start gap-2">
-                              {isAwayWin && (
-                                <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-black text-emerald-400">
-                                  +3 PTS
-                                </span>
-                              )}
-                              {isDraw && (
-                                <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-black text-yellow-400">
-                                  +1 PT
-                                </span>
+                            <div className="flex items-center justify-center md:justify-start gap-2.5">
+                              {away.logo && (
+                                <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 p-0.5 border border-white/10">
+                                  <img
+                                    src={away.logo}
+                                    alt={away.name}
+                                    className="h-5 w-5 object-contain"
+                                  />
+                                </div>
                               )}
                               <span
                                 className={`text-base font-bold ${
@@ -260,21 +268,49 @@ export default async function TournamentPage(
                                       : "text-gray-400"
                                 }`}
                               >
-                                {awayName}
+                                {away.name}
                               </span>
+                              {isAwayWin && (
+                                <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-black text-emerald-400">
+                                  +3 PTS
+                                </span>
+                              )}
+                              {isDraw && (
+                                <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-black text-yellow-400">
+                                  +1 PT
+                                </span>
+                              )}
                             </div>
                           </div>
                         ) : (
                           <div className="flex items-center justify-center gap-4 py-1 text-center">
-                            <span className="text-base font-bold text-white">
-                              {homeName}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              {home.logo && (
+                                <img
+                                  src={home.logo}
+                                  alt={home.name}
+                                  className="h-6 w-6 object-contain"
+                                />
+                              )}
+                              <span className="text-base font-bold text-white">
+                                {home.name}
+                              </span>
+                            </div>
                             <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded">
                               VS
                             </span>
-                            <span className="text-base font-bold text-white">
-                              {awayName}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-base font-bold text-white">
+                                {away.name}
+                              </span>
+                              {away.logo && (
+                                <img
+                                  src={away.logo}
+                                  alt={away.name}
+                                  className="h-6 w-6 object-contain"
+                                />
+                              )}
+                            </div>
                           </div>
                         )}
 
@@ -301,18 +337,35 @@ export default async function TournamentPage(
             {tournament.groups.map((group) => (
               <div
                 key={group.id}
-                className="rounded-lg border border-white/10 bg-white/5 p-4"
+                className="flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur hover:border-indigo-500/40 transition"
               >
-                <h3 className="font-bold text-white">{group.name}</h3>
-                <p className="text-xs text-gray-400 mt-1">
-                  {
-                    group.members.filter(
-                      (m) =>
-                        !m.isAdmin && m.fplId !== tournament.adminFplId
-                    ).length
-                  }{" "}
-                  active players
-                </p>
+                {group.logo ? (
+                  <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/10 p-1 border border-white/10">
+                    <img
+                      src={group.logo}
+                      alt={group.name}
+                      className="h-8 w-8 object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-indigo-600/30 text-indigo-300 font-bold border border-indigo-500/30 text-sm">
+                    {group.name.slice(0, 2).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h3 className="font-bold text-white leading-tight">
+                    {group.name}
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {
+                      group.members.filter(
+                        (m) =>
+                          !m.isAdmin && m.fplId !== tournament.adminFplId
+                      ).length
+                    }{" "}
+                    active players
+                  </p>
+                </div>
               </div>
             ))}
           </div>

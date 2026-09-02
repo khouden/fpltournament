@@ -32,6 +32,7 @@ import {
 interface Group {
   id: string;
   name: string;
+  logo?: string | null;
 }
 
 interface Match {
@@ -561,19 +562,37 @@ export function ScheduleBuilder({
                         {/* Score Display */}
                         {match.homeScore !== null &&
                           match.awayScore !== null && (
-                            <div className="flex items-center justify-center gap-4 rounded-md bg-gray-50 py-2 border border-gray-100">
-                              <span className="font-bold text-gray-900">
-                                {groupNameById(match.homeGroupId)}
-                              </span>
-                              <span className="text-lg font-mono font-black text-indigo-600">
+                            <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg bg-gray-50 py-2.5 px-4 border border-gray-100">
+                              <div className="flex items-center gap-2">
+                                {groups.find((g) => g.id === match.homeGroupId)?.logo && (
+                                  <img
+                                    src={groups.find((g) => g.id === match.homeGroupId)!.logo!}
+                                    alt={groupNameById(match.homeGroupId)}
+                                    className="h-5 w-5 object-contain"
+                                  />
+                                )}
+                                <span className="font-bold text-gray-900 text-sm">
+                                  {groupNameById(match.homeGroupId)}
+                                </span>
+                              </div>
+                              <span className="text-lg font-mono font-black text-indigo-600 bg-white px-2.5 py-0.5 rounded border border-gray-200">
                                 {match.homeScore} - {match.awayScore}
                               </span>
-                              <span className="font-bold text-gray-900">
-                                {groupNameById(match.awayGroupId)}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-gray-900 text-sm">
+                                  {groupNameById(match.awayGroupId)}
+                                </span>
+                                {groups.find((g) => g.id === match.awayGroupId)?.logo && (
+                                  <img
+                                    src={groups.find((g) => g.id === match.awayGroupId)!.logo!}
+                                    alt={groupNameById(match.awayGroupId)}
+                                    className="h-5 w-5 object-contain"
+                                  />
+                                )}
+                              </div>
                               {match.result && (
                                 <span
-                                  className={`rounded px-2 py-0.5 text-xs font-bold ${
+                                  className={`rounded px-2 py-0.5 text-[11px] font-bold ${
                                     match.result === "DRAW"
                                       ? "bg-yellow-100 text-yellow-700"
                                       : "bg-green-100 text-green-700"

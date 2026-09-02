@@ -19,7 +19,8 @@ export async function POST(
     const result = await importLeagueAsGroupAction(
       id,
       Number(body.leagueId),
-      body.name || body.customName
+      body.name || body.customName,
+      body.logo
     );
 
     if (!result.success) {

@@ -28,8 +28,8 @@ export async function GET(
           include: {
             matches: {
               include: {
-                homeGroup: { select: { id: true, name: true } },
-                awayGroup: { select: { id: true, name: true } },
+                homeGroup: { select: { id: true, name: true, logo: true } },
+                awayGroup: { select: { id: true, name: true, logo: true } },
               },
               orderBy: { matchNumber: "asc" },
             },

@@ -1,4 +1,5 @@
 import { prisma } from "../lib/db";
+import { suggestLogoForTeamName } from "../lib/team-logos";
 
 async function main() {
   console.log("==================================================");
@@ -37,16 +38,36 @@ async function main() {
 
   // Groups
   const realMadrid = await prisma.group.create({
-    data: { tournamentId: t1.id, name: "Real Madrid", fplLeagueId: 100001 },
+    data: {
+      tournamentId: t1.id,
+      name: "Real Madrid",
+      logo: suggestLogoForTeamName("Real Madrid")?.path || null,
+      fplLeagueId: 100001,
+    },
   });
   const napoli = await prisma.group.create({
-    data: { tournamentId: t1.id, name: "Napoli", fplLeagueId: 100002 },
+    data: {
+      tournamentId: t1.id,
+      name: "Napoli",
+      logo: suggestLogoForTeamName("Napoli")?.path || null,
+      fplLeagueId: 100002,
+    },
   });
   const barcelona = await prisma.group.create({
-    data: { tournamentId: t1.id, name: "Barcelona", fplLeagueId: 100003 },
+    data: {
+      tournamentId: t1.id,
+      name: "Barcelona",
+      logo: suggestLogoForTeamName("Barcelona")?.path || null,
+      fplLeagueId: 100003,
+    },
   });
   const liverpool = await prisma.group.create({
-    data: { tournamentId: t1.id, name: "Liverpool", fplLeagueId: 100004 },
+    data: {
+      tournamentId: t1.id,
+      name: "Liverpool",
+      logo: suggestLogoForTeamName("Liverpool")?.path || null,
+      fplLeagueId: 100004,
+    },
   });
 
   // Real Madrid Members (Ali 50, Mohamed 50, Zaid 30, Baha 30 = 160)
@@ -316,6 +337,7 @@ async function main() {
       data: {
         tournamentId: t2.id,
         name: team.name,
+        logo: suggestLogoForTeamName(team.name)?.path || null,
         fplLeagueId: team.fplLeagueId,
       },
     });
@@ -516,7 +538,12 @@ async function main() {
   for (let i = 0; i < euroClubs.length; i++) {
     const clubName = euroClubs[i];
     const group = await prisma.group.create({
-      data: { tournamentId: t3.id, name: clubName, fplLeagueId: 300000 + i + 1 },
+      data: {
+        tournamentId: t3.id,
+        name: clubName,
+        logo: suggestLogoForTeamName(clubName)?.path || null,
+        fplLeagueId: 300000 + i + 1,
+      },
     });
 
     const admin = await prisma.groupMember.create({
@@ -677,7 +704,12 @@ async function main() {
   for (let i = 0; i < t4Clubs.length; i++) {
     const clubName = t4Clubs[i];
     const group = await prisma.group.create({
-      data: { tournamentId: t4.id, name: clubName, fplLeagueId: 400000 + i + 1 },
+      data: {
+        tournamentId: t4.id,
+        name: clubName,
+        logo: suggestLogoForTeamName(clubName)?.path || null,
+        fplLeagueId: 400000 + i + 1,
+      },
     });
 
     const admin = await prisma.groupMember.create({
@@ -782,7 +814,12 @@ async function main() {
 
   for (let i = 0; i < draftClubs.length; i++) {
     const group = await prisma.group.create({
-      data: { tournamentId: t5.id, name: draftClubs[i], fplLeagueId: 500000 + i + 1 },
+      data: {
+        tournamentId: t5.id,
+        name: draftClubs[i],
+        logo: suggestLogoForTeamName(draftClubs[i])?.path || null,
+        fplLeagueId: 500000 + i + 1,
+      },
     });
 
     await prisma.groupMember.create({

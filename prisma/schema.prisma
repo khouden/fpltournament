@@ -30,6 +30,7 @@ model Group {
   tournamentId String
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   name         String
+  logo         String?  // Relative URL path to team logo (e.g. "/images/teams/English Premier League/128x128/arsenal.football-logos.cc.png")
   fplLeagueId  Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt

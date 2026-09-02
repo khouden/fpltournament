@@ -231,8 +231,23 @@ export default async function TournamentManagementPage({
                 </p>
               ) : (
                 tournament.groups.slice(0, 4).map((g) => (
-                  <div key={g.id} className="py-2 flex items-center justify-between text-sm">
-                    <span className="font-medium text-gray-800">{g.name}</span>
+                  <div key={g.id} className="py-2.5 flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2.5">
+                      {g.logo ? (
+                        <div className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded bg-gray-50 p-0.5 border border-gray-200">
+                          <img
+                            src={g.logo}
+                            alt={g.name}
+                            className="h-4 w-4 object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-indigo-50 text-[10px] font-bold text-indigo-700">
+                          {g.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="font-medium text-gray-900">{g.name}</span>
+                    </div>
                     <span className="text-xs text-gray-500">
                       {g.members.filter((m) => !m.isAdmin).length} players
                     </span>

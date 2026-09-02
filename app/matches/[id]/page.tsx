@@ -108,41 +108,56 @@ export default async function MatchPage(
             {match.round.name || `Round ${match.round.roundNumber}`} · Gameweek {match.round.gameweek}
           </p>
 
-          <div className="mt-6 flex items-center justify-center gap-6">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-8">
             {/* Home */}
-            <div className="text-right">
-              <h2
-                className={`text-2xl font-bold ${
-                  match.result === "HOME_WIN"
-                    ? "text-emerald-400"
-                    : "text-white"
-                }`}
-              >
-                {match.homeGroup?.name || "TBD"}
-              </h2>
-              {match.result && (
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-black">
-                  {match.result === "HOME_WIN" ? (
-                    <>
-                      <Sparkles className="h-3 w-3 text-emerald-400" />
-                      <span className="text-emerald-400">+3 PTS (Win)</span>
-                    </>
-                  ) : match.result === "DRAW" ? (
-                    <>
-                      <Handshake className="h-3 w-3 text-yellow-400" />
-                      <span className="text-yellow-400">+1 PT (Draw)</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-400">0 PTS (Loss)</span>
-                  )}
-                </span>
+            <div className="flex items-center gap-3 text-right">
+              <div>
+                <h2
+                  className={`text-xl sm:text-2xl font-bold ${
+                    match.result === "HOME_WIN"
+                      ? "text-emerald-400"
+                      : "text-white"
+                  }`}
+                >
+                  {match.homeGroup?.name || "TBD"}
+                </h2>
+                {match.result && (
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-black">
+                    {match.result === "HOME_WIN" ? (
+                      <>
+                        <Sparkles className="h-3 w-3 text-emerald-400" />
+                        <span className="text-emerald-400">+3 PTS (Win)</span>
+                      </>
+                    ) : match.result === "DRAW" ? (
+                      <>
+                        <Handshake className="h-3 w-3 text-yellow-400" />
+                        <span className="text-yellow-400">+1 PT (Draw)</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">0 PTS (Loss)</span>
+                    )}
+                  </span>
+                )}
+              </div>
+              {match.homeGroup?.logo ? (
+                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 p-1 border border-white/10 shadow-xs">
+                  <img
+                    src={match.homeGroup.logo}
+                    alt={match.homeGroup.name}
+                    className="h-9 w-9 object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/5 font-bold text-indigo-300 border border-white/10 text-sm">
+                  {match.homeGroup?.name ? match.homeGroup.name.slice(0, 2).toUpperCase() : "?"}
+                </div>
               )}
             </div>
 
             {/* Score */}
             {hasScore ? (
-              <div>
-                <p className="text-4xl font-bold text-white font-mono">
+              <div className="bg-black/40 rounded-xl px-5 py-2 border border-white/10">
+                <p className="text-3xl sm:text-4xl font-bold text-white font-mono tracking-wider">
                   {match.homeScore}{" "}
                   <span className="text-gray-500">-</span>{" "}
                   {match.awayScore}
@@ -153,33 +168,48 @@ export default async function MatchPage(
             )}
 
             {/* Away */}
-            <div className="text-left">
-              <h2
-                className={`text-2xl font-bold ${
-                  match.result === "AWAY_WIN"
-                    ? "text-emerald-400"
-                    : "text-white"
-                }`}
-              >
-                {match.awayGroup?.name || "TBD"}
-              </h2>
-              {match.result && (
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-black">
-                  {match.result === "AWAY_WIN" ? (
-                    <>
-                      <Sparkles className="h-3 w-3 text-emerald-400" />
-                      <span className="text-emerald-400">+3 PTS (Win)</span>
-                    </>
-                  ) : match.result === "DRAW" ? (
-                    <>
-                      <Handshake className="h-3 w-3 text-yellow-400" />
-                      <span className="text-yellow-400">+1 PT (Draw)</span>
-                    </>
-                  ) : (
-                    <span className="text-gray-400">0 PTS (Loss)</span>
-                  )}
-                </span>
+            <div className="flex items-center gap-3 text-left">
+              {match.awayGroup?.logo ? (
+                <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 p-1 border border-white/10 shadow-xs">
+                  <img
+                    src={match.awayGroup.logo}
+                    alt={match.awayGroup.name}
+                    className="h-9 w-9 object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/5 font-bold text-indigo-300 border border-white/10 text-sm">
+                  {match.awayGroup?.name ? match.awayGroup.name.slice(0, 2).toUpperCase() : "?"}
+                </div>
               )}
+              <div>
+                <h2
+                  className={`text-xl sm:text-2xl font-bold ${
+                    match.result === "AWAY_WIN"
+                      ? "text-emerald-400"
+                      : "text-white"
+                  }`}
+                >
+                  {match.awayGroup?.name || "TBD"}
+                </h2>
+                {match.result && (
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-black">
+                    {match.result === "AWAY_WIN" ? (
+                      <>
+                        <Sparkles className="h-3 w-3 text-emerald-400" />
+                        <span className="text-emerald-400">+3 PTS (Win)</span>
+                      </>
+                    ) : match.result === "DRAW" ? (
+                      <>
+                        <Handshake className="h-3 w-3 text-yellow-400" />
+                        <span className="text-yellow-400">+1 PT (Draw)</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-400">0 PTS (Loss)</span>
+                    )}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -233,6 +263,7 @@ export default async function MatchPage(
             {match.homeGroup && (
               <ScoreBreakdown
                 groupName={match.homeGroup.name}
+                logo={match.homeGroup.logo}
                 scores={homeScores}
                 total={match.homeScore!}
                 isWinner={match.result === "HOME_WIN"}
@@ -243,6 +274,7 @@ export default async function MatchPage(
             {match.awayGroup && (
               <ScoreBreakdown
                 groupName={match.awayGroup.name}
+                logo={match.awayGroup.logo}
                 scores={awayScores}
                 total={match.awayScore!}
                 isWinner={match.result === "AWAY_WIN"}
@@ -269,11 +301,13 @@ export default async function MatchPage(
 
 function ScoreBreakdown({
   groupName,
+  logo,
   scores,
   total,
   isWinner,
 }: {
   groupName: string;
+  logo?: string | null;
   scores: {
     id: string;
     gameweekPoints: number;
@@ -294,11 +328,22 @@ function ScoreBreakdown({
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-5">
       <div className="flex items-center justify-between mb-4">
-        <h3
-          className={`text-lg font-bold ${isWinner ? "text-emerald-400" : "text-white"}`}
-        >
-          {groupName}
-        </h3>
+        <div className="flex items-center gap-2.5">
+          {logo && (
+            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 p-0.5 border border-white/10">
+              <img
+                src={logo}
+                alt={groupName}
+                className="h-6 w-6 object-contain"
+              />
+            </div>
+          )}
+          <h3
+            className={`text-lg font-bold ${isWinner ? "text-emerald-400" : "text-white"}`}
+          >
+            {groupName}
+          </h3>
+        </div>
         <span className="text-2xl font-bold text-white">{total}</span>
       </div>
 

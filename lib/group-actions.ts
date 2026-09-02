@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { getLeague, getManagerLeagues, verifyManagerInLeague } from "@/lib/fpl";
 import { safeRevalidate } from "@/lib/safe-revalidate";
+import { suggestLogoForTeamName } from "@/lib/team-logos";
 
 export interface GroupMemberView {
   id: string;
@@ -15,6 +16,7 @@ export interface GroupMemberView {
 export interface GroupView {
   id: string;
   name: string;
+  logo: string | null;
   fplLeagueId: number | null;
   tournamentId: string;
   members: GroupMemberView[];
@@ -72,7 +74,8 @@ export async function getAdminLeaguesForTournamentAction(tournamentId: string) {
 export async function importLeagueAsGroupAction(
   tournamentId: string,
   leagueId: number,
-  customName?: string
+  customName?: string,
+  logo?: string | null
 ) {
   try {
     const tournament = await prisma.tournament.findUnique({
@@ -114,11 +117,16 @@ export async function importLeagueAsGroupAction(
       return { success: false, error: `Group "${groupName}" is already in this tournament` };
     }
 
+    // Determine logo (passed explicitly or auto-suggested)
+    const finalLogo =
+      logo !== undefined ? logo : (suggestLogoForTeamName(groupName)?.path || null);
+
     // 4. Create Group & GroupMembers inside a transaction
     const group = await prisma.group.create({
       data: {
         tournamentId: tournament.id,
         name: groupName,
+        logo: finalLogo,
         fplLeagueId: leagueId,
         members: {
           create: standings.map((m) => ({
@@ -147,22 +155,31 @@ export async function importLeagueAsGroupAction(
 }
 
 /**
- * Rename an existing group
+ * Update an existing group's name and/or logo
  */
-export async function renameGroupAction(
+export async function updateGroupAction(
   groupId: string,
   tournamentId: string,
-  newName: string
+  data: { name?: string; logo?: string | null }
 ) {
   try {
-    const trimmed = newName.trim();
-    if (!trimmed) {
-      return { success: false, error: "Group name cannot be empty" };
+    const updatePayload: { name?: string; logo?: string | null } = {};
+
+    if (data.name !== undefined) {
+      const trimmed = data.name.trim();
+      if (!trimmed) {
+        return { success: false, error: "Group name cannot be empty" };
+      }
+      updatePayload.name = trimmed;
+    }
+
+    if (data.logo !== undefined) {
+      updatePayload.logo = data.logo;
     }
 
     const group = await prisma.group.update({
       where: { id: groupId },
-      data: { name: trimmed },
+      data: updatePayload,
     });
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
@@ -172,9 +189,35 @@ export async function renameGroupAction(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to rename group",
+      error: error instanceof Error ? error.message : "Failed to update group",
     };
   }
+}
+
+/**
+ * Update an existing group's logo
+ */
+export async function updateGroupLogoAction(
+  groupId: string,
+  tournamentId: string,
+  logo: string | null
+) {
+  return updateGroupAction(groupId, tournamentId, { logo });
+}
+
+/**
+ * Rename an existing group
+ */
+export async function renameGroupAction(
+  groupId: string,
+  tournamentId: string,
+  newName: string,
+  logo?: string | null
+) {
+  return updateGroupAction(groupId, tournamentId, {
+    name: newName,
+    ...(logo !== undefined ? { logo } : {}),
+  });
 }
 
 /**

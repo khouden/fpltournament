@@ -91,18 +91,33 @@ export function LeagueTable({ standings }: LeagueTableProps) {
                     </span>
                   </td>
 
-                  {/* Team Name */}
+                  {/* Team Name & Logo */}
                   <td className="py-3.5 px-3">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white tracking-wide">
-                        {team.groupName}
-                      </span>
-                      {isLeader && (
-                        <span className="inline-flex items-center gap-1 rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-300 border border-amber-400/30">
-                          <Crown className="h-3 w-3" />
-                          <span>LEADER</span>
-                        </span>
+                    <div className="flex items-center gap-2.5">
+                      {team.logo ? (
+                        <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 p-0.5 border border-white/10 shadow-xs">
+                          <img
+                            src={team.logo}
+                            alt={team.groupName}
+                            className="h-5 w-5 object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/5 text-[11px] font-bold text-indigo-300 border border-white/10">
+                          {team.groupName.slice(0, 2).toUpperCase()}
+                        </div>
                       )}
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white tracking-wide">
+                          {team.groupName}
+                        </span>
+                        {isLeader && (
+                          <span className="inline-flex items-center gap-1 rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-300 border border-amber-400/30">
+                            <Crown className="h-3 w-3" />
+                            <span>LEADER</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
 

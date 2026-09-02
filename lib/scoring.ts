@@ -343,6 +343,7 @@ export interface GroupStanding {
   rank: number;
   groupId: string;
   groupName: string;
+  logo?: string | null;
   fplLeagueId: number | null;
   played: number;
   won: number;
@@ -399,6 +400,7 @@ export async function calculateLeagueStandings(
     {
       groupId: string;
       groupName: string;
+      logo: string | null;
       fplLeagueId: number | null;
       played: number;
       won: number;
@@ -416,6 +418,7 @@ export async function calculateLeagueStandings(
     map.set(group.id, {
       groupId: group.id,
       groupName: group.name,
+      logo: group.logo || null,
       fplLeagueId: group.fplLeagueId,
       played: 0,
       won: 0,

@@ -1,4 +1,4 @@
-import { renameGroupAction, deleteGroupAction } from "@/lib/group-actions";
+import { updateGroupAction, deleteGroupAction } from "@/lib/group-actions";
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -18,14 +18,17 @@ export async function PATCH(
       return NextResponse.json({ error: "Group not found" }, { status: 404 });
     }
 
-    if (!body.name) {
+    if (body.name === undefined && body.logo === undefined) {
       return NextResponse.json(
-        { error: "New group name is required" },
+        { error: "Group name or logo is required" },
         { status: 400 }
       );
     }
 
-    const result = await renameGroupAction(id, group.tournamentId, body.name);
+    const result = await updateGroupAction(id, group.tournamentId, {
+      name: body.name,
+      logo: body.logo,
+    });
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -34,7 +37,7 @@ export async function PATCH(
     return NextResponse.json({ group: result.group });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to rename group";
+      error instanceof Error ? error.message : "Failed to update group";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
