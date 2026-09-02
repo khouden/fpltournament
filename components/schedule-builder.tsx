@@ -25,9 +25,11 @@ import {
   Trash2,
   X,
   Loader2,
-  Calendar,
   Check,
+  Calendar,
+  ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 
 interface Group {
   id: string;
@@ -637,6 +639,16 @@ export function ScheduleBuilder({
                                   : "Finalize"}
                               </span>
                             </button>
+                          )}
+                          {match.homeScore !== null && match.awayScore !== null && (
+                            <Link
+                              href={`/matches/${match.id}`}
+                              target="_blank"
+                              className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              <span>View Match</span>
+                            </Link>
                           )}
                         </div>
                       </div>

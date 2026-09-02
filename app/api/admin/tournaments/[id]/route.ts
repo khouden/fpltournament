@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getManager } from "@/lib/fpl";
+import { recalculateTournamentScores } from "@/lib/scoring";
+import { safeRevalidate } from "@/lib/safe-revalidate";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -75,6 +77,23 @@ export async function PATCH(
         status: body.status !== undefined ? body.status : undefined,
       },
     });
+
+    if (
+      (body.allowBenchBoost !== undefined || body.allowTripleCaptain !== undefined) &&
+      (tournament.status === "PUBLISHED" || tournament.status === "FINISHED")
+    ) {
+      try {
+        await recalculateTournamentScores(tournament.id, true);
+      } catch (err) {
+        console.error("Auto-recalculating tournament scores failed:", err);
+      }
+    }
+
+    safeRevalidate("/admin");
+    safeRevalidate(`/admin/tournaments/${tournament.id}`);
+    safeRevalidate(`/admin/tournaments/${tournament.id}/schedule`);
+    safeRevalidate(`/tournaments/${tournament.id}`);
+    safeRevalidate("/tournaments");
 
     return NextResponse.json({ tournament });
   } catch (error) {

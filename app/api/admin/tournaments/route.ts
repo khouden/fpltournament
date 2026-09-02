@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getManager, verifyManagerInLeague } from "@/lib/fpl";
+import { recalculateTournamentScores } from "@/lib/scoring";
+import { safeRevalidate } from "@/lib/safe-revalidate";
 import { NextRequest, NextResponse } from "next/server";
 
 async function validateTournament(data: {
@@ -94,6 +96,21 @@ export async function PUT(request: NextRequest) {
         allowTripleCaptain: body.allowTripleCaptain ?? true,
       },
     });
+
+    // If tournament has started or is published, recalculate scores to reflect updated chip settings
+    if (tournament.status === "PUBLISHED" || tournament.status === "FINISHED") {
+      try {
+        await recalculateTournamentScores(tournament.id, true);
+      } catch (err) {
+        console.error("Auto-recalculating tournament scores failed:", err);
+      }
+    }
+
+    safeRevalidate("/admin");
+    safeRevalidate(`/admin/tournaments/${tournament.id}`);
+    safeRevalidate(`/admin/tournaments/${tournament.id}/schedule`);
+    safeRevalidate(`/tournaments/${tournament.id}`);
+    safeRevalidate("/tournaments");
 
     return NextResponse.json(tournament);
   } catch (error) {

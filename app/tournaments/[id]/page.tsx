@@ -15,6 +15,7 @@ import {
   Ban,
   CheckCircle2,
   XCircle,
+  Sparkles,
 } from "lucide-react";
 
 export async function generateMetadata(
@@ -48,6 +49,15 @@ export default async function TournamentPage(
             include: {
               homeGroup: true,
               awayGroup: true,
+              scores: {
+                include: {
+                  member: true,
+                },
+                orderBy: [
+                  { isExcluded: "asc" },
+                  { gameweekPoints: "desc" },
+                ],
+              },
             },
             orderBy: { matchNumber: "asc" },
           },
@@ -167,7 +177,7 @@ export default async function TournamentPage(
                   </span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {round.matches.map((match) => {
                     const home = resolveGroup(match, "home");
                     const away = resolveGroup(match, "away");
@@ -177,21 +187,38 @@ export default async function TournamentPage(
                     const isAwayWin = match.result === "AWAY_WIN";
                     const isDraw = match.result === "DRAW";
 
+                    const homeGroupId = match.homeGroupId || match.homeGroup?.id;
+                    const awayGroupId = match.awayGroupId || match.awayGroup?.id;
+
+                    const homeScores = match.scores.filter(
+                      (s) => s.member.groupId === homeGroupId
+                    );
+                    const awayScores = match.scores.filter(
+                      (s) => s.member.groupId === awayGroupId
+                    );
+                    const hasScoresBreakdown =
+                      homeScores.length > 0 || awayScores.length > 0;
+
                     return (
                       <Link
                         key={match.id}
                         href={`/matches/${match.id}`}
-                        className="group block rounded-lg border border-white/10 bg-black/30 p-4 transition hover:border-indigo-500/50 hover:bg-black/50"
+                        className="group block rounded-xl border border-white/10 bg-black/40 p-4 sm:p-5 transition hover:border-indigo-500/50 hover:bg-black/60 shadow-lg backdrop-blur-xs"
                       >
-                        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
-                          <span className="font-semibold">Match {match.matchNumber}</span>
+                        {/* Card Header Meta */}
+                        <div className="flex items-center justify-between text-xs text-gray-400 mb-3 pb-2.5 border-b border-white/5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-gray-300">Match {match.matchNumber}</span>
+                            <span className="text-gray-600">•</span>
+                            <span className="text-indigo-300 font-medium">GW {round.gameweek}</span>
+                          </div>
                           <span
-                            className={`font-bold ${
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${
                               match.status === "FINALIZED"
-                                ? "text-emerald-400"
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                                 : match.status === "COMPLETED"
-                                  ? "text-blue-400"
-                                  : "text-gray-500"
+                                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                  : "bg-gray-500/20 text-gray-400 border border-white/10"
                             }`}
                           >
                             {match.status}
@@ -199,91 +226,114 @@ export default async function TournamentPage(
                         </div>
 
                         {hasScore ? (
-                          <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3 text-center">
-                            {/* Home Side */}
-                            <div className="flex items-center justify-center md:justify-end gap-2.5">
-                              {isHomeWin && (
-                                <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-black text-emerald-400">
-                                  +3 PTS
+                          <>
+                            {/* Scoreboard Banner */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-3 text-center py-1">
+                              {/* Home Side */}
+                              <div className="flex items-center justify-center md:justify-end gap-2.5">
+                                {isHomeWin && (
+                                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-400 border border-emerald-500/30">
+                                    +3 PTS
+                                  </span>
+                                )}
+                                {isDraw && (
+                                  <span className="rounded bg-yellow-500/20 px-2 py-0.5 text-[10px] font-black text-yellow-400 border border-yellow-500/30">
+                                    +1 PT
+                                  </span>
+                                )}
+                                <span
+                                  className={`text-base sm:text-lg font-bold ${
+                                    isHomeWin
+                                      ? "text-emerald-400"
+                                      : isDraw
+                                        ? "text-gray-200"
+                                        : "text-gray-400"
+                                  }`}
+                                >
+                                  {home.name}
                                 </span>
-                              )}
-                              {isDraw && (
-                                <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-black text-yellow-400">
-                                  +1 PT
-                                </span>
-                              )}
-                              <span
-                                className={`text-base font-bold ${
-                                  isHomeWin
-                                    ? "text-emerald-400"
-                                    : isDraw
-                                      ? "text-gray-200"
-                                      : "text-gray-400"
-                                }`}
-                              >
-                                {home.name}
-                              </span>
-                              {home.logo && (
-                                <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 p-0.5 border border-white/10">
-                                  <img
-                                    src={home.logo}
-                                    alt={home.name}
-                                    className="h-5 w-5 object-contain"
-                                  />
-                                </div>
-                              )}
-                            </div>
+                                {home.logo && (
+                                  <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 p-1 border border-white/10 shadow-xs">
+                                    <img
+                                      src={home.logo}
+                                      alt={home.name}
+                                      className="h-6 w-6 object-contain"
+                                    />
+                                  </div>
+                                )}
+                              </div>
 
-                            {/* Score Display */}
-                            <div className="bg-black/40 rounded-lg py-1.5 px-3 border border-white/5 inline-block mx-auto">
-                              <span className="text-xl font-mono font-bold text-white tracking-wider">
-                                {match.homeScore} - {match.awayScore}
-                              </span>
-                              <div className="text-[10px] uppercase tracking-wider font-bold text-gray-400">
-                                {isDraw
-                                  ? "DRAW"
-                                  : isHomeWin
-                                    ? `${home.name} WIN`
-                                    : `${away.name} WIN`}
+                              {/* Score Display */}
+                              <div className="bg-black/50 rounded-xl py-2 px-4 border border-white/10 inline-block mx-auto shadow-inner">
+                                <span className="text-2xl sm:text-3xl font-mono font-black text-white tracking-wider">
+                                  {match.homeScore} - {match.awayScore}
+                                </span>
+                                <div className="text-[10px] uppercase tracking-wider font-extrabold text-gray-400 mt-0.5">
+                                  {isDraw
+                                    ? "MATCH DRAW"
+                                    : isHomeWin
+                                      ? `${home.name} WIN`
+                                      : `${away.name} WIN`}
+                                </div>
+                              </div>
+
+                              {/* Away Side */}
+                              <div className="flex items-center justify-center md:justify-start gap-2.5">
+                                {away.logo && (
+                                  <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 p-1 border border-white/10 shadow-xs">
+                                    <img
+                                      src={away.logo}
+                                      alt={away.name}
+                                      className="h-6 w-6 object-contain"
+                                    />
+                                  </div>
+                                )}
+                                <span
+                                  className={`text-base sm:text-lg font-bold ${
+                                    isAwayWin
+                                      ? "text-emerald-400"
+                                      : isDraw
+                                        ? "text-gray-200"
+                                        : "text-gray-400"
+                                  }`}
+                                >
+                                  {away.name}
+                                </span>
+                                {isAwayWin && (
+                                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-400 border border-emerald-500/30">
+                                    +3 PTS
+                                  </span>
+                                )}
+                                {isDraw && (
+                                  <span className="rounded bg-yellow-500/20 px-2 py-0.5 text-[10px] font-black text-yellow-400 border border-yellow-500/30">
+                                    +1 PT
+                                  </span>
+                                )}
                               </div>
                             </div>
 
-                            {/* Away Side */}
-                            <div className="flex items-center justify-center md:justify-start gap-2.5">
-                              {away.logo && (
-                                <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 p-0.5 border border-white/10">
-                                  <img
-                                    src={away.logo}
-                                    alt={away.name}
-                                    className="h-5 w-5 object-contain"
+                            {/* Team Members with Points Breakdown */}
+                            {hasScoresBreakdown && (
+                              <div className="mt-4 pt-3 border-t border-white/10">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <MatchSquadList
+                                    teamName={home.name}
+                                    teamLogo={home.logo}
+                                    scores={homeScores}
+                                    totalScore={match.homeScore}
+                                  />
+                                  <MatchSquadList
+                                    teamName={away.name}
+                                    teamLogo={away.logo}
+                                    scores={awayScores}
+                                    totalScore={match.awayScore}
                                   />
                                 </div>
-                              )}
-                              <span
-                                className={`text-base font-bold ${
-                                  isAwayWin
-                                    ? "text-emerald-400"
-                                    : isDraw
-                                      ? "text-gray-200"
-                                      : "text-gray-400"
-                                }`}
-                              >
-                                {away.name}
-                              </span>
-                              {isAwayWin && (
-                                <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-black text-emerald-400">
-                                  +3 PTS
-                                </span>
-                              )}
-                              {isDraw && (
-                                <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-black text-yellow-400">
-                                  +1 PT
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                              </div>
+                            )}
+                          </>
                         ) : (
-                          <div className="flex items-center justify-center gap-4 py-1 text-center">
+                          <div className="flex items-center justify-center gap-4 py-2 text-center">
                             <div className="flex items-center gap-2">
                               {home.logo && (
                                 <img
@@ -296,7 +346,7 @@ export default async function TournamentPage(
                                 {home.name}
                               </span>
                             </div>
-                            <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded">
+                            <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30">
                               VS
                             </span>
                             <div className="flex items-center gap-2">
@@ -314,10 +364,10 @@ export default async function TournamentPage(
                           </div>
                         )}
 
-                        <p className="mt-2 text-center text-xs text-indigo-400 opacity-0 transition group-hover:opacity-100 inline-flex items-center justify-center w-full gap-1">
+                        <div className="mt-3 pt-2 text-center text-xs text-indigo-400 flex items-center justify-center gap-1 opacity-80 group-hover:opacity-100 group-hover:text-indigo-300 transition border-t border-white/5">
                           <span>View Match & Player Breakdown</span>
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </p>
+                          <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
+                        </div>
                       </Link>
                     );
                   })}
@@ -371,6 +421,142 @@ export default async function TournamentPage(
           </div>
         </section>
       </main>
+    </div>
+  );
+}
+
+function MatchSquadList({
+  teamName,
+  teamLogo,
+  scores,
+  totalScore,
+}: {
+  teamName: string;
+  teamLogo: string | null;
+  scores: {
+    id: string;
+    gameweekPoints: number;
+    isExcluded: boolean;
+    activeChip: string | null;
+    chipDeduction: number;
+    member: {
+      fplName: string;
+      fplTeamName: string | null;
+      isAdmin: boolean;
+    };
+  }[];
+  totalScore: number | null;
+}) {
+  const included = scores.filter((s) => !s.isExcluded);
+  const excluded = scores.filter((s) => s.isExcluded);
+  const maxPoints =
+    included.length > 0
+      ? Math.max(...included.map((s) => s.gameweekPoints))
+      : 0;
+
+  if (scores.length === 0) {
+    return (
+      <div className="rounded-lg bg-white/[0.02] p-3 border border-white/5 text-center text-xs text-gray-500 italic">
+        No player scores recorded
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg bg-white/[0.03] p-3 border border-white/5 space-y-2">
+      <div className="flex items-center justify-between text-xs pb-1.5 border-b border-white/5">
+        <div className="flex items-center gap-1.5 font-bold text-gray-200 truncate">
+          {teamLogo ? (
+            <div className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded bg-white/10 p-0.5">
+              <img src={teamLogo} alt="" className="h-3.5 w-3.5 object-contain" />
+            </div>
+          ) : (
+            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-indigo-500/20 text-[9px] font-black text-indigo-300">
+              {teamName.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <span className="truncate">{teamName} Players</span>
+        </div>
+        {totalScore !== null && (
+          <span className="shrink-0 font-mono text-[11px] font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+            {totalScore} pts
+          </span>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        {included.map((s) => {
+          const isTopScorer =
+            s.gameweekPoints === maxPoints && s.gameweekPoints > 0;
+          return (
+            <div
+              key={s.id}
+              className="flex items-center justify-between text-xs py-1 px-1.5 rounded hover:bg-white/5 transition"
+            >
+              <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                <span className="font-semibold text-gray-200 truncate">
+                  {s.member.fplName}
+                </span>
+                {s.member.fplTeamName && (
+                  <span className="text-[10px] text-gray-500 truncate hidden sm:inline">
+                    ({s.member.fplTeamName})
+                  </span>
+                )}
+                {s.activeChip && (
+                  <span className="shrink-0 rounded bg-indigo-500/20 px-1 py-0.2 text-[9px] font-bold text-indigo-300 uppercase">
+                    {s.activeChip === "bboost"
+                      ? "BB"
+                      : s.activeChip === "3xc"
+                        ? "3XC"
+                        : s.activeChip}
+                  </span>
+                )}
+                {s.chipDeduction > 0 && (
+                  <span className="shrink-0 text-[9px] text-amber-400 font-medium">
+                    (-{s.chipDeduction})
+                  </span>
+                )}
+              </div>
+              <span
+                className={`shrink-0 font-mono font-bold px-1.5 py-0.5 rounded text-xs flex items-center gap-1 ${
+                  isTopScorer
+                    ? "bg-amber-400/20 text-amber-300 border border-amber-400/30"
+                    : "bg-white/10 text-white"
+                }`}
+              >
+                {isTopScorer && (
+                  <Sparkles className="h-2.5 w-2.5 text-amber-400" />
+                )}
+                <span>{s.gameweekPoints}</span>
+                <span className="text-[9px] font-normal text-gray-400">
+                  pts
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {excluded.length > 0 && (
+        <div className="pt-1.5 border-t border-white/5 space-y-1">
+          {excluded.map((s) => (
+            <div
+              key={s.id}
+              className="flex items-center justify-between text-[11px] text-gray-500 px-1.5 py-0.5 italic"
+            >
+              <span className="truncate pr-2">
+                {s.member.fplName}{" "}
+                <span className="text-[10px] text-gray-600">
+                  (Admin - excluded)
+                </span>
+              </span>
+              <span className="shrink-0 font-mono line-through text-gray-600">
+                {s.gameweekPoints} pts
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -367,16 +367,14 @@ function ScoreBreakdown({
                   </span>
                 )}
               </div>
-              {s.member.fplTeamName && (
-                <p className="text-xs text-gray-500">
-                  {s.member.fplTeamName}
-                  {s.chipDeduction && s.chipDeduction > 0 ? (
-                    <span className="text-amber-400/90 ml-2">
-                      (-{s.chipDeduction} pts chip adjustment)
-                    </span>
-                  ) : null}
-                </p>
-              )}
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                {s.member.fplTeamName && <span>{s.member.fplTeamName}</span>}
+                {s.chipDeduction && s.chipDeduction > 0 ? (
+                  <span className="text-amber-400/95 font-medium">
+                    (-{s.chipDeduction} pts {s.activeChip === "bboost" ? "bench excluded" : "chip adjustment"})
+                  </span>
+                ) : null}
+              </div>
             </div>
             <span className="font-mono font-bold text-white text-base">
               {s.gameweekPoints}

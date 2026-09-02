@@ -417,12 +417,11 @@ export async function verifyManagerInLeague(
 }
 
 /**
- * Get individual player's points in a specific gameweek from live event data
+ * Get map of all player points in a specific gameweek from live event data
  */
-export async function getLivePlayerPoints(
-  gameweek: number,
-  elementId: number
-): Promise<number> {
+export async function getGameweekLiveElementsMap(
+  gameweek: number
+): Promise<Map<number, number>> {
   try {
     const liveData = await fetchFPL<{
       elements?: Array<{
@@ -431,11 +430,27 @@ export async function getLivePlayerPoints(
       }>;
     }>(`/event/${gameweek}/live/`);
 
-    const el = liveData?.elements?.find((e) => e.id === elementId);
-    return el?.stats?.total_points || 0;
+    const map = new Map<number, number>();
+    if (liveData?.elements && Array.isArray(liveData.elements)) {
+      for (const el of liveData.elements) {
+        map.set(el.id, el.stats?.total_points || 0);
+      }
+    }
+    return map;
   } catch {
-    return 0;
+    return new Map();
   }
+}
+
+/**
+ * Get individual player's points in a specific gameweek from live event data
+ */
+export async function getLivePlayerPoints(
+  gameweek: number,
+  elementId: number
+): Promise<number> {
+  const map = await getGameweekLiveElementsMap(gameweek);
+  return map.get(elementId) || 0;
 }
 
 /**
@@ -510,24 +525,39 @@ export async function getManagerGameweekPoints(
     if (picksData?.entry_history) {
       const rawPoints = picksData.entry_history.points || 0;
       const transferCost = picksData.entry_history.event_transfers_cost || 0;
-      const benchPoints = picksData.entry_history.points_on_bench || 0;
+      let benchPoints = picksData.entry_history.points_on_bench || 0;
       const activeChip = picksData.active_chip || null;
 
       let chipDeduction = 0;
 
-      if (activeChip === "bboost" && !allowBenchBoost) {
-        // Exclude bench points
-        chipDeduction = benchPoints;
+      if (activeChip === "bboost") {
+        // In FPL API, entry_history.points_on_bench is 0 during Bench Boost because all 15 players
+        // are treated as active starters in FPL's calculation.
+        // To accurately get the bench points, calculate the sum of gameweek points for picks 12-15.
+        if (picksData.picks && picksData.picks.length > 0) {
+          const liveMap = await getGameweekLiveElementsMap(gameweek);
+          const benchPicks = picksData.picks.filter((p) => p.position > 11);
+          const calculatedBench = benchPicks.reduce(
+            (sum, p) => sum + (liveMap.get(p.element) || 0),
+            0
+          );
+          if (calculatedBench > 0 || benchPoints === 0) {
+            benchPoints = calculatedBench;
+          }
+        }
+
+        if (!allowBenchBoost) {
+          // Exclude bench points so only starting 11 count
+          chipDeduction = benchPoints;
+        }
       } else if (activeChip === "3xc" && !allowTripleCaptain) {
         // Identify captain element to deduct 1x base points (reducing 3x to 2x)
         const captainPick = picksData.picks?.find(
           (p) => p.multiplier === 3 || (p.is_captain && p.multiplier > 1)
         );
         if (captainPick) {
-          const captainBasePoints = await getLivePlayerPoints(
-            gameweek,
-            captainPick.element
-          );
+          const liveMap = await getGameweekLiveElementsMap(gameweek);
+          const captainBasePoints = liveMap.get(captainPick.element) || 0;
           chipDeduction = captainBasePoints;
         }
       }
@@ -557,23 +587,39 @@ export async function getManagerGameweekPoints(
           event_transfers_cost: number;
           points_on_bench: number;
         }>;
+        chips?: Array<{
+          name: string;
+          time: string;
+          event: number;
+        }>;
       }>(`/entry/${entryId}/history/`);
 
       const gwEntry = historyData?.current?.find((e) => e.event === gameweek);
+      const gwChip = historyData?.chips?.find((c) => c.event === gameweek);
       if (gwEntry) {
         const rawPoints = gwEntry.points;
         const transferCost = gwEntry.event_transfers_cost;
+        const activeChip = gwChip?.name || null;
+        let benchPoints = gwEntry.points_on_bench || 0;
+        let chipDeduction = 0;
+
+        if (activeChip === "bboost" && !allowBenchBoost) {
+          chipDeduction = benchPoints;
+        }
+
         const netPoints = rawPoints - transferCost;
+        const adjustedNetPoints = Math.max(0, netPoints - chipDeduction);
+
         return {
           entryId,
           gameweek,
           points: rawPoints,
           eventTransfersCost: transferCost,
           netPoints,
-          benchPoints: gwEntry.points_on_bench,
-          activeChip: null,
-          chipDeduction: 0,
-          adjustedNetPoints: netPoints,
+          benchPoints,
+          activeChip,
+          chipDeduction,
+          adjustedNetPoints,
         };
       }
     } catch {
