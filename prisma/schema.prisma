@@ -18,11 +18,27 @@ model Tournament {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  admins              TournamentAdmin[]
   groups              Group[]
   rounds              Round[]
 
   @@index([status])
   @@index([adminFplId])
+}
+
+model TournamentAdmin {
+  id           String      @id @default(cuid())
+  tournamentId String
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  fplId        Int
+  name         String?     // Manager name (e.g. "Ahmed Ali")
+  teamName     String?     // FPL team name (e.g. "Admin FC")
+  isPrimary    Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+
+  @@unique([tournamentId, fplId])
+  @@index([tournamentId])
+  @@index([fplId])
 }
 
 model Group {

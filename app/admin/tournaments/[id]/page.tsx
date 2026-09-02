@@ -28,6 +28,9 @@ export default async function TournamentManagementPage({
   const tournament = await prisma.tournament.findUnique({
     where: { id },
     include: {
+      admins: {
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      },
       groups: {
         include: { members: true },
         orderBy: { createdAt: "asc" },
@@ -122,6 +125,14 @@ export default async function TournamentManagementPage({
                 </>
               )}
             </span>
+            {tournament.admins.length > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <Users className="h-3.5 w-3.5" />
+                <span>
+                  {tournament.admins.length} Admin{tournament.admins.length > 1 ? "s" : ""}
+                </span>
+              </span>
+            )}
           </div>
         </div>
 
@@ -150,11 +161,30 @@ export default async function TournamentManagementPage({
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase">Season & Admin</p>
+          <p className="text-xs font-medium text-gray-500 uppercase">Season & Admins</p>
           <p className="mt-1 text-xl font-bold text-gray-900">
-            {tournament.season}
+            Season {tournament.season}
           </p>
-          <p className="text-xs text-gray-500">Admin FPL ID: {tournament.adminFplId}</p>
+          <div className="mt-1 space-y-0.5">
+            {tournament.admins.length > 0 ? (
+              tournament.admins.slice(0, 2).map((a) => (
+                <p key={a.fplId} className="text-xs text-gray-600 truncate">
+                  <span className="font-semibold text-gray-800">
+                    {a.isPrimary ? "👑 " : "🛡️ "}
+                    {a.name || `Admin #${a.fplId}`}
+                  </span>{" "}
+                  (#{a.fplId})
+                </p>
+              ))
+            ) : (
+              <p className="text-xs text-gray-500">Admin FPL ID: #{tournament.adminFplId}</p>
+            )}
+            {tournament.admins.length > 2 && (
+              <p className="text-[11px] text-indigo-600">
+                +{tournament.admins.length - 2} more co-admin{tournament.admins.length - 2 > 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">

@@ -4,10 +4,18 @@ import { recalculateTournamentScores } from "@/lib/scoring";
 import { safeRevalidate } from "@/lib/safe-revalidate";
 import { NextRequest, NextResponse } from "next/server";
 
+interface AdminInput {
+  fplId: number;
+  name?: string | null;
+  teamName?: string | null;
+  isPrimary?: boolean;
+}
+
 async function validateTournament(data: {
   name: string;
   season: number;
-  adminFplId: number;
+  adminFplId?: number;
+  admins?: AdminInput[];
 }) {
   if (!data.name || data.name.trim().length === 0) {
     throw new Error("Tournament name is required");
@@ -17,17 +25,28 @@ async function validateTournament(data: {
     throw new Error("Invalid season year");
   }
 
-  if (!data.adminFplId || data.adminFplId <= 0) {
-    throw new Error("Valid admin FPL ID is required");
+  const adminList = data.admins && data.admins.length > 0
+    ? data.admins
+    : data.adminFplId
+      ? [{ fplId: data.adminFplId, isPrimary: true }]
+      : [];
+
+  if (adminList.length === 0) {
+    throw new Error("At least one verified admin FPL account is required");
   }
 
-  // Verify FPL manager exists
-  try {
-    await getManager(data.adminFplId);
-  } catch (error) {
-    throw new Error(
-      "Invalid admin FPL ID or FPL API unavailable. Please verify your entry ID."
-    );
+  // Verify each FPL admin manager exists
+  for (const admin of adminList) {
+    if (!admin.fplId || admin.fplId <= 0) {
+      throw new Error("Valid admin FPL ID is required");
+    }
+    try {
+      await getManager(admin.fplId);
+    } catch {
+      throw new Error(
+        `Invalid admin FPL ID (${admin.fplId}) or FPL API unavailable. Please verify all admin entry IDs.`
+      );
+    }
   }
 }
 
@@ -35,6 +54,7 @@ export async function GET() {
   try {
     const tournaments = await prisma.tournament.findMany({
       include: {
+        admins: true,
         groups: true,
         rounds: {
           include: { matches: true },
@@ -57,14 +77,40 @@ export async function POST(request: NextRequest) {
 
     await validateTournament(body);
 
+    const admins: AdminInput[] =
+      body.admins && body.admins.length > 0
+        ? body.admins
+        : [{ fplId: Number(body.adminFplId), isPrimary: true }];
+
+    // Ensure exactly one primary admin
+    const hasPrimary = admins.some((a) => a.isPrimary);
+    const normalizedAdmins = admins.map((a, idx) => ({
+      ...a,
+      isPrimary: hasPrimary ? !!a.isPrimary : idx === 0,
+    }));
+
+    const primaryAdmin =
+      normalizedAdmins.find((a) => a.isPrimary) || normalizedAdmins[0];
+
     const tournament = await prisma.tournament.create({
       data: {
         name: body.name,
         season: body.season,
-        adminFplId: body.adminFplId,
+        adminFplId: primaryAdmin.fplId,
         allowBenchBoost: body.allowBenchBoost ?? true,
         allowTripleCaptain: body.allowTripleCaptain ?? true,
         status: "DRAFT",
+        admins: {
+          create: normalizedAdmins.map((a) => ({
+            fplId: a.fplId,
+            name: a.name || null,
+            teamName: a.teamName || null,
+            isPrimary: a.isPrimary ?? false,
+          })),
+        },
+      },
+      include: {
+        admins: true,
       },
     });
 
@@ -86,15 +132,53 @@ export async function PUT(request: NextRequest) {
 
     await validateTournament(body);
 
-    const tournament = await prisma.tournament.update({
-      where: { id: body.id },
-      data: {
-        name: body.name,
-        season: body.season,
-        adminFplId: body.adminFplId,
-        allowBenchBoost: body.allowBenchBoost ?? true,
-        allowTripleCaptain: body.allowTripleCaptain ?? true,
-      },
+    const admins: AdminInput[] =
+      body.admins && body.admins.length > 0
+        ? body.admins
+        : body.adminFplId
+          ? [{ fplId: Number(body.adminFplId), isPrimary: true }]
+          : [];
+
+    const hasPrimary = admins.some((a) => a.isPrimary);
+    const normalizedAdmins = admins.map((a, idx) => ({
+      ...a,
+      isPrimary: hasPrimary ? !!a.isPrimary : idx === 0,
+    }));
+
+    const primaryAdmin =
+      normalizedAdmins.find((a) => a.isPrimary) ||
+      (body.adminFplId ? { fplId: Number(body.adminFplId) } : null);
+
+    const tournament = await prisma.$transaction(async (tx) => {
+      if (normalizedAdmins.length > 0) {
+        await tx.tournamentAdmin.deleteMany({
+          where: { tournamentId: body.id },
+        });
+
+        await tx.tournamentAdmin.createMany({
+          data: normalizedAdmins.map((a) => ({
+            tournamentId: body.id,
+            fplId: a.fplId,
+            name: a.name || null,
+            teamName: a.teamName || null,
+            isPrimary: a.isPrimary ?? false,
+          })),
+        });
+      }
+
+      return tx.tournament.update({
+        where: { id: body.id },
+        data: {
+          name: body.name,
+          season: body.season,
+          adminFplId: primaryAdmin ? primaryAdmin.fplId : undefined,
+          allowBenchBoost: body.allowBenchBoost ?? true,
+          allowTripleCaptain: body.allowTripleCaptain ?? true,
+        },
+        include: {
+          admins: true,
+        },
+      });
     });
 
     // If tournament has started or is published, recalculate scores to reflect updated chip settings

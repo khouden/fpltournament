@@ -22,48 +22,110 @@ export interface GroupView {
   members: GroupMemberView[];
 }
 
+export interface TournamentAdminView {
+  fplId: number;
+  name: string | null;
+  teamName: string | null;
+  isPrimary: boolean;
+}
+
+export interface LeagueView {
+  id: number;
+  name: string;
+  isAlreadyImported: boolean;
+  isPrivate?: boolean;
+  adminFplId?: number;
+  adminName?: string | null;
+}
+
 /**
- * Fetch all available FPL classic leagues for the tournament's admin
+ * Fetch all available FPL classic leagues for all tournament admins
  */
-export async function getAdminLeaguesForTournamentAction(tournamentId: string) {
+export async function getAdminLeaguesForTournamentAction(
+  tournamentId: string,
+  filterAdminFplId?: number
+) {
   try {
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
-      include: { groups: true },
+      include: {
+        admins: {
+          orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+        },
+        groups: true,
+      },
     });
 
     if (!tournament) {
       return { success: false, error: "Tournament not found" };
     }
 
-    const leagues = await getManagerLeagues(tournament.adminFplId);
+    const allAdmins: TournamentAdminView[] =
+      tournament.admins.length > 0
+        ? tournament.admins.map((a) => ({
+            fplId: a.fplId,
+            name: a.name,
+            teamName: a.teamName,
+            isPrimary: a.isPrimary,
+          }))
+        : [
+            {
+              fplId: tournament.adminFplId,
+              name: "Primary Admin",
+              teamName: "Admin FC",
+              isPrimary: true,
+            },
+          ];
+
+    const targetAdmins = filterAdminFplId
+      ? allAdmins.filter((a) => a.fplId === filterAdminFplId)
+      : allAdmins;
+
     const existingLeagueIds = new Set(
       tournament.groups.map((g) => g.fplLeagueId).filter(Boolean)
     );
 
-    // Sort private leagues (league_type === 'x') first, then by name
-    const sortedLeagues = [...leagues].sort((a, b) => {
-      const aIsPrivate = a.league_type === "x" ? 0 : 1;
-      const bIsPrivate = b.league_type === "x" ? 0 : 1;
+    // Fetch leagues for each admin
+    const leagueMap = new Map<number, LeagueView>();
+
+    for (const admin of targetAdmins) {
+      try {
+        const leagues = await getManagerLeagues(admin.fplId);
+        for (const l of leagues) {
+          if (!leagueMap.has(l.id)) {
+            leagueMap.set(l.id, {
+              ...l,
+              isAlreadyImported: existingLeagueIds.has(l.id),
+              isPrivate: l.league_type === "x",
+              adminFplId: admin.fplId,
+              adminName: admin.name || `Admin #${admin.fplId}`,
+            });
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to fetch leagues for admin ${admin.fplId}:`, err);
+      }
+    }
+
+    // Sort private leagues first, then by name
+    const sortedLeagues = Array.from(leagueMap.values()).sort((a, b) => {
+      const aIsPrivate = a.isPrivate ? 0 : 1;
+      const bIsPrivate = b.isPrivate ? 0 : 1;
       if (aIsPrivate !== bIsPrivate) return aIsPrivate - bIsPrivate;
       return a.name.localeCompare(b.name);
     });
 
-    const mappedLeagues = sortedLeagues.map((l) => ({
-      ...l,
-      isAlreadyImported: existingLeagueIds.has(l.id),
-      isPrivate: l.league_type === "x",
-    }));
-
     return {
       success: true,
-      leagues: mappedLeagues,
+      leagues: sortedLeagues,
+      admins: allAdmins,
       adminFplId: tournament.adminFplId,
     };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch admin leagues",
+      error:
+        error instanceof Error ? error.message : "Failed to fetch admin leagues",
     };
   }
 }
@@ -75,12 +137,16 @@ export async function importLeagueAsGroupAction(
   tournamentId: string,
   leagueId: number,
   customName?: string,
-  logo?: string | null
+  logo?: string | null,
+  importingAdminFplId?: number
 ) {
   try {
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
-      include: { groups: true },
+      include: {
+        admins: true,
+        groups: true,
+      },
     });
 
     if (!tournament) {
@@ -88,15 +154,43 @@ export async function importLeagueAsGroupAction(
     }
 
     if (tournament.status === "FINISHED") {
-      return { success: false, error: "Cannot add groups to a finished tournament" };
-    }
-
-    // 1. Verify Admin is a member of the selected league
-    const verification = await verifyManagerInLeague(tournament.adminFplId, leagueId);
-    if (!verification.isValid) {
       return {
         success: false,
-        error: verification.error || "Admin is not a verified member of this league",
+        error: "Cannot add groups to a finished tournament",
+      };
+    }
+
+    // Collect all admin IDs configured for this tournament
+    const tournamentAdminIds = Array.from(
+      new Set([
+        tournament.adminFplId,
+        ...tournament.admins.map((a) => a.fplId),
+      ])
+    );
+
+    // 1. Verify that at least one of the tournament admins is a verified member of the selected league
+    let isValidAdmin = false;
+    let verificationError = "Admin is not a verified member of this league";
+
+    // If importingAdminFplId is specified, check it first
+    const testAdminIds = importingAdminFplId
+      ? [importingAdminFplId, ...tournamentAdminIds.filter((id) => id !== importingAdminFplId)]
+      : tournamentAdminIds;
+
+    for (const adminId of testAdminIds) {
+      const verification = await verifyManagerInLeague(adminId, leagueId);
+      if (verification.isValid) {
+        isValidAdmin = true;
+        break;
+      } else if (verification.error) {
+        verificationError = verification.error;
+      }
+    }
+
+    if (!isValidAdmin) {
+      return {
+        success: false,
+        error: verificationError,
       };
     }
 
@@ -111,17 +205,25 @@ export async function importLeagueAsGroupAction(
 
     // Check if group already exists in tournament
     const existingGroup = tournament.groups.find(
-      (g) => g.fplLeagueId === leagueId || g.name.toLowerCase() === groupName.toLowerCase()
+      (g) =>
+        g.fplLeagueId === leagueId ||
+        g.name.toLowerCase() === groupName.toLowerCase()
     );
     if (existingGroup) {
-      return { success: false, error: `Group "${groupName}" is already in this tournament` };
+      return {
+        success: false,
+        error: `Group "${groupName}" is already in this tournament`,
+      };
     }
 
     // Determine logo (passed explicitly or auto-suggested)
     const finalLogo =
-      logo !== undefined ? logo : (suggestLogoForTeamName(groupName)?.path || null);
+      logo !== undefined
+        ? logo
+        : suggestLogoForTeamName(groupName)?.path || null;
 
     // 4. Create Group & GroupMembers inside a transaction
+    // Any tournament admin member in the squad is marked isAdmin: true
     const group = await prisma.group.create({
       data: {
         tournamentId: tournament.id,
@@ -133,7 +235,7 @@ export async function importLeagueAsGroupAction(
             fplName: m.player_name,
             fplTeamName: m.entry_name,
             fplId: m.entry,
-            isAdmin: m.entry === tournament.adminFplId,
+            isAdmin: tournamentAdminIds.includes(m.entry),
           })),
         },
       },

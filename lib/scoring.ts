@@ -45,7 +45,7 @@ export interface MatchScoreResult {
 export async function calculateGroupScore(
   groupId: string,
   gameweek: number,
-  adminFplId: number,
+  adminFplIds: number | number[],
   options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true
 ): Promise<GroupScoreResult> {
   const group = await prisma.group.findUnique({
@@ -57,11 +57,15 @@ export async function calculateGroupScore(
     throw new Error(`Group ${groupId} not found`);
   }
 
+  const excludedAdminIds = Array.isArray(adminFplIds)
+    ? adminFplIds
+    : [adminFplIds];
+
   let totalScore = 0;
   const members: MemberScoreBreakdown[] = [];
 
   for (const member of group.members) {
-    const isExcluded = member.isAdmin || member.fplId === adminFplId;
+    const isExcluded = member.isAdmin || excludedAdminIds.includes(member.fplId);
     const scoreData = await getManagerGameweekPoints(
       member.fplId,
       gameweek,
@@ -119,7 +123,9 @@ export async function calculateMatchScore(
     include: {
       round: {
         include: {
-          tournament: true,
+          tournament: {
+            include: { admins: true },
+          },
         },
       },
       homeGroup: {
@@ -211,7 +217,12 @@ export async function calculateMatchScore(
     };
   }
 
-  const adminFplId = match.round.tournament.adminFplId;
+  const adminFplIds = Array.from(
+    new Set([
+      match.round.tournament.adminFplId,
+      ...(match.round.tournament.admins?.map((a) => a.fplId) || []),
+    ])
+  );
   const chipOptions = {
     allowBenchBoost: match.round.tournament.allowBenchBoost ?? true,
     allowTripleCaptain: match.round.tournament.allowTripleCaptain ?? true,
@@ -221,14 +232,14 @@ export async function calculateMatchScore(
   const homeResult = await calculateGroupScore(
     resolvedHomeGroupId,
     gameweek,
-    adminFplId,
+    adminFplIds,
     chipOptions
   );
 
   const awayResult = await calculateGroupScore(
     resolvedAwayGroupId,
     gameweek,
-    adminFplId,
+    adminFplIds,
     chipOptions
   );
 

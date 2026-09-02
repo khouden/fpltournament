@@ -14,6 +14,7 @@ export async function GET(
     const tournament = await prisma.tournament.findUnique({
       where: { id },
       include: {
+        admins: true,
         groups: {
           include: { members: true },
           orderBy: { createdAt: "asc" },
@@ -60,22 +61,68 @@ export async function PATCH(
       await getManager(Number(body.adminFplId));
     }
 
-    const tournament = await prisma.tournament.update({
-      where: { id },
-      data: {
-        name: body.name !== undefined ? body.name : undefined,
-        season: body.season !== undefined ? body.season : undefined,
-        adminFplId: body.adminFplId !== undefined ? Number(body.adminFplId) : undefined,
-        allowBenchBoost:
-          body.allowBenchBoost !== undefined
-            ? Boolean(body.allowBenchBoost)
-            : undefined,
-        allowTripleCaptain:
-          body.allowTripleCaptain !== undefined
-            ? Boolean(body.allowTripleCaptain)
-            : undefined,
-        status: body.status !== undefined ? body.status : undefined,
-      },
+    if (Array.isArray(body.admins)) {
+      for (const admin of body.admins) {
+        if (admin.fplId) {
+          await getManager(Number(admin.fplId));
+        }
+      }
+    }
+
+    const tournament = await prisma.$transaction(async (tx) => {
+      let primaryAdminFplId = body.adminFplId ? Number(body.adminFplId) : undefined;
+
+      if (Array.isArray(body.admins)) {
+        const hasPrimary = body.admins.some((a: { isPrimary?: boolean }) => a.isPrimary);
+        const normalizedAdmins = body.admins.map((a: { fplId: number; name?: string; teamName?: string; isPrimary?: boolean }, idx: number) => ({
+          fplId: Number(a.fplId),
+          name: a.name || null,
+          teamName: a.teamName || null,
+          isPrimary: hasPrimary ? !!a.isPrimary : idx === 0,
+        }));
+
+        const primary = normalizedAdmins.find((a: { isPrimary: boolean }) => a.isPrimary) || normalizedAdmins[0];
+        if (primary) {
+          primaryAdminFplId = primary.fplId;
+        }
+
+        await tx.tournamentAdmin.deleteMany({
+          where: { tournamentId: id },
+        });
+
+        if (normalizedAdmins.length > 0) {
+          await tx.tournamentAdmin.createMany({
+            data: normalizedAdmins.map((a: { fplId: number; name: string | null; teamName: string | null; isPrimary: boolean }) => ({
+              tournamentId: id,
+              fplId: a.fplId,
+              name: a.name,
+              teamName: a.teamName,
+              isPrimary: a.isPrimary,
+            })),
+          });
+        }
+      }
+
+      return tx.tournament.update({
+        where: { id },
+        data: {
+          name: body.name !== undefined ? body.name : undefined,
+          season: body.season !== undefined ? body.season : undefined,
+          adminFplId: primaryAdminFplId,
+          allowBenchBoost:
+            body.allowBenchBoost !== undefined
+              ? Boolean(body.allowBenchBoost)
+              : undefined,
+          allowTripleCaptain:
+            body.allowTripleCaptain !== undefined
+              ? Boolean(body.allowTripleCaptain)
+              : undefined,
+          status: body.status !== undefined ? body.status : undefined,
+        },
+        include: {
+          admins: true,
+        },
+      });
     });
 
     if (

@@ -412,6 +412,7 @@ export async function validateScheduleAction(
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     include: {
+      admins: true,
       groups: {
         include: { members: true },
       },
@@ -428,6 +429,13 @@ export async function validateScheduleAction(
     return { isValid: false, issues: ["Tournament not found"] };
   }
 
+  const adminFplIds = Array.from(
+    new Set([
+      tournament.adminFplId,
+      ...(tournament.admins?.map((a) => a.fplId) || []),
+    ])
+  );
+
   // 1. Group checks
   if (tournament.groups.length < 2) {
     issues.push("Tournament must have at least 2 groups to play matches");
@@ -435,13 +443,13 @@ export async function validateScheduleAction(
 
   for (const g of tournament.groups) {
     const hasAdmin = g.members.some(
-      (m) => m.isAdmin || m.fplId === tournament.adminFplId
+      (m) => m.isAdmin || adminFplIds.includes(m.fplId)
     );
     if (!hasAdmin) {
       issues.push(`Admin is not recorded as a member in group "${g.name}"`);
     }
     const nonAdminCount = g.members.filter(
-      (m) => !m.isAdmin && m.fplId !== tournament.adminFplId
+      (m) => !m.isAdmin && !adminFplIds.includes(m.fplId)
     ).length;
     if (nonAdminCount === 0) {
       issues.push(`Group "${g.name}" has no scoring members`);

@@ -7,9 +7,19 @@ import { CheckCircle2, ShieldCheck, AlertCircle, Loader2 } from "lucide-react";
 
 interface FPLVerifierProps {
   onVerified?: (manager: FPLManager) => void;
+  title?: string;
+  description?: string;
+  buttonText?: string;
+  autoClearOnVerify?: boolean;
 }
 
-export function FPLVerifier({ onVerified }: FPLVerifierProps) {
+export function FPLVerifier({
+  onVerified,
+  title = "Verify FPL Entry",
+  description = "Enter your FPL manager ID to verify and import your leagues",
+  buttonText = "Verify Entry",
+  autoClearOnVerify = false,
+}: FPLVerifierProps) {
   const [entryId, setEntryId] = useState("");
   const [manager, setManager] = useState<FPLManager | null>(null);
   const [error, setError] = useState("");
@@ -30,6 +40,9 @@ export function FPLVerifier({ onVerified }: FPLVerifierProps) {
       if (result.success && result.manager) {
         setManager(result.manager);
         onVerified?.(result.manager);
+        if (autoClearOnVerify) {
+          setEntryId("");
+        }
       } else {
         setError(result.error || "Failed to verify entry");
       }
@@ -45,10 +58,10 @@ export function FPLVerifier({ onVerified }: FPLVerifierProps) {
     <div className="rounded-lg bg-white p-6 shadow">
       <div className="flex items-center gap-2">
         <ShieldCheck className="h-5 w-5 text-indigo-600" />
-        <h3 className="text-lg font-bold text-gray-900">Verify FPL Entry</h3>
+        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
       </div>
       <p className="mt-2 text-sm text-gray-600">
-        Enter your FPL manager ID to verify and import your leagues
+        {description}
       </p>
 
       <div className="mt-6 space-y-4">
@@ -104,7 +117,7 @@ export function FPLVerifier({ onVerified }: FPLVerifierProps) {
           className="inline-flex items-center justify-center gap-2 w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400 cursor-pointer transition"
         >
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-          <span>{loading ? "Verifying..." : "Verify Entry"}</span>
+          <span>{loading ? "Verifying..." : buttonText}</span>
         </button>
       </div>
     </div>

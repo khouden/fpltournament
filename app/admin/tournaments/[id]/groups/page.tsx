@@ -12,6 +12,9 @@ export default async function GroupsPage(
   const tournament = await prisma.tournament.findUnique({
     where: { id },
     include: {
+      admins: {
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      },
       groups: {
         include: { members: true },
         orderBy: { createdAt: "asc" },
@@ -56,11 +59,34 @@ export default async function GroupsPage(
 
       {/* Tournament Info */}
       <div className="rounded-lg bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <p className="text-sm text-gray-500">
-              Season {tournament.season} · Admin FPL ID: {tournament.adminFplId}
+            <p className="text-sm text-gray-700 font-medium">
+              Season {tournament.season}
             </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              <span className="font-semibold text-gray-600">
+                Organizers ({tournament.admins.length}):
+              </span>
+              {tournament.admins.length > 0 ? (
+                tournament.admins.map((a) => (
+                  <span
+                    key={a.fplId}
+                    className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-medium ${
+                      a.isPrimary
+                        ? "bg-amber-50 text-amber-800 border border-amber-200"
+                        : "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                    }`}
+                  >
+                    <span>{a.isPrimary ? "👑" : "🛡️"}</span>
+                    <span>{a.name || `Admin #${a.fplId}`}</span>
+                    <span className="text-[10px] opacity-75">#{a.fplId}</span>
+                  </span>
+                ))
+              ) : (
+                <span>Admin FPL ID: #{tournament.adminFplId}</span>
+              )}
+            </div>
           </div>
           <span
             className={`rounded-full px-2 py-1 text-xs font-semibold ${

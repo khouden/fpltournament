@@ -39,6 +39,7 @@ export default async function TournamentPage(
   const tournament = await prisma.tournament.findUnique({
     where: { id },
     include: {
+      admins: true,
       groups: {
         include: { members: true },
         orderBy: { name: "asc" },
@@ -410,7 +411,9 @@ export default async function TournamentPage(
                     {
                       group.members.filter(
                         (m) =>
-                          !m.isAdmin && m.fplId !== tournament.adminFplId
+                          !m.isAdmin &&
+                          m.fplId !== tournament.adminFplId &&
+                          !tournament.admins?.some((a) => a.fplId === m.fplId)
                       ).length
                     }{" "}
                     active players

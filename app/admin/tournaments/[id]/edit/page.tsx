@@ -9,6 +9,11 @@ export default async function EditTournamentPage(
 
   const tournament = await prisma.tournament.findUnique({
     where: { id },
+    include: {
+      admins: {
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+      },
+    },
   });
 
   if (!tournament) {
@@ -19,7 +24,7 @@ export default async function EditTournamentPage(
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Edit Tournament</h1>
-        <p className="mt-2 text-gray-600">Update tournament details</p>
+        <p className="mt-2 text-gray-600">Update tournament details and organizers</p>
       </div>
 
       <div className="rounded-lg bg-white p-8 shadow">
@@ -31,6 +36,12 @@ export default async function EditTournamentPage(
             adminFplId: Number(tournament.adminFplId),
             allowBenchBoost: tournament.allowBenchBoost,
             allowTripleCaptain: tournament.allowTripleCaptain,
+            admins: tournament.admins.map((a) => ({
+              fplId: a.fplId,
+              name: a.name,
+              teamName: a.teamName,
+              isPrimary: a.isPrimary,
+            })),
           }}
         />
       </div>

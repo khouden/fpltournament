@@ -192,6 +192,14 @@ const MOCK_LEAGUES: Record<number, { league: FPLLeague; members: FPLLeagueEntry[
       { id: 13, entry: 1234567, player_name: "Admin", entry_name: "Admin FC", total: 1200, rank: 3 },
     ],
   },
+  100004: {
+    league: { id: 100004, name: "Arsenal Supporters", league_type: "x" },
+    members: [
+      { id: 14, entry: 111111, player_name: "Ali", entry_name: "Ali's XI", total: 1150, rank: 1 },
+      { id: 15, entry: 555555, player_name: "Othman", entry_name: "Othman's XI", total: 1210, rank: 2 },
+      { id: 16, entry: 999111, player_name: "Youssef", entry_name: "Youssef Stars", total: 1140, rank: 3 },
+    ],
+  },
 };
 
 // Mock points per GW (e.g. GW5 matches the spec draw scenario)
@@ -314,6 +322,15 @@ export async function getManager(entryId: number): Promise<FPLManager> {
  * Get all classic leagues for a manager
  */
 export async function getManagerLeagues(entryId: number): Promise<FPLLeague[]> {
+  // Check mock managers first for demo IDs
+  if (MOCK_MANAGERS[entryId] || entryId === 1234567) {
+    const memberLeagues = Object.values(MOCK_LEAGUES)
+      .filter((l) => l.members.some((m) => m.entry === entryId))
+      .map((l) => l.league);
+    if (memberLeagues.length > 0) return memberLeagues;
+    return Object.values(MOCK_LEAGUES).map((l) => l.league);
+  }
+
   try {
     const response = await fetchFPL<{
       leagues?: {
@@ -327,10 +344,6 @@ export async function getManagerLeagues(entryId: number): Promise<FPLLeague[]> {
     }
     return [];
   } catch (error) {
-    // Return mock leagues if available for this entry or demo admin
-    if (entryId === 1234567 || MOCK_MANAGERS[entryId]) {
-      return Object.values(MOCK_LEAGUES).map((l) => l.league);
-    }
     throw error;
   }
 }
@@ -600,7 +613,7 @@ export async function getManagerGameweekPoints(
         const rawPoints = gwEntry.points;
         const transferCost = gwEntry.event_transfers_cost;
         const activeChip = gwChip?.name || null;
-        let benchPoints = gwEntry.points_on_bench || 0;
+        const benchPoints = gwEntry.points_on_bench || 0;
         let chipDeduction = 0;
 
         if (activeChip === "bboost" && !allowBenchBoost) {
