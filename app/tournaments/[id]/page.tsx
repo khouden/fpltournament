@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { LeagueTable } from "@/components/league-table";
 import { calculateLeagueStandings } from "@/lib/scoring";
+import { MatchSquadList } from "@/components/match-squad-client";
 import {
   Trophy,
   Calendar,
@@ -322,12 +323,18 @@ export default async function TournamentPage(
                                     teamLogo={home.logo}
                                     scores={homeScores}
                                     totalScore={match.homeScore}
+                                    gameweek={round.gameweek}
+                                    allowBenchBoost={tournament.allowBenchBoost}
+                                    allowTripleCaptain={tournament.allowTripleCaptain}
                                   />
                                   <MatchSquadList
                                     teamName={away.name}
                                     teamLogo={away.logo}
                                     scores={awayScores}
                                     totalScore={match.awayScore}
+                                    gameweek={round.gameweek}
+                                    allowBenchBoost={tournament.allowBenchBoost}
+                                    allowTripleCaptain={tournament.allowTripleCaptain}
                                   />
                                 </div>
                               </div>
@@ -428,138 +435,4 @@ export default async function TournamentPage(
   );
 }
 
-function MatchSquadList({
-  teamName,
-  teamLogo,
-  scores,
-  totalScore,
-}: {
-  teamName: string;
-  teamLogo: string | null;
-  scores: {
-    id: string;
-    gameweekPoints: number;
-    isExcluded: boolean;
-    activeChip: string | null;
-    chipDeduction: number;
-    member: {
-      fplName: string;
-      fplTeamName: string | null;
-      isAdmin: boolean;
-    };
-  }[];
-  totalScore: number | null;
-}) {
-  const included = scores.filter((s) => !s.isExcluded);
-  const excluded = scores.filter((s) => s.isExcluded);
-  const maxPoints =
-    included.length > 0
-      ? Math.max(...included.map((s) => s.gameweekPoints))
-      : 0;
 
-  if (scores.length === 0) {
-    return (
-      <div className="rounded-lg bg-white/[0.02] p-3 border border-white/5 text-center text-xs text-gray-500 italic">
-        No player scores recorded
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg bg-white/[0.03] p-3 border border-white/5 space-y-2">
-      <div className="flex items-center justify-between text-xs pb-1.5 border-b border-white/5">
-        <div className="flex items-center gap-1.5 font-bold text-gray-200 truncate">
-          {teamLogo ? (
-            <div className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded bg-white/10 p-0.5">
-              <img src={teamLogo} alt="" className="h-3.5 w-3.5 object-contain" />
-            </div>
-          ) : (
-            <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-indigo-500/20 text-[9px] font-black text-indigo-300">
-              {teamName.slice(0, 2).toUpperCase()}
-            </div>
-          )}
-          <span className="truncate">{teamName} Players</span>
-        </div>
-        {totalScore !== null && (
-          <span className="shrink-0 font-mono text-[11px] font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
-            {totalScore} pts
-          </span>
-        )}
-      </div>
-
-      <div className="space-y-1">
-        {included.map((s) => {
-          const isTopScorer =
-            s.gameweekPoints === maxPoints && s.gameweekPoints > 0;
-          return (
-            <div
-              key={s.id}
-              className="flex items-center justify-between text-xs py-1 px-1.5 rounded hover:bg-white/5 transition"
-            >
-              <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                <span className="font-semibold text-gray-200 truncate">
-                  {s.member.fplName}
-                </span>
-                {s.member.fplTeamName && (
-                  <span className="text-[10px] text-gray-500 truncate hidden sm:inline">
-                    ({s.member.fplTeamName})
-                  </span>
-                )}
-                {s.activeChip && (
-                  <span className="shrink-0 rounded bg-indigo-500/20 px-1 py-0.2 text-[9px] font-bold text-indigo-300 uppercase">
-                    {s.activeChip === "bboost"
-                      ? "BB"
-                      : s.activeChip === "3xc"
-                        ? "3XC"
-                        : s.activeChip}
-                  </span>
-                )}
-                {s.chipDeduction > 0 && (
-                  <span className="shrink-0 text-[9px] text-amber-400 font-medium">
-                    (-{s.chipDeduction})
-                  </span>
-                )}
-              </div>
-              <span
-                className={`shrink-0 font-mono font-bold px-1.5 py-0.5 rounded text-xs flex items-center gap-1 ${
-                  isTopScorer
-                    ? "bg-amber-400/20 text-amber-300 border border-amber-400/30"
-                    : "bg-white/10 text-white"
-                }`}
-              >
-                {isTopScorer && (
-                  <Sparkles className="h-2.5 w-2.5 text-amber-400" />
-                )}
-                <span>{s.gameweekPoints}</span>
-                <span className="text-[9px] font-normal text-gray-400">
-                  pts
-                </span>
-              </span>
-            </div>
-          );
-        })}
-      </div>
-
-      {excluded.length > 0 && (
-        <div className="pt-1.5 border-t border-white/5 space-y-1">
-          {excluded.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center justify-between text-[11px] text-gray-500 px-1.5 py-0.5 italic"
-            >
-              <span className="truncate pr-2">
-                {s.member.fplName}{" "}
-                <span className="text-[10px] text-gray-600">
-                  (Admin - excluded)
-                </span>
-              </span>
-              <span className="shrink-0 font-mono line-through text-gray-600">
-                {s.gameweekPoints} pts
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

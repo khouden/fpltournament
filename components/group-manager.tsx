@@ -12,6 +12,7 @@ import {
 } from "@/lib/group-actions";
 import { TeamLogoPicker } from "./team-logo-picker";
 import { suggestLogoForTeamName } from "@/lib/team-logos";
+import { FantasyTeamModal } from "./fantasy-team-modal";
 import {
   Users,
   Plus,
@@ -26,6 +27,7 @@ import {
   Crown,
   Search,
   Image as ImageIcon,
+  Eye,
 } from "lucide-react";
 
 interface GroupMember {
@@ -69,6 +71,9 @@ export function GroupManager({
   const [importLogos, setImportLogos] = useState<Record<number, string | null>>({});
   const [activePickerLeague, setActivePickerLeague] = useState<LeagueView | null>(null);
   const [activePickerGroup, setActivePickerGroup] = useState<Group | null>(null);
+
+  // Fantasy Team Squad Modal state
+  const [activeSquadPlayer, setActiveSquadPlayer] = useState<{ member: GroupMember; group: Group } | null>(null);
 
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -669,23 +674,38 @@ export function GroupManager({
                       {group.members.map((member) => (
                         <tr
                           key={member.id}
-                          className={
+                          onClick={() => setActiveSquadPlayer({ member, group })}
+                          className={`cursor-pointer transition ${
                             member.isAdmin
-                              ? "text-gray-400 italic bg-amber-50/30"
-                              : "text-gray-700 hover:bg-gray-50/50"
-                          }
+                              ? "text-gray-400 italic bg-amber-50/30 hover:bg-amber-50/60"
+                              : "text-gray-700 hover:bg-indigo-50/60"
+                          }`}
+                          title={`Click to view ${member.fplName}'s fantasy squad`}
                         >
-                          <td className="py-2 font-medium">{member.fplName}</td>
-                          <td className="py-2 text-gray-500">
+                          <td className="py-2.5 font-medium">
+                            <div className="flex items-center gap-1.5">
+                              <span className="hover:text-indigo-600 transition hover:underline">
+                                {member.fplName}
+                              </span>
+                              <span className="text-[10px] text-indigo-600 font-semibold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100 hidden sm:inline-flex items-center gap-0.5 opacity-80 hover:opacity-100">
+                                <Eye className="h-2.5 w-2.5" /> Squad
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 text-gray-500">
                             {member.fplTeamName || "—"}
                           </td>
-                          <td className="py-2 text-right font-mono text-xs">
+                          <td className="py-2.5 text-right font-mono text-xs text-gray-600">
                             {member.fplId}
                           </td>
-                          <td className="py-2 text-right">
-                            {member.isAdmin && (
+                          <td className="py-2.5 text-right">
+                            {member.isAdmin ? (
                               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
                                 Admin (Excluded)
+                              </span>
+                            ) : (
+                              <span className="text-xs text-indigo-600 font-medium hover:underline">
+                                View Squad
                               </span>
                             )}
                           </td>
@@ -736,6 +756,20 @@ export function GroupManager({
           }
           teamName={activePickerGroup.name}
           title={`Choose Logo for "${activePickerGroup.name}"`}
+        />
+      )}
+
+      {/* Fantasy Team Squad Modal */}
+      {activeSquadPlayer && (
+        <FantasyTeamModal
+          isOpen={true}
+          onClose={() => setActiveSquadPlayer(null)}
+          fplId={activeSquadPlayer.member.fplId}
+          managerName={activeSquadPlayer.member.fplName}
+          fplTeamName={activeSquadPlayer.member.fplTeamName}
+          tournamentTeamName={activeSquadPlayer.group.name}
+          tournamentTeamLogo={activeSquadPlayer.group.logo}
+          gameweek={1}
         />
       )}
     </div>

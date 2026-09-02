@@ -79,6 +79,47 @@ export interface FPLGameweekScore {
   adjustedNetPoints: number; // net points after chip deduction (if chips disabled)
 }
 
+export interface FantasyPlayerPick {
+  elementId: number;
+  webName: string;
+  fullName: string;
+  teamShortName: string;
+  positionType: "GKP" | "DEF" | "MID" | "FWD";
+  positionNumber: number; // 1 to 15 (1-11 starters, 12-15 bench)
+  isStarter: boolean;
+  isCaptain: boolean;
+  isViceCaptain: boolean;
+  multiplier: number; // 0 (bench without BB), 1 (starter), 2 (captain), 3 (triple captain)
+  points: number; // base gameweek points
+  totalPoints: number; // points * multiplier
+  stats?: {
+    goals?: number;
+    assists?: number;
+    cleanSheets?: number;
+    bonus?: number;
+    minutes?: number;
+    yellowCards?: number;
+    redCards?: number;
+  };
+}
+
+export interface FantasyTeamSquadView {
+  managerId: number;
+  managerName: string;
+  teamName: string;
+  gameweek: number;
+  activeChip: string | null;
+  totalPoints: number;
+  transfersCost: number;
+  benchPoints: number;
+  netPoints: number;
+  chipDeduction: number;
+  adjustedPoints: number;
+  starters: FantasyPlayerPick[];
+  bench: FantasyPlayerPick[];
+  formation: string;
+}
+
 // -------------------------------------------------------------
 // Mock Data for Testing & Demo Scenarios (e.g. Real Madrid vs Napoli)
 // -------------------------------------------------------------
@@ -429,30 +470,153 @@ export async function verifyManagerInLeague(
   }
 }
 
+export interface ElementMetadata {
+  id: number;
+  webName: string;
+  fullName: string;
+  teamShortName: string;
+  teamName: string;
+  positionType: "GKP" | "DEF" | "MID" | "FWD";
+}
+
+export interface ElementLiveStats {
+  points: number;
+  goals?: number;
+  assists?: number;
+  cleanSheets?: number;
+  bonus?: number;
+  minutes?: number;
+  yellowCards?: number;
+  redCards?: number;
+}
+
+/**
+ * Get cached bootstrap-static player and team lookup
+ */
+export async function getBootstrapStaticLookup(): Promise<Map<number, ElementMetadata>> {
+  const cacheKey = "fpl::bootstrap_static_elements";
+  const cached = getFromCache<Map<number, ElementMetadata>>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const data = await fetchFPL<{
+      elements: Array<{
+        id: number;
+        web_name: string;
+        first_name: string;
+        second_name: string;
+        team: number;
+        element_type: number;
+      }>;
+      teams: Array<{
+        id: number;
+        name: string;
+        short_name: string;
+      }>;
+      element_types: Array<{
+        id: number;
+        singular_name_short: string;
+      }>;
+    }>("/bootstrap-static/");
+
+    const teamShortNames = new Map<number, { name: string; short_name: string }>();
+    data.teams?.forEach((t) =>
+      teamShortNames.set(t.id, { name: t.name, short_name: t.short_name })
+    );
+
+    const posTypes = new Map<number, "GKP" | "DEF" | "MID" | "FWD">();
+    data.element_types?.forEach((et) => {
+      const type = (et.singular_name_short || "").toUpperCase();
+      if (type === "GKP" || type === "DEF" || type === "MID" || type === "FWD") {
+        posTypes.set(et.id, type);
+      }
+    });
+
+    const map = new Map<number, ElementMetadata>();
+    data.elements?.forEach((el) => {
+      const teamInfo = teamShortNames.get(el.team) || {
+        name: "Premier League",
+        short_name: "PL",
+      };
+      const posType = posTypes.get(el.element_type) || "MID";
+      map.set(el.id, {
+        id: el.id,
+        webName: el.web_name,
+        fullName: `${el.first_name} ${el.second_name}`.trim(),
+        teamShortName: teamInfo.short_name,
+        teamName: teamInfo.name,
+        positionType: posType,
+      });
+    });
+
+    setInCache(cacheKey, map);
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * Get map of all player gameweek live points and performance stats
+ */
+export async function getGameweekLiveElementsStatsMap(
+  gameweek: number
+): Promise<Map<number, ElementLiveStats>> {
+  const cacheKey = getCacheKey("fpl", "live_stats", gameweek);
+  const cached = getFromCache<Map<number, ElementLiveStats>>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const liveData = await fetchFPL<{
+      elements?: Array<{
+        id: number;
+        stats?: {
+          total_points?: number;
+          goals_scored?: number;
+          assists?: number;
+          clean_sheets?: number;
+          bonus?: number;
+          minutes?: number;
+          yellow_cards?: number;
+          red_cards?: number;
+        };
+      }>;
+    }>(`/event/${gameweek}/live/`);
+
+    const map = new Map<number, ElementLiveStats>();
+    if (liveData?.elements && Array.isArray(liveData.elements)) {
+      for (const el of liveData.elements) {
+        map.set(el.id, {
+          points: el.stats?.total_points || 0,
+          goals: el.stats?.goals_scored || 0,
+          assists: el.stats?.assists || 0,
+          cleanSheets: el.stats?.clean_sheets || 0,
+          bonus: el.stats?.bonus || 0,
+          minutes: el.stats?.minutes || 0,
+          yellowCards: el.stats?.yellow_cards || 0,
+          redCards: el.stats?.red_cards || 0,
+        });
+      }
+    }
+    setInCache(cacheKey, map);
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
 /**
  * Get map of all player points in a specific gameweek from live event data
  */
 export async function getGameweekLiveElementsMap(
   gameweek: number
 ): Promise<Map<number, number>> {
-  try {
-    const liveData = await fetchFPL<{
-      elements?: Array<{
-        id: number;
-        stats?: { total_points?: number };
-      }>;
-    }>(`/event/${gameweek}/live/`);
-
-    const map = new Map<number, number>();
-    if (liveData?.elements && Array.isArray(liveData.elements)) {
-      for (const el of liveData.elements) {
-        map.set(el.id, el.stats?.total_points || 0);
-      }
-    }
-    return map;
-  } catch {
-    return new Map();
+  const statsMap = await getGameweekLiveElementsStatsMap(gameweek);
+  const pointsMap = new Map<number, number>();
+  for (const [id, stats] of statsMap.entries()) {
+    pointsMap.set(id, stats.points);
   }
+  return pointsMap;
 }
 
 /**
@@ -651,5 +815,289 @@ export async function getManagerGameweekPoints(
     activeChip: null,
     chipDeduction: 0,
     adjustedNetPoints: pseudoRandomScore,
+  };
+}
+
+/**
+ * Realistic Mock Squad Generator for demo / testing managers
+ */
+function generateMockSquad(
+  entryId: number,
+  gameweek: number,
+  targetScore: number,
+  activeChip: string | null,
+  allowBenchBoost: boolean,
+  allowTripleCaptain: boolean
+): { starters: FantasyPlayerPick[]; bench: FantasyPlayerPick[]; formation: string } {
+  const mockStartersConfig = [
+    { name: "Raya", fullName: "David Raya", team: "ARS", pos: "GKP" as const, min: 90 },
+    { name: "Gabriel", fullName: "Gabriel Magalhães", team: "ARS", pos: "DEF" as const, min: 90 },
+    { name: "Alexander-Arnold", fullName: "Trent Alexander-Arnold", team: "LIV", pos: "DEF" as const, min: 85 },
+    { name: "Saliba", fullName: "William Saliba", team: "ARS", pos: "DEF" as const, min: 90 },
+    { name: "Pedro Porro", fullName: "Pedro Porro", team: "TOT", pos: "DEF" as const, min: 90 },
+    { name: "Salah", fullName: "Mohamed Salah", team: "LIV", pos: "MID" as const, min: 90 },
+    { name: "Saka", fullName: "Bukayo Saka", team: "ARS", pos: "MID" as const, min: 88 },
+    { name: "Palmer", fullName: "Cole Palmer", team: "CHE", pos: "MID" as const, min: 90 },
+    { name: "Luis Díaz", fullName: "Luis Díaz", team: "LIV", pos: "MID" as const, min: 78 },
+    { name: "Haaland", fullName: "Erling Haaland", team: "MCI", pos: "FWD" as const, min: 90, isCap: true },
+    { name: "Watkins", fullName: "Ollie Watkins", team: "AVL", pos: "FWD" as const, min: 85, isVice: true },
+  ];
+
+  const mockBenchConfig = [
+    { name: "Fabianski", fullName: "Lukasz Fabianski", team: "WHU", pos: "GKP" as const, pts: 2 },
+    { name: "Robinson", fullName: "Antonee Robinson", team: "FUL", pos: "DEF" as const, pts: 2 },
+    { name: "Winks", fullName: "Harry Winks", team: "LEI", pos: "MID" as const, pts: 2 },
+    { name: "Wood", fullName: "Chris Wood", team: "NFO", pos: "FWD" as const, pts: 5 },
+  ];
+
+  const is3xC = activeChip === "3xc";
+  const captainMultiplier = is3xC ? (allowTripleCaptain ? 3 : 2) : 2;
+  const isBB = activeChip === "bboost";
+
+  const totalUnits = 10 + captainMultiplier;
+  const unitPoints = Math.max(1, Math.floor(targetScore / totalUnits));
+
+  const starters: FantasyPlayerPick[] = mockStartersConfig.map((cfg, idx) => {
+    const isCaptain = !!cfg.isCap;
+    const isViceCaptain = !!cfg.isVice;
+    const mult = isCaptain ? captainMultiplier : 1;
+
+    let basePoints = 2;
+    if (idx === 0) basePoints = Math.min(6, Math.max(2, unitPoints));
+    else if (cfg.pos === "DEF") basePoints = Math.min(6, Math.max(1, unitPoints - 1));
+    else if (cfg.pos === "MID") basePoints = Math.max(2, unitPoints);
+    else if (isCaptain) basePoints = Math.max(4, Math.floor(unitPoints * 1.8));
+    else basePoints = Math.max(2, unitPoints);
+
+    return {
+      elementId: 1000 + idx,
+      webName: cfg.name,
+      fullName: cfg.fullName,
+      teamShortName: cfg.team,
+      positionType: cfg.pos,
+      positionNumber: idx + 1,
+      isStarter: true,
+      isCaptain,
+      isViceCaptain,
+      multiplier: mult,
+      points: basePoints,
+      totalPoints: basePoints * mult,
+      stats: {
+        minutes: cfg.min,
+        goals: cfg.pos === "FWD" || isCaptain ? 1 : 0,
+        assists: cfg.pos === "MID" && idx === 5 ? 1 : 0,
+        cleanSheets: cfg.pos === "DEF" || cfg.pos === "GKP" ? 1 : 0,
+        bonus: isCaptain ? 3 : 0,
+      },
+    };
+  });
+
+  // Adjust captain or highest scorer so sum(totalPoints) exactly equals targetScore
+  const currentStarterTotal = starters.reduce((sum, p) => sum + p.totalPoints, 0);
+  const diff = targetScore - currentStarterTotal;
+  const captainPick = starters.find((p) => p.isCaptain);
+  if (captainPick && captainMultiplier > 0) {
+    const capDelta = Math.floor(diff / captainMultiplier);
+    captainPick.points = Math.max(1, captainPick.points + capDelta);
+    captainPick.totalPoints = captainPick.points * captainMultiplier;
+  }
+
+  // Clean remainder
+  const remainder = targetScore - starters.reduce((sum, p) => sum + p.totalPoints, 0);
+  if (remainder !== 0) {
+    const nonCapMid = starters.find((p) => !p.isCaptain && p.positionType === "MID");
+    if (nonCapMid) {
+      nonCapMid.points = Math.max(0, nonCapMid.points + remainder);
+      nonCapMid.totalPoints = nonCapMid.points;
+    }
+  }
+
+  const bench: FantasyPlayerPick[] = mockBenchConfig.map((cfg, idx) => {
+    const benchMult = isBB ? (allowBenchBoost ? 1 : 0) : 0;
+    return {
+      elementId: 2000 + idx,
+      webName: cfg.name,
+      fullName: cfg.fullName,
+      teamShortName: cfg.team,
+      positionType: cfg.pos,
+      positionNumber: 12 + idx,
+      isStarter: false,
+      isCaptain: false,
+      isViceCaptain: false,
+      multiplier: benchMult,
+      points: cfg.pts,
+      totalPoints: cfg.pts * (isBB && allowBenchBoost ? 1 : 0),
+      stats: {
+        minutes: cfg.pts > 2 ? 75 : 15,
+        goals: cfg.pts > 4 ? 1 : 0,
+      },
+    };
+  });
+
+  return {
+    starters,
+    bench,
+    formation: "4-4-2",
+  };
+}
+
+/**
+ * Get a manager's complete fantasy squad (starters, bench, scores, formation) for a gameweek
+ */
+export async function getManagerGameweekSquad(
+  entryId: number,
+  gameweek: number,
+  options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true
+): Promise<FantasyTeamSquadView> {
+  const allowBenchBoost =
+    typeof options === "boolean" ? options : options.allowBenchBoost ?? true;
+  const allowTripleCaptain =
+    typeof options === "boolean" ? options : options.allowTripleCaptain ?? true;
+
+  // 1. Get gameweek score calculation
+  const score = await getManagerGameweekPoints(entryId, gameweek, {
+    allowBenchBoost,
+    allowTripleCaptain,
+  });
+
+  // 2. Get manager profile
+  let managerName = `Manager #${entryId}`;
+  let teamName = `Team #${entryId}`;
+  try {
+    const manager = await getManager(entryId);
+    managerName = `${manager.player_first_name} ${manager.player_last_name}`.trim();
+    teamName = manager.name;
+  } catch {
+    // Fallback names
+  }
+
+  // 3. Try to fetch real picks from FPL API if not a mock manager
+  const isMock = !!MOCK_MANAGERS[entryId];
+
+  if (!isMock) {
+    try {
+      const picksData = await fetchFPL<{
+        active_chip?: string | null;
+        entry_history?: {
+          points?: number;
+          total_points?: number;
+          event_transfers_cost?: number;
+          points_on_bench?: number;
+        };
+        picks?: Array<{
+          element: number;
+          position: number;
+          multiplier: number;
+          is_captain: boolean;
+          is_vice_captain: boolean;
+        }>;
+      }>(`/entry/${entryId}/event/${gameweek}/picks/`);
+
+      if (picksData?.picks && picksData.picks.length > 0) {
+        const [lookup, statsMap] = await Promise.all([
+          getBootstrapStaticLookup(),
+          getGameweekLiveElementsStatsMap(gameweek),
+        ]);
+
+        const allPicks: FantasyPlayerPick[] = picksData.picks.map((p) => {
+          const meta = lookup.get(p.element) || {
+            id: p.element,
+            webName: `Player ${p.element}`,
+            fullName: `Player ${p.element}`,
+            teamShortName: "PL",
+            teamName: "Premier League",
+            positionType: (p.position === 1 || p.position === 12
+              ? "GKP"
+              : "MID") as "GKP" | "DEF" | "MID" | "FWD",
+          };
+
+          const live = statsMap.get(p.element) || { points: 0 };
+          const isStarter = p.position <= 11;
+          let mult = p.multiplier;
+
+          // Apply chip adjustments
+          if (p.is_captain && score.activeChip === "3xc" && !allowTripleCaptain) {
+            mult = 2; // Reduced from 3x to 2x
+          }
+          if (!isStarter && score.activeChip === "bboost" && !allowBenchBoost) {
+            mult = 0; // Bench points excluded
+          }
+
+          const basePoints = live.points;
+          const totalPoints = basePoints * mult;
+
+          return {
+            elementId: p.element,
+            webName: meta.webName,
+            fullName: meta.fullName,
+            teamShortName: meta.teamShortName,
+            positionType: meta.positionType,
+            positionNumber: p.position,
+            isStarter,
+            isCaptain: p.is_captain,
+            isViceCaptain: p.is_vice_captain,
+            multiplier: mult,
+            points: basePoints,
+            totalPoints,
+            stats: live,
+          };
+        });
+
+        const starters = allPicks.filter((p) => p.isStarter);
+        const bench = allPicks.filter((p) => !p.isStarter);
+
+        const defCount = starters.filter((p) => p.positionType === "DEF").length;
+        const midCount = starters.filter((p) => p.positionType === "MID").length;
+        const fwdCount = starters.filter((p) => p.positionType === "FWD").length;
+        const formation = `${defCount}-${midCount}-${fwdCount}`;
+
+        return {
+          managerId: entryId,
+          managerName,
+          teamName,
+          gameweek,
+          activeChip: score.activeChip || null,
+          totalPoints: score.points,
+          transfersCost: score.eventTransfersCost,
+          benchPoints: score.benchPoints || 0,
+          netPoints: score.netPoints,
+          chipDeduction: score.chipDeduction,
+          adjustedPoints: score.adjustedNetPoints,
+          starters,
+          bench,
+          formation,
+        };
+      }
+    } catch {
+      // Fallback to mock generator below
+    }
+  }
+
+  // 4. Mock / fallback generator for mock managers or offline mode
+  const { starters, bench, formation } = generateMockSquad(
+    entryId,
+    gameweek,
+    score.points,
+    score.activeChip || null,
+    allowBenchBoost,
+    allowTripleCaptain
+  );
+
+  return {
+    managerId: entryId,
+    managerName,
+    teamName,
+    gameweek,
+    activeChip: score.activeChip || null,
+    totalPoints: score.points,
+    transfersCost: score.eventTransfersCost,
+    benchPoints:
+      score.benchPoints || bench.reduce((sum, p) => sum + p.points, 0),
+    netPoints: score.netPoints,
+    chipDeduction: score.chipDeduction,
+    adjustedPoints: score.adjustedNetPoints,
+    starters,
+    bench,
+    formation,
   };
 }

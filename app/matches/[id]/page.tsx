@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Trophy, ArrowLeft, Sparkles, Handshake } from "lucide-react";
+import { MatchScoreBreakdown } from "@/components/match-squad-client";
 
 export async function generateMetadata(
   props: PageProps<"/matches/[id]">
@@ -261,23 +262,29 @@ export default async function MatchPage(
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             {/* Home Group Breakdown */}
             {match.homeGroup && (
-              <ScoreBreakdown
+              <MatchScoreBreakdown
                 groupName={match.homeGroup.name}
                 logo={match.homeGroup.logo}
                 scores={homeScores}
                 total={match.homeScore!}
                 isWinner={match.result === "HOME_WIN"}
+                gameweek={match.round.gameweek}
+                allowBenchBoost={tournament.allowBenchBoost}
+                allowTripleCaptain={tournament.allowTripleCaptain}
               />
             )}
 
             {/* Away Group Breakdown */}
             {match.awayGroup && (
-              <ScoreBreakdown
+              <MatchScoreBreakdown
                 groupName={match.awayGroup.name}
                 logo={match.awayGroup.logo}
                 scores={awayScores}
                 total={match.awayScore!}
                 isWinner={match.result === "AWAY_WIN"}
+                gameweek={match.round.gameweek}
+                allowBenchBoost={tournament.allowBenchBoost}
+                allowTripleCaptain={tournament.allowTripleCaptain}
               />
             )}
           </div>
@@ -295,121 +302,6 @@ export default async function MatchPage(
           </div>
         )}
       </main>
-    </div>
-  );
-}
-
-function ScoreBreakdown({
-  groupName,
-  logo,
-  scores,
-  total,
-  isWinner,
-}: {
-  groupName: string;
-  logo?: string | null;
-  scores: {
-    id: string;
-    gameweekPoints: number;
-    isExcluded: boolean;
-    activeChip?: string | null;
-    chipDeduction?: number;
-    member: {
-      fplName: string;
-      fplTeamName: string | null;
-    };
-  }[];
-  total: number;
-  isWinner: boolean;
-}) {
-  const included = scores.filter((s) => !s.isExcluded);
-  const excluded = scores.filter((s) => s.isExcluded);
-
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          {logo && (
-            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 p-0.5 border border-white/10">
-              <img
-                src={logo}
-                alt={groupName}
-                className="h-6 w-6 object-contain"
-              />
-            </div>
-          )}
-          <h3
-            className={`text-lg font-bold ${isWinner ? "text-emerald-400" : "text-white"}`}
-          >
-            {groupName}
-          </h3>
-        </div>
-        <span className="text-2xl font-bold text-white">{total}</span>
-      </div>
-
-      {/* Included Members */}
-      <div className="space-y-2">
-        {included.map((s) => (
-          <div
-            key={s.id}
-            className="flex items-center justify-between text-sm py-0.5 border-b border-white/5 last:border-0"
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-white font-medium">{s.member.fplName}</span>
-                {s.activeChip && (
-                  <span className="rounded bg-indigo-500/20 px-1.5 py-0.2 text-[10px] font-bold text-indigo-300 uppercase">
-                    {s.activeChip === "bboost"
-                      ? "Bench Boost"
-                      : s.activeChip === "3xc"
-                        ? "Triple Captain"
-                        : s.activeChip}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                {s.member.fplTeamName && <span>{s.member.fplTeamName}</span>}
-                {s.chipDeduction && s.chipDeduction > 0 ? (
-                  <span className="text-amber-400/95 font-medium">
-                    (-{s.chipDeduction} pts {s.activeChip === "bboost" ? "bench excluded" : "chip adjustment"})
-                  </span>
-                ) : null}
-              </div>
-            </div>
-            <span className="font-mono font-bold text-white text-base">
-              {s.gameweekPoints}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Total */}
-      <div className="mt-3 border-t border-white/10 pt-2 flex items-center justify-between">
-        <span className="text-sm font-bold text-gray-400">TOTAL</span>
-        <span className="font-mono font-bold text-indigo-400 text-xl">{total}</span>
-      </div>
-
-      {/* Excluded (Admin) */}
-      {excluded.length > 0 && (
-        <div className="mt-4 rounded-lg bg-yellow-500/10 p-3">
-          <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wider mb-2">
-            Admin — Excluded from Score
-          </p>
-          {excluded.map((s) => (
-            <div
-              key={s.id}
-              className="flex items-center justify-between text-sm"
-            >
-              <span className="text-yellow-400/70 italic">
-                {s.member.fplName}
-              </span>
-              <span className="font-mono text-yellow-400/70 line-through">
-                {s.gameweekPoints}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
