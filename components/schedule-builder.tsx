@@ -25,7 +25,6 @@ import {
   Trash2,
   X,
   Loader2,
-  Check,
   Calendar,
   ExternalLink,
 } from "lucide-react";
@@ -434,7 +433,7 @@ export function ScheduleBuilder({
             No Fixtures Scheduled Yet
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            Use the "Auto-Generate Round-Robin Fixtures" button above or create
+            Use the &quot;Auto-Generate Round-Robin Fixtures&quot; button above or create
             rounds manually below.
           </p>
         </div>
@@ -478,7 +477,7 @@ export function ScheduleBuilder({
               <div className="divide-y divide-gray-100 p-4">
                 {round.matches.length === 0 ? (
                   <p className="text-sm text-gray-400 italic py-2">
-                    No matches in this round. Click "+ Add Match" to schedule.
+                    No matches in this round. Click &quot;+ Add Match&quot; to schedule.
                   </p>
                 ) : (
                   round.matches

@@ -1,11 +1,9 @@
 "use client";
-
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import {
   TEAM_LEAGUES,
   TEAM_LOGOS,
-  TeamLogo,
   suggestLogoForTeamName,
 } from "@/lib/team-logos";
 import {
@@ -14,7 +12,6 @@ import {
   Check,
   Shield,
   Sparkles,
-  Filter,
   ImageOff,
 } from "lucide-react";
 
@@ -40,21 +37,23 @@ export function TeamLogoPicker({
   const [selectedPath, setSelectedPath] = useState<string | null>(
     currentLogo || null
   );
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+
+  // Reset/sync state when modal opens without setting state inside an effect
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
+      setSelectedPath(currentLogo || null);
+      setSearchQuery("");
+      setSelectedLeague("ALL");
+    }
+  }
 
   // Auto suggestion based on teamName
   const suggestedLogo = useMemo(() => {
     if (!teamName) return null;
     return suggestLogoForTeamName(teamName);
   }, [teamName]);
-
-  // Sync currentLogo when opened
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedPath(currentLogo || null);
-      setSearchQuery("");
-      setSelectedLeague("ALL");
-    }
-  }, [isOpen, currentLogo]);
 
   // Filtered logos
   const filteredLogos = useMemo(() => {
@@ -117,9 +116,11 @@ export function TeamLogoPicker({
           <div className="mx-6 mt-4 flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50/80 p-3 shadow-xs">
             <div className="flex items-center gap-3">
               <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1 border border-indigo-100 shadow-xs">
-                <img
+                <Image
                   src={suggestedLogo.path}
                   alt={suggestedLogo.name}
+                  width={32}
+                  height={32}
                   className="h-8 w-8 object-contain"
                 />
               </div>
@@ -253,9 +254,11 @@ export function TeamLogoPicker({
                     )}
 
                     <div className="flex h-14 w-14 items-center justify-center p-1">
-                      <img
+                      <Image
                         src={logo.path}
                         alt={logo.name}
+                        width={48}
+                        height={48}
                         className="max-h-12 max-w-12 object-contain transition group-hover:scale-110"
                         loading="lazy"
                       />

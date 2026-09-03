@@ -5,12 +5,21 @@ import {
 } from "./lib/group-actions";
 import { calculateGroupScore } from "./lib/scoring";
 
+import { createSession } from "./lib/session";
+
 const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:3005";
 
 async function runMultiAdminTests() {
   console.log("==================================================");
   console.log("TESTING MULTI-ADMIN TOURNAMENT CREATION & WORKFLOW");
   console.log("==================================================\n");
+
+  const adminSession = createSession("admin@tournament.local");
+  const adminCookie = `admin_session=${encodeURIComponent(JSON.stringify(adminSession))}`;
+  const adminHeaders = {
+    "Content-Type": "application/json",
+    Cookie: adminCookie,
+  };
 
   let passed = 0;
   let total = 0;
@@ -29,7 +38,7 @@ async function runMultiAdminTests() {
   console.log("--- 1. Creating tournament with Primary Admin & Co-Admin ---");
   const createRes = await fetch(`${BASE_URL}/api/admin/tournaments`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: adminHeaders,
     body: JSON.stringify({
       name: "Multi-Admin Test Championship",
       season: 2025,
@@ -160,7 +169,7 @@ async function runMultiAdminTests() {
   console.log("\n--- 6. Updating tournament admins via PUT API ---");
   const putRes = await fetch(`${BASE_URL}/api/admin/tournaments`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: adminHeaders,
     body: JSON.stringify({
       id: tournamentId,
       name: "Multi-Admin Test Championship (Updated)",
@@ -206,7 +215,6 @@ async function runMultiAdminTests() {
 runMultiAdminTests()
   .then(async () => {
     await prisma.$disconnect();
-    process.exit(0);
   })
   .catch(async (err) => {
     console.error("Multi-admin test run failed:", err);

@@ -3,11 +3,9 @@
 import {
   getManager,
   getManagerLeagues,
-  getLeague,
   verifyManagerInLeague,
   type FPLManager,
   type FPLLeague,
-  type FPLLeagueEntry,
 } from "@/lib/fpl";
 
 export async function verifyFPLEntryAction(

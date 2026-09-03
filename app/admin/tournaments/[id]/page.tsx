@@ -15,7 +15,6 @@ import {
   Armchair,
   Crown,
   Ban,
-  ShieldAlert,
 } from "lucide-react";
 
 export default async function TournamentManagementPage({
@@ -257,7 +256,7 @@ export default async function TournamentManagementPage({
             <div className="mt-4 divide-y divide-gray-100">
               {tournament.groups.length === 0 ? (
                 <p className="py-2 text-xs italic text-gray-400">
-                  No groups imported yet. Click "Manage Groups" to import from FPL.
+                  No groups imported yet. Click &quot;Manage Groups&quot; to import from FPL.
                 </p>
               ) : (
                 tournament.groups.slice(0, 4).map((g) => (
@@ -316,7 +315,7 @@ export default async function TournamentManagementPage({
             <div className="mt-4 space-y-2">
               {tournament.rounds.length === 0 ? (
                 <p className="py-2 text-xs italic text-gray-400">
-                  No rounds scheduled yet. Click "Configure Schedule" to add fixtures.
+                  No rounds scheduled yet. Click &quot;Configure Schedule&quot; to add fixtures.
                 </p>
               ) : (
                 tournament.rounds.map((r) => (

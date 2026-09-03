@@ -2,7 +2,6 @@ import { prisma } from "./lib/db";
 import {
   calculateGroupScore,
   calculateMatchScore,
-  recalculateTournamentScores,
   calculateLeagueStandings,
 } from "./lib/scoring";
 import { validateScheduleAction } from "./lib/schedule-actions";

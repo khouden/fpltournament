@@ -3,9 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Only protect admin routes
-  if (pathname.startsWith("/admin")) {
-    // Allow /admin/login without authentication
+  // Protect admin routes and admin API endpoints
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
+    const isApi = pathname.startsWith("/api/admin");
+
+    // Allow /admin/login without authentication (only for page)
     if (pathname === "/admin/login") {
       return NextResponse.next();
     }
@@ -13,7 +15,9 @@ export async function middleware(request: NextRequest) {
     // Check for admin session
     const sessionCookie = request.cookies.get("admin_session");
     if (!sessionCookie?.value) {
-      // Redirect unauthenticated users to login
+      if (isApi) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
 
@@ -21,11 +25,15 @@ export async function middleware(request: NextRequest) {
       const session = JSON.parse(sessionCookie.value);
       // Check if session is still valid (not expired)
       if (session.expiresAt && session.expiresAt < Date.now()) {
-        // Session expired, redirect to login
+        if (isApi) {
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
         return NextResponse.redirect(new URL("/admin/login", request.url));
       }
     } catch {
-      // Invalid session data, redirect to login
+      if (isApi) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
       return NextResponse.redirect(new URL("/admin/login", request.url));
     }
   }
@@ -34,5 +42,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
 };

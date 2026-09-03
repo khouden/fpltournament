@@ -1,5 +1,28 @@
 import { prisma } from "../lib/db";
 import { suggestLogoForTeamName } from "../lib/team-logos";
+import type { Group, GroupMember } from "@prisma/client";
+
+interface PlMemberDetail {
+  id: string;
+  groupId: string;
+  fplName: string;
+  fplTeamName?: string | null;
+  fplId: number;
+  isAdmin: boolean;
+  ptsGW1?: number;
+  ptsGW2?: number;
+  chipGW1?: string | null;
+  chipGW2?: string | null;
+}
+
+interface MatchScoreSeedItem {
+  memberId: string;
+  gameweekPoints: number;
+  isExcluded: boolean;
+  isFinal: boolean;
+  activeChip?: string | null;
+  chipDeduction?: number;
+}
 
 async function main() {
   console.log("==================================================");
@@ -330,7 +353,7 @@ async function main() {
     },
   ];
 
-  const t2Groups: Record<string, { group: any; members: any[]; memberMap: Record<number, any> }> = {};
+  const t2Groups: Record<string, { group: Group; members: GroupMember[]; memberMap: Record<number, PlMemberDetail> }> = {};
 
   for (const team of plTeamsData) {
     const group = await prisma.group.create({
@@ -352,8 +375,8 @@ async function main() {
       },
     });
 
-    const members: any[] = [admin];
-    const memberMap: Record<number, any> = { [ADMIN_FPL_ID]: admin };
+    const members: GroupMember[] = [admin];
+    const memberMap: Record<number, PlMemberDetail> = { [ADMIN_FPL_ID]: admin };
 
     for (const m of team.members) {
       const created = await prisma.groupMember.create({
@@ -408,18 +431,16 @@ async function main() {
       });
     }
 
-    const ptsProp = gw === 1 ? "ptsGW1" : "ptsGW2";
-    const chipProp = gw === 1 ? "chipGW1" : "chipGW2";
-
     let homeScore = 0;
     let awayScore = 0;
 
-    const homeScoresData: any[] = [
+    const homeScoresData: MatchScoreSeedItem[] = [
       { memberId: home.memberMap[ADMIN_FPL_ID].id, gameweekPoints: 45, isExcluded: true, isFinal: true },
     ];
-    for (const m of home.members.filter((x: any) => !x.isAdmin)) {
-      const raw = home.memberMap[m.fplId][ptsProp] || 50;
-      const chip = home.memberMap[m.fplId][chipProp] || null;
+    for (const m of home.members.filter((x) => !x.isAdmin)) {
+      const memberDetail = home.memberMap[m.fplId];
+      const raw = (gw === 1 ? memberDetail?.ptsGW1 : memberDetail?.ptsGW2) ?? 50;
+      const chip = (gw === 1 ? memberDetail?.chipGW1 : memberDetail?.chipGW2) ?? null;
       homeScore += raw;
       homeScoresData.push({
         memberId: m.id,
@@ -431,12 +452,13 @@ async function main() {
       });
     }
 
-    const awayScoresData: any[] = [
+    const awayScoresData: MatchScoreSeedItem[] = [
       { memberId: away.memberMap[ADMIN_FPL_ID].id, gameweekPoints: 42, isExcluded: true, isFinal: true },
     ];
-    for (const m of away.members.filter((x: any) => !x.isAdmin)) {
-      const raw = away.memberMap[m.fplId][ptsProp] || 50;
-      const chip = away.memberMap[m.fplId][chipProp] || null;
+    for (const m of away.members.filter((x) => !x.isAdmin)) {
+      const memberDetail = away.memberMap[m.fplId];
+      const raw = (gw === 1 ? memberDetail?.ptsGW1 : memberDetail?.ptsGW2) ?? 50;
+      const chip = (gw === 1 ? memberDetail?.chipGW1 : memberDetail?.chipGW2) ?? null;
       awayScore += raw;
       awayScoresData.push({
         memberId: m.id,
@@ -534,7 +556,7 @@ async function main() {
     "Atletico Madrid",
   ];
 
-  const t3GroupsMap: Record<string, any> = {};
+  const t3GroupsMap: Record<string, { group: Group; members: GroupMember[] }> = {};
   for (let i = 0; i < euroClubs.length; i++) {
     const clubName = euroClubs[i];
     const group = await prisma.group.create({
@@ -618,8 +640,8 @@ async function main() {
   });
 
   for (const matchObj of [t3m1, t3m2, t3m3]) {
-    const homeTeam = Object.values(t3GroupsMap).find((x: any) => x.group.id === matchObj.homeGroupId);
-    const awayTeam = Object.values(t3GroupsMap).find((x: any) => x.group.id === matchObj.awayGroupId);
+    const homeTeam = Object.values(t3GroupsMap).find((x) => x.group.id === matchObj.homeGroupId);
+    const awayTeam = Object.values(t3GroupsMap).find((x) => x.group.id === matchObj.awayGroupId);
 
     if (homeTeam && awayTeam) {
       for (const m of homeTeam.members) {
@@ -699,7 +721,7 @@ async function main() {
   });
 
   const t4Clubs = ["Celtic Bhoys", "Ajax Amsterdam", "Porto Dragons", "Benfica Eagles"];
-  const t4GroupsMap: Record<string, any> = {};
+  const t4GroupsMap: Record<string, { group: Group; members: GroupMember[] }> = {};
 
   for (let i = 0; i < t4Clubs.length; i++) {
     const clubName = t4Clubs[i];
@@ -810,7 +832,7 @@ async function main() {
   });
 
   const draftClubs = ["Grasshoppers FC", "Red Bull Pioneers", "Spartak Casuals", "Dynamo Pubs"];
-  const t5GroupsMap: Record<string, any> = {};
+  const t5GroupsMap: Record<string, Group> = {};
 
   for (let i = 0; i < draftClubs.length; i++) {
     const group = await prisma.group.create({

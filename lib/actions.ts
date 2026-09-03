@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createSession, setSessionCookie } from "@/lib/session";
+import { createSession } from "@/lib/session";
 
 // Admin credentials - in production, this should be from env or a more secure source
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@tournament.local";

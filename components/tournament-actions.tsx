@@ -134,7 +134,7 @@ export function TournamentActions({
               Delete Tournament?
             </h3>
             <p className="mt-2 text-sm text-gray-600">
-              Are you sure you want to delete "{tournamentName}"? This action
+              Are you sure you want to delete &quot;{tournamentName}&quot;? This action
               cannot be undone.
             </p>
 

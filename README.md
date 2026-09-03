@@ -60,6 +60,10 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - **Match scoring** with member breakdowns
 - **Public tournament display** with bracket progression
 
+## Documentation
+
+- [User Stories Specification](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/USER_STORIES.md) - Complete agile user stories, acceptance criteria, and business rules across all 12 epics.
+
 ## Environment Variables
 
 See `.env.example` for all required variables. For development, the `.env` file is pre-configured.

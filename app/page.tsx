@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Trophy, ArrowRight, Check, X, Shield, Award, Users, Calendar } from "lucide-react";
+import { Trophy, ArrowRight, Check, X } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "FPL Tournaments — Custom Fantasy Premier League Knockout Tournaments",
@@ -156,7 +156,7 @@ export default async function Home() {
             <div className="space-y-1">
               <p className="font-semibold text-indigo-300">1. Group Score</p>
               <p className="text-xs text-gray-400">
-                Each tournament group corresponds to an FPL Classic League. Score equals the sum of all members' Gameweek points.
+                Each tournament group corresponds to an FPL Classic League. Score equals the sum of all members&apos; Gameweek points.
               </p>
             </div>
             <div className="space-y-1">
