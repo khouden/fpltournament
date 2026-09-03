@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { safeRevalidate } from "@/lib/safe-revalidate";
+import { requireAdminSession } from "@/lib/auth-server";
 
 export interface ScheduleValidationResult {
   isValid: boolean;
@@ -17,6 +18,7 @@ export async function generateRoundRobinScheduleAction(
   startingGameweek: number = 1
 ) {
   try {
+    await requireAdminSession();
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: {
@@ -157,6 +159,7 @@ export async function createRoundAction(
   roundNumber?: number
 ) {
   try {
+    await requireAdminSession();
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: { rounds: { orderBy: { roundNumber: "asc" } } },
@@ -222,6 +225,7 @@ export async function updateRoundAction(
   }
 ) {
   try {
+    await requireAdminSession();
     if (data.gameweek && (data.gameweek < 1 || data.gameweek > 38)) {
       return { success: false, error: "Gameweek must be between 1 and 38" };
     }
@@ -253,6 +257,7 @@ export async function updateRoundAction(
  */
 export async function deleteRoundAction(roundId: string, tournamentId: string) {
   try {
+    await requireAdminSession();
     await prisma.round.delete({
       where: { id: roundId },
     });
@@ -283,6 +288,7 @@ export async function createMatchAction(
   }
 ) {
   try {
+    await requireAdminSession();
     const round = await prisma.round.findUnique({
       where: { id: roundId },
       include: { matches: true },
@@ -345,6 +351,7 @@ export async function updateMatchAction(
   }
 ) {
   try {
+    await requireAdminSession();
     if (
       data.homeGroupId &&
       data.awayGroupId &&
@@ -384,6 +391,7 @@ export async function updateMatchAction(
  */
 export async function deleteMatchAction(matchId: string, tournamentId: string) {
   try {
+    await requireAdminSession();
     await prisma.match.delete({
       where: { id: matchId },
     });

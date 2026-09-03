@@ -104,16 +104,6 @@ export default function AdminLoginPage() {
               <span>{loading ? "Logging in..." : "Login"}</span>
             </Button>
           </form>
-
-          <Alert className="bg-blue-50/70 border-blue-200 text-blue-900">
-            <AlertDescription className="text-xs">
-              <strong>Demo credentials:</strong>
-              <br />
-              Email: <code className="font-semibold text-blue-950">admin@tournament.local</code>
-              <br />
-              Password: <code className="font-semibold text-blue-950">admin123</code>
-            </AlertDescription>
-          </Alert>
         </CardContent>
       </Card>
     </div>

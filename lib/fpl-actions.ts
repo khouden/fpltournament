@@ -7,6 +7,7 @@ import {
   type FPLManager,
   type FPLLeague,
 } from "@/lib/fpl";
+import { requireAdminSession } from "@/lib/auth-server";
 
 export async function verifyFPLEntryAction(
   entryId: string
@@ -16,6 +17,7 @@ export async function verifyFPLEntryAction(
   error?: string;
 }> {
   try {
+    await requireAdminSession();
     const id = parseInt(entryId, 10);
     if (isNaN(id)) {
       return { success: false, error: "Invalid entry ID" };
@@ -39,6 +41,7 @@ export async function getManagerLeaguesAction(
   error?: string;
 }> {
   try {
+    await requireAdminSession();
     const id = parseInt(entryId, 10);
     if (isNaN(id)) {
       return { success: false, error: "Invalid entry ID" };
@@ -65,6 +68,7 @@ export async function validateManagerInLeagueAction(
   error?: string;
 }> {
   try {
+    await requireAdminSession();
     const id = parseInt(entryId, 10);
     const lId = parseInt(leagueId, 10);
 

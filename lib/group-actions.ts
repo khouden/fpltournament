@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getLeague, getManagerLeagues, verifyManagerInLeague } from "@/lib/fpl";
 import { safeRevalidate } from "@/lib/safe-revalidate";
 import { suggestLogoForTeamName } from "@/lib/team-logos";
+import { requireAdminSession } from "@/lib/auth-server";
 
 export interface GroupMemberView {
   id: string;
@@ -46,6 +47,7 @@ export async function getAdminLeaguesForTournamentAction(
   filterAdminFplId?: number
 ) {
   try {
+    await requireAdminSession();
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: {
@@ -141,6 +143,7 @@ export async function importLeagueAsGroupAction(
   importingAdminFplId?: number
 ) {
   try {
+    await requireAdminSession();
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: {
@@ -265,6 +268,7 @@ export async function updateGroupAction(
   data: { name?: string; logo?: string | null }
 ) {
   try {
+    await requireAdminSession();
     const updatePayload: { name?: string; logo?: string | null } = {};
 
     if (data.name !== undefined) {
@@ -327,6 +331,7 @@ export async function renameGroupAction(
  */
 export async function deleteGroupAction(groupId: string, tournamentId: string) {
   try {
+    await requireAdminSession();
     // Check if group is referenced in matches
     const matchesCount = await prisma.match.count({
       where: {

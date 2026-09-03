@@ -4,12 +4,14 @@ import { prisma } from "@/lib/db";
 import { calculateMatchScore, recalculateTournamentScores } from "@/lib/scoring";
 import { validateScheduleAction } from "@/lib/schedule-actions";
 import { safeRevalidate } from "@/lib/safe-revalidate";
+import { requireAdminSession } from "@/lib/auth-server";
 
 /**
  * Server action to calculate / recalculate a single match
  */
 export async function recalculateMatchAction(matchId: string, tournamentId: string) {
   try {
+    await requireAdminSession();
     const result = await calculateMatchScore(matchId, true);
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/matches`);
@@ -30,6 +32,7 @@ export async function recalculateMatchAction(matchId: string, tournamentId: stri
  */
 export async function recalculateAllScoresAction(tournamentId: string) {
   try {
+    await requireAdminSession();
     const results = await recalculateTournamentScores(tournamentId, true);
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/matches`);
@@ -49,6 +52,7 @@ export async function recalculateAllScoresAction(tournamentId: string) {
  */
 export async function finalizeMatchAction(matchId: string, tournamentId: string) {
   try {
+    await requireAdminSession();
     // 1. Calculate score to ensure latest values are saved
     await calculateMatchScore(matchId, true);
 
@@ -86,6 +90,7 @@ export async function finalizeMatchAction(matchId: string, tournamentId: string)
  */
 export async function publishTournamentWithValidationAction(tournamentId: string) {
   try {
+    await requireAdminSession();
     // Run full schedule validation
     const validation = await validateScheduleAction(tournamentId);
     if (!validation.isValid) {
@@ -124,6 +129,7 @@ export async function publishTournamentWithValidationAction(tournamentId: string
  */
 export async function finishTournamentAction(tournamentId: string) {
   try {
+    await requireAdminSession();
     const tournament = await prisma.tournament.update({
       where: { id: tournamentId },
       data: { status: "FINISHED" },

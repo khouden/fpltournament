@@ -62,6 +62,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Documentation
 
+- [Page Architecture & UI/UX Documentation](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/README.md) - Complete page-by-page design system, UI wireframes, and functional specifications across all 12 platform pages and views.
 - [User Stories Specification](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/USER_STORIES.md) - Complete agile user stories, acceptance criteria, and business rules across all 12 epics.
 
 ## Environment Variables

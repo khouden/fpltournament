@@ -43,9 +43,6 @@ export default async function Home() {
             <Button variant="ghost" size="sm" asChild className="text-gray-300 hover:text-white hover:bg-white/10">
               <Link href="/tournaments">All Tournaments</Link>
             </Button>
-            <Button size="sm" asChild>
-              <Link href="/admin">Admin Panel</Link>
-            </Button>
           </div>
         </div>
       </header>
@@ -69,9 +66,6 @@ export default async function Home() {
                 <span>Browse Tournaments</span>
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
-            </Button>
-            <Button variant="subtle" size="lg" asChild className="rounded-xl font-semibold backdrop-blur">
-              <Link href="/admin">Organize Tournament</Link>
             </Button>
           </div>
         </div>
@@ -101,10 +95,7 @@ export default async function Home() {
           {active.length === 0 ? (
             <Card className="border-white/10 bg-white/5 p-8 text-center backdrop-blur">
               <p className="text-gray-400">No active tournaments published at the moment.</p>
-              <Link href="/admin/tournaments/new" className="mt-3 inline-flex items-center gap-1.5 text-sm text-indigo-400 hover:underline">
-                <span>Create a tournament in Admin</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+              <p className="mt-2 text-xs text-gray-500">Check back soon for upcoming tournaments and fixtures!</p>
             </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">

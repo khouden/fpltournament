@@ -2,9 +2,11 @@
 
 import { prisma } from "@/lib/db";
 import { safeRevalidate } from "@/lib/safe-revalidate";
+import { requireAdminSession } from "@/lib/auth-server";
 
 export async function deleteTournamentAction(id: string) {
   try {
+    await requireAdminSession();
     const tournament = await prisma.tournament.findUnique({
       where: { id },
       include: {
@@ -55,6 +57,7 @@ export async function deleteTournamentAction(id: string) {
 
 export async function publishTournamentAction(id: string) {
   try {
+    await requireAdminSession();
     const tournament = await prisma.tournament.update({
       where: { id },
       data: { status: "PUBLISHED" },
@@ -75,6 +78,7 @@ export async function publishTournamentAction(id: string) {
 
 export async function unpublishTournamentAction(id: string) {
   try {
+    await requireAdminSession();
     const tournament = await prisma.tournament.update({
       where: { id },
       data: { status: "DRAFT" },

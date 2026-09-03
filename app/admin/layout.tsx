@@ -1,34 +1,15 @@
-import { cookies } from "next/headers";
 import { logoutAction } from "@/lib/actions";
 import { Trophy, LogOut } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
-async function getSession() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("admin_session");
-
-  if (!sessionCookie?.value) {
-    return null;
-  }
-
-  try {
-    const session = JSON.parse(sessionCookie.value);
-    if (session.expiresAt && session.expiresAt < Date.now()) {
-      return null;
-    }
-    return session;
-  } catch {
-    return null;
-  }
-}
+import { getAdminSessionServer } from "@/lib/auth-server";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
+  const session = await getAdminSessionServer();
 
   if (!session) {
     return <>{children}</>;
