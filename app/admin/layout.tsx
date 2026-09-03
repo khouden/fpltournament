@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { logoutAction } from "@/lib/actions";
-import { Trophy, LogOut, Shield } from "lucide-react";
+import { Trophy, LogOut } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 async function getSession() {
   const cookieStore = await cookies();
@@ -36,8 +36,8 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6 sm:px-6 lg:px-8">
+      <header className="bg-white shadow-xs border-b border-gray-200">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <Link href="/admin" className="flex items-center gap-2 text-2xl font-bold text-gray-900 hover:text-indigo-600 transition">
             <Trophy className="h-6 w-6 text-indigo-600" />
             <span>Fantasy Leagues Admin</span>
@@ -47,13 +47,15 @@ export default async function AdminLayout({
               {session.user?.email}
             </span>
             <form action={logoutAction}>
-              <button
+              <Button
                 type="submit"
-                className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-red-700 transition cursor-pointer"
+                variant="destructive"
+                size="sm"
+                className="gap-1.5"
               >
                 <LogOut className="h-4 w-4" />
                 <span>Logout</span>
-              </button>
+              </Button>
             </form>
           </div>
         </div>

@@ -2,6 +2,9 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Trophy, ArrowRight, Check, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "FPL Tournaments — Custom Fantasy Premier League Knockout Tournaments",
@@ -37,18 +40,12 @@ export default async function Home() {
             <span>FPL TOURNAMENTS</span>
           </Link>
           <div className="flex items-center gap-3">
-            <Link
-              href="/tournaments"
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition"
-            >
-              All Tournaments
-            </Link>
-            <Link
-              href="/admin"
-              className="rounded-lg bg-indigo-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 transition"
-            >
-              Admin Panel
-            </Link>
+            <Button variant="ghost" size="sm" asChild className="text-gray-300 hover:text-white hover:bg-white/10">
+              <Link href="/tournaments">All Tournaments</Link>
+            </Button>
+            <Button size="sm" asChild>
+              <Link href="/admin">Admin Panel</Link>
+            </Button>
           </div>
         </div>
       </header>
@@ -56,9 +53,9 @@ export default async function Home() {
       {/* Hero Section */}
       <section className="relative overflow-hidden border-b border-white/10 py-16 sm:py-24">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-300 border border-indigo-500/30 mb-4">
+          <Badge variant="subtle" className="mb-4 gap-1.5 px-3 py-1 text-xs font-bold uppercase tracking-wider text-indigo-300 border-indigo-500/30 bg-indigo-500/20">
             <Trophy className="h-3.5 w-3.5" /> Fantasy Premier League Tournament Engine
-          </span>
+          </Badge>
           <h1 className="text-4xl font-black sm:text-6xl tracking-tight text-white">
             Custom Knockout Tournaments for FPL Leagues
           </h1>
@@ -67,19 +64,15 @@ export default async function Home() {
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Link
-              href="/tournaments"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 font-bold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 hover:scale-105 transition"
-            >
-              <span>Browse Tournaments</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/admin"
-              className="rounded-xl border border-white/20 bg-white/5 px-6 py-3 font-semibold text-white backdrop-blur hover:bg-white/10 transition"
-            >
-              Organize Tournament
-            </Link>
+            <Button size="lg" asChild className="rounded-xl font-bold shadow-lg shadow-indigo-500/25">
+              <Link href="/tournaments">
+                <span>Browse Tournaments</span>
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Link>
+            </Button>
+            <Button variant="subtle" size="lg" asChild className="rounded-xl font-semibold backdrop-blur">
+              <Link href="/admin">Organize Tournament</Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -99,20 +92,20 @@ export default async function Home() {
               </p>
             </div>
             {active.length > 0 && (
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+              <Badge variant="success" className="font-bold">
                 {active.length} Live
-              </span>
+              </Badge>
             )}
           </div>
 
           {active.length === 0 ? (
-            <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur">
+            <Card className="border-white/10 bg-white/5 p-8 text-center backdrop-blur">
               <p className="text-gray-400">No active tournaments published at the moment.</p>
               <Link href="/admin/tournaments/new" className="mt-3 inline-flex items-center gap-1.5 text-sm text-indigo-400 hover:underline">
                 <span>Create a tournament in Admin</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
-            </div>
+            </Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {active.map((t) => (
@@ -134,9 +127,9 @@ export default async function Home() {
                   Historical tournament brackets and final results
                 </p>
               </div>
-              <span className="text-xs font-bold text-gray-400 bg-gray-500/10 px-2.5 py-1 rounded-full border border-gray-500/20">
+              <Badge variant="secondary" className="font-bold">
                 {finished.length} Completed
-              </span>
+              </Badge>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -148,31 +141,35 @@ export default async function Home() {
         )}
 
         {/* Core Rules Overview */}
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur">
-          <h2 className="text-xl font-bold text-white mb-4">
-            How FPL Tournament Scoring Works
-          </h2>
-          <div className="grid gap-6 sm:grid-cols-3 text-sm text-gray-300">
-            <div className="space-y-1">
-              <p className="font-semibold text-indigo-300">1. Group Score</p>
-              <p className="text-xs text-gray-400">
-                Each tournament group corresponds to an FPL Classic League. Score equals the sum of all members&apos; Gameweek points.
-              </p>
+        <Card className="rounded-2xl border-white/10 bg-white/5 p-8 backdrop-blur text-white">
+          <CardHeader className="p-0 pb-4">
+            <CardTitle className="text-xl font-bold text-white">
+              How FPL Tournament Scoring Works
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="grid gap-6 sm:grid-cols-3 text-sm text-gray-300">
+              <div className="space-y-1">
+                <p className="font-semibold text-indigo-300">1. Group Score</p>
+                <p className="text-xs text-gray-400">
+                  Each tournament group corresponds to an FPL Classic League. Score equals the sum of all members&apos; Gameweek points.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-semibold text-yellow-300">2. Admin Exclusion</p>
+                <p className="text-xs text-gray-400">
+                  The tournament organizer/admin is a member of every group to manage leagues, but their points are strictly excluded from all scores.
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-semibold text-emerald-300">3. Chips &amp; Progression</p>
+                <p className="text-xs text-gray-400">
+                  Organizers can configure chip rules. Matches determine knockout progression dynamically across rounds.
+                </p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <p className="font-semibold text-yellow-300">2. Admin Exclusion</p>
-              <p className="text-xs text-gray-400">
-                The tournament organizer/admin is a member of every group to manage leagues, but their points are strictly excluded from all scores.
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="font-semibold text-emerald-300">3. Chips & Progression</p>
-              <p className="text-xs text-gray-400">
-                Organizers can configure chip rules. Matches determine knockout progression dynamically across rounds.
-              </p>
-            </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </main>
 
       {/* Footer */}
@@ -213,49 +210,48 @@ function TournamentCard({
   return (
     <Link
       href={`/tournaments/${tournament.id}`}
-      className="group rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-indigo-500/50 hover:bg-white/10"
+      className="group block"
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-xl font-bold text-white group-hover:text-indigo-300 transition">
-            {tournament.name}
-          </h3>
-          <p className="mt-1 text-sm text-gray-400">
-            Season {tournament.season}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-              tournament.status === "PUBLISHED"
-                ? "bg-emerald-500/20 text-emerald-400"
-                : "bg-gray-500/20 text-gray-400"
-            }`}
-          >
-            {tournament.status === "PUBLISHED" ? "ACTIVE" : "FINISHED"}
-          </span>
-          <div className="flex items-center gap-2 text-[10px] text-gray-400 font-mono">
-            <span className="flex items-center gap-0.5">
-              BB: {tournament.allowBenchBoost ? <Check className="h-3 w-3 text-emerald-400" /> : <X className="h-3 w-3 text-rose-400" />}
-            </span>
-            <span>|</span>
-            <span className="flex items-center gap-0.5">
-              TC: {tournament.allowTripleCaptain ? <Check className="h-3 w-3 text-emerald-400" /> : <X className="h-3 w-3 text-rose-400" />}
-            </span>
+      <Card className="border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-indigo-500/50 hover:bg-white/10 text-white">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-white group-hover:text-indigo-300 transition">
+              {tournament.name}
+            </h3>
+            <p className="mt-1 text-sm text-gray-400">
+              Season {tournament.season}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Badge
+              variant={tournament.status === "PUBLISHED" ? "success" : "secondary"}
+              className="font-bold"
+            >
+              {tournament.status === "PUBLISHED" ? "ACTIVE" : "FINISHED"}
+            </Badge>
+            <div className="flex items-center gap-2 text-[10px] text-gray-400 font-mono">
+              <span className="flex items-center gap-0.5">
+                BB: {tournament.allowBenchBoost ? <Check className="h-3 w-3 text-emerald-400" /> : <X className="h-3 w-3 text-rose-400" />}
+              </span>
+              <span>|</span>
+              <span className="flex items-center gap-0.5">
+                TC: {tournament.allowTripleCaptain ? <Check className="h-3 w-3 text-emerald-400" /> : <X className="h-3 w-3 text-rose-400" />}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="mt-4 flex gap-4 text-xs text-gray-400">
-        <span>{tournament.groups.length} Groups</span>
-        <span>
-          {completedMatches}/{totalMatches} Matches
-        </span>
-        <span>{tournament.rounds.length} Rounds</span>
-      </div>
-      <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
-        <span>View Tournament</span>
-        <ArrowRight className="h-4 w-4" />
-      </div>
+        <div className="mt-4 flex gap-4 text-xs text-gray-400">
+          <span>{tournament.groups.length} Groups</span>
+          <span>
+            {completedMatches}/{totalMatches} Matches
+          </span>
+          <span>{tournament.rounds.length} Rounds</span>
+        </div>
+        <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
+          <span>View Tournament</span>
+          <ArrowRight className="h-4 w-4" />
+        </div>
+      </Card>
     </Link>
   );
 }

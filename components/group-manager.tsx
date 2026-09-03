@@ -28,7 +28,37 @@ import {
   Search,
   Image as ImageIcon,
   Eye,
+  Sparkles,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 interface GroupMember {
   id: string;
@@ -66,6 +96,9 @@ export function GroupManager({
   const [renamingGroup, setRenamingGroup] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renameLogo, setRenameLogo] = useState<string | null>(null);
+
+  // Delete confirmation
+  const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
 
   // Logo Pickers state
   const [importLogos, setImportLogos] = useState<Record<number, string | null>>({});
@@ -148,219 +181,230 @@ export function GroupManager({
         )
       );
       setRenamingGroup(null);
-      setRenameValue("");
-      setRenameLogo(null);
       showToast("Team updated successfully");
     } else {
       setError(result.error || "Failed to update team");
     }
   };
 
-  const handleDirectChangeLogo = async (groupId: string, newLogo: string | null) => {
-    setError("");
-    const result = await updateGroupLogoAction(groupId, tournamentId, newLogo);
+  const handleDirectChangeLogo = async (groupId: string, logoPath: string | null) => {
+    const result = await updateGroupLogoAction(groupId, tournamentId, logoPath);
     if (result.success && result.group) {
       setGroups((prev) =>
-        prev.map((g) => (g.id === groupId ? { ...g, logo: result.group!.logo } : g))
+        prev.map((g) =>
+          g.id === groupId ? { ...g, logo: result.group!.logo } : g
+        )
       );
-      showToast("Logo updated");
+      showToast("Team logo updated");
     } else {
       setError(result.error || "Failed to update logo");
     }
   };
 
   const handleDelete = async (groupId: string) => {
-    if (!confirm("Are you sure you want to delete this group?")) return;
     setError("");
     const result = await deleteGroupAction(groupId, tournamentId);
     if (result.success) {
+      const deleted = groups.find((g) => g.id === groupId);
       setGroups((prev) => prev.filter((g) => g.id !== groupId));
-      showToast("Group deleted");
+      if (deleted?.fplLeagueId) {
+        setLeagues((prev) =>
+          prev.map((l) =>
+            l.id === deleted.fplLeagueId ? { ...l, isAlreadyImported: false } : l
+          )
+        );
+      }
+      showToast("Team deleted");
+      setGroupToDelete(null);
     } else {
-      setError(result.error || "Failed to delete group");
+      setError(result.error || "Failed to delete team");
+      setGroupToDelete(null);
     }
+  };
+
+  const handleAutoSuggestAllLogos = () => {
+    const updated = { ...importLogos };
+    let count = 0;
+    leagues.forEach((l) => {
+      const match = suggestLogoForTeamName(l.name);
+      if (match) {
+        updated[l.id] = match.path;
+        count++;
+      }
+    });
+    setImportLogos(updated);
+    showToast(`Auto-assigned logos to ${count} leagues based on names!`);
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-            <Users className="h-5 w-5 text-indigo-600" />
-            <span>Teams & Groups ({groups.length})</span>
+          <h2 className="text-xl font-bold text-gray-900">
+            Tournament Teams ({groups.length})
           </h2>
           <p className="text-sm text-gray-500">
-            Import FPL Classic Leagues, customize club logos, and manage team rosters
+            Each team corresponds to an FPL Classic League. Admins are excluded from match scoring.
           </p>
         </div>
-        <button
+
+        <Button
           onClick={() => {
             setShowImport(!showImport);
             if (!showImport && leagues.length === 0) fetchLeagues();
           }}
-          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition cursor-pointer"
         >
           {showImport ? (
             <>
-              <X className="h-4 w-4" />
+              <X className="h-4 w-4 mr-1.5" />
               <span>Close</span>
             </>
           ) : (
             <>
-              <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4 mr-1.5" />
               <span>Import Group</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 border border-red-200">
-          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
-          <p className="text-sm text-red-800">{error}</p>
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {successMsg && (
-        <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 border border-green-200">
-          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-          <p className="text-sm text-green-800">{successMsg}</p>
-        </div>
+        <Alert variant="success">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle>Success</AlertTitle>
+          <AlertDescription>{successMsg}</AlertDescription>
+        </Alert>
       )}
 
       {/* Import Panel */}
       {showImport && (
-        <div className="rounded-xl border-2 border-indigo-200 bg-indigo-50/70 p-5 space-y-4">
-          <div>
-            <h3 className="font-bold text-indigo-950 flex items-center gap-2">
+        <Card className="border-2 border-indigo-200 bg-indigo-50/70 shadow-xs">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-indigo-600" />
-              <span>Import from FPL Classic Leagues</span>
-            </h3>
-            <p className="mt-1 text-xs text-indigo-700">
-              Select a Classic League and customize the team logo before importing.
-            </p>
-          </div>
-
-          {loadingLeagues ? (
-            <div className="flex items-center gap-2 text-sm text-indigo-600 py-4">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Loading leagues from FPL...</span>
+              <CardTitle className="text-base font-bold text-indigo-950">
+                Import from FPL Classic Leagues
+              </CardTitle>
             </div>
-          ) : leagues.length === 0 ? (
-            <p className="text-sm text-indigo-700 py-2">
-              No leagues found. Please verify the Admin FPL accounts.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {/* Search input */}
-              <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={leagueSearchQuery}
-                  onChange={(e) => setLeagueSearchQuery(e.target.value)}
-                  placeholder="Search leagues by name, league ID, or admin..."
-                  className="w-full rounded-xl border border-indigo-200 bg-white py-2.5 pl-10 pr-9 text-sm text-gray-900 placeholder:text-gray-400 shadow-xs focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-                />
-                {leagueSearchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setLeagueSearchQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition cursor-pointer"
-                    title="Clear search"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
+            <CardDescription className="text-xs text-indigo-700">
+              Select a Classic League and customize the team logo before importing.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {loadingLeagues ? (
+              <div className="flex items-center gap-2 text-sm text-indigo-600 py-4">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Loading leagues from FPL...</span>
               </div>
-
-              {/* Admin Filter Tabs if tournament has multiple admins */}
-              {tournamentAdmins.length > 1 && (
-                <div className="flex flex-wrap items-center gap-2 pt-1 border-b border-indigo-200/70 pb-3">
-                  <span className="text-xs font-bold text-indigo-900 mr-1">
-                    Filter by Admin:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedAdminFilter("ALL")}
-                    className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
-                      selectedAdminFilter === "ALL"
-                        ? "bg-indigo-600 text-white shadow-xs"
-                        : "bg-white text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
-                    }`}
-                  >
-                    All Admins ({leagues.length})
-                  </button>
-                  {tournamentAdmins.map((admin) => {
-                    const count = leagues.filter(
-                      (l) => l.adminFplId === admin.fplId
-                    ).length;
-                    const isSelected = selectedAdminFilter === admin.fplId;
-                    return (
-                      <button
-                        key={admin.fplId}
-                        type="button"
-                        onClick={() => setSelectedAdminFilter(admin.fplId)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition cursor-pointer ${
-                          isSelected
-                            ? "bg-indigo-600 text-white shadow-xs"
-                            : "bg-white text-gray-700 hover:bg-indigo-50 border border-gray-200"
-                        }`}
-                      >
-                        {admin.isPrimary ? (
-                          <Crown className="h-3 w-3 text-amber-500" />
-                        ) : (
-                          <Shield className="h-3 w-3 text-indigo-500" />
-                        )}
-                        <span>{admin.name || `Admin #${admin.fplId}`}</span>
-                        <span
-                          className={`rounded-full px-1.5 py-0.2 text-[10px] ${
-                            isSelected
-                              ? "bg-indigo-700 text-white"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
+            ) : leagues.length === 0 ? (
+              <p className="text-sm text-indigo-700 py-2">
+                No leagues found. Please verify the Admin FPL accounts.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {/* Search input */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-400 pointer-events-none" />
+                  <Input
+                    type="text"
+                    value={leagueSearchQuery}
+                    onChange={(e) => setLeagueSearchQuery(e.target.value)}
+                    placeholder="Search leagues by name, league ID, or admin..."
+                    className="pl-9 pr-8 bg-white border-indigo-200"
+                  />
+                  {leagueSearchQuery && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setLeagueSearchQuery("")}
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
-              )}
 
-              {/* Search stats feedback */}
-              {leagueSearchQuery.trim() && (
-                <div className="flex items-center justify-between text-xs text-indigo-900 px-1 pt-0.5">
-                  <span>
-                    Showing{" "}
-                    <strong>
-                      {
-                        leagues.filter((league) => {
-                          if (
-                            selectedAdminFilter !== "ALL" &&
-                            league.adminFplId !== selectedAdminFilter
-                          ) {
-                            return false;
-                          }
-                          const q = leagueSearchQuery.trim().toLowerCase();
-                          const matchName = league.name.toLowerCase().includes(q);
-                          const matchId = String(league.id).includes(q);
-                          const matchAdmin = (league.adminName || "")
-                            .toLowerCase()
-                            .includes(q);
-                          return matchName || matchId || matchAdmin;
-                        }).length
-                      }
-                    </strong>{" "}
-                    matching{" "}
-                    {leagues.filter((league) => {
-                      if (
-                        selectedAdminFilter !== "ALL" &&
-                        league.adminFplId !== selectedAdminFilter
-                      ) {
-                        return false;
-                      }
+                {/* Admin Filter if tournament has multiple admins */}
+                {tournamentAdmins.length > 1 && (
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 border-b border-indigo-200/70 pb-3">
+                    <span className="text-xs font-bold text-indigo-900 mr-1">
+                      Filter by Admin:
+                    </span>
+                    <Button
+                      type="button"
+                      variant={selectedAdminFilter === "ALL" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedAdminFilter("ALL")}
+                      className="h-7 text-xs"
+                    >
+                      All Admins ({leagues.length})
+                    </Button>
+                    {tournamentAdmins.map((admin) => {
+                      const count = leagues.filter(
+                        (l) => l.adminFplId === admin.fplId
+                      ).length;
+                      const isSelected = selectedAdminFilter === admin.fplId;
+                      return (
+                        <Button
+                          key={admin.fplId}
+                          type="button"
+                          variant={isSelected ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setSelectedAdminFilter(admin.fplId)}
+                          className="h-7 text-xs gap-1.5"
+                        >
+                          {admin.isPrimary ? (
+                            <Crown className="h-3 w-3 text-amber-500" />
+                          ) : (
+                            <Shield className="h-3 w-3 text-indigo-500" />
+                          )}
+                          <span>{admin.name || `Admin #${admin.fplId}`}</span>
+                          <Badge variant="secondary" className="px-1.5 py-0 text-[10px] ml-0.5">
+                            {count}
+                          </Badge>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Action to Auto-Suggest Logos */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-indigo-800">
+                    {leagues.length} leagues discovered
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAutoSuggestAllLogos}
+                    className="gap-1.5 text-xs bg-white"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+                    <span>Auto-Match Logos</span>
+                  </Button>
+                </div>
+
+                {/* Leagues List */}
+                {(() => {
+                  const filtered = leagues.filter((league) => {
+                    if (
+                      selectedAdminFilter !== "ALL" &&
+                      league.adminFplId !== selectedAdminFilter
+                    ) {
+                      return false;
+                    }
+                    if (leagueSearchQuery.trim()) {
                       const q = leagueSearchQuery.trim().toLowerCase();
                       const matchName = league.name.toLowerCase().includes(q);
                       const matchId = String(league.id).includes(q);
@@ -368,191 +412,155 @@ export function GroupManager({
                         .toLowerCase()
                         .includes(q);
                       return matchName || matchId || matchAdmin;
-                    }).length === 1
-                      ? "league"
-                      : "leagues"}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setLeagueSearchQuery("")}
-                    className="font-semibold text-indigo-600 hover:underline cursor-pointer"
-                  >
-                    Clear search
-                  </button>
-                </div>
-              )}
+                    }
+                    return true;
+                  });
 
-              {/* Leagues List or No Matches */}
-              {(() => {
-                const filtered = leagues.filter((league) => {
-                  if (
-                    selectedAdminFilter !== "ALL" &&
-                    league.adminFplId !== selectedAdminFilter
-                  ) {
-                    return false;
-                  }
-                  if (leagueSearchQuery.trim()) {
-                    const q = leagueSearchQuery.trim().toLowerCase();
-                    const matchName = league.name.toLowerCase().includes(q);
-                    const matchId = String(league.id).includes(q);
-                    const matchAdmin = (league.adminName || "")
-                      .toLowerCase()
-                      .includes(q);
-                    return matchName || matchId || matchAdmin;
-                  }
-                  return true;
-                });
-
-                if (filtered.length === 0) {
-                  return (
-                    <div className="rounded-xl border border-dashed border-indigo-200 bg-white p-6 text-center">
-                      <Search className="h-7 w-7 text-indigo-300 mx-auto mb-2" />
-                      <p className="text-sm font-semibold text-gray-800">
-                        No leagues found
-                        {leagueSearchQuery.trim()
-                          ? ` matching "${leagueSearchQuery}"`
-                          : ""}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {leagueSearchQuery.trim()
-                          ? "Try searching with a different name, league ID, or changing the admin filter."
-                          : "No leagues available for this filter."}
-                      </p>
-                      {(leagueSearchQuery.trim() ||
-                        selectedAdminFilter !== "ALL") && (
-                        <button
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="rounded-xl border border-dashed border-indigo-200 bg-white p-6 text-center">
+                        <Search className="h-7 w-7 text-indigo-300 mx-auto mb-2" />
+                        <p className="text-sm font-semibold text-gray-800">
+                          No leagues found
+                          {leagueSearchQuery.trim()
+                            ? ` matching "${leagueSearchQuery}"`
+                            : ""}
+                        </p>
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={() => {
                             setLeagueSearchQuery("");
                             setSelectedAdminFilter("ALL");
                           }}
-                          className="mt-3 inline-flex items-center rounded-lg bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition cursor-pointer"
+                          className="mt-3"
                         >
-                          Reset search & filters
-                        </button>
-                      )}
-                    </div>
-                  );
-                }
+                          Reset search &amp; filters
+                        </Button>
+                      </div>
+                    );
+                  }
 
-                return (
-                  <div className="space-y-2.5">
-                    {filtered.map((league) => {
-                      const currentChosenLogo = importLogos[league.id];
-                      return (
-                        <div
-                          key={`${league.adminFplId || "admin"}_${league.id}`}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-3.5 shadow-xs border border-indigo-100"
-                        >
-                          <div className="flex items-center gap-3 min-w-[200px]">
-                            {/* Logo selector thumbnail button */}
-                            <button
-                              type="button"
-                              onClick={() => setActivePickerLeague(league)}
-                              disabled={league.isAlreadyImported}
-                              className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-1 hover:border-indigo-400 hover:bg-indigo-50/50 transition cursor-pointer disabled:opacity-60"
-                              title="Click to choose a custom logo"
-                            >
-                              {currentChosenLogo ? (
-                                <img
-                                  src={currentChosenLogo}
-                                  alt={league.name}
-                                  className="h-9 w-9 object-contain"
-                                />
-                              ) : (
-                                <Shield className="h-6 w-6 text-gray-400 group-hover:text-indigo-600" />
-                              )}
-                              <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[9px] font-bold text-white shadow-xs">
-                                <Pencil className="h-2.5 w-2.5" />
-                              </span>
-                            </button>
-
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-bold text-gray-900">
-                                  {league.name}
-                                </p>
-                                {league.isPrivate && (
-                                  <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">
-                                    Mini-League
-                                  </span>
-                                )}
-                                {league.adminName && (
-                                  <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 border border-indigo-200">
-                                    <Shield className="h-2.5 w-2.5 text-indigo-500" />
-                                    <span>via {league.adminName}</span>
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                                <span>League #{league.id}</span>
-                                {currentChosenLogo && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setActivePickerLeague(league)}
-                                    className="text-[11px] font-semibold text-indigo-600 hover:underline cursor-pointer"
-                                  >
-                                    Change logo
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {league.isAlreadyImported ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-md border border-emerald-200">
-                                <Check className="h-3.5 w-3.5" />
-                                <span>Imported</span>
-                              </span>
-                            ) : (
+                  return (
+                    <div className="space-y-2.5">
+                      {filtered.map((league) => {
+                        const currentChosenLogo = importLogos[league.id];
+                        return (
+                          <div
+                            key={`${league.adminFplId || "admin"}_${league.id}`}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-3.5 shadow-xs border border-indigo-100"
+                          >
+                            <div className="flex items-center gap-3 min-w-[200px]">
+                              {/* Logo selector thumbnail button */}
                               <button
-                                onClick={() =>
-                                  handleImport(league.id, league.adminFplId)
-                                }
-                                disabled={importing === league.id}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 disabled:bg-gray-400 cursor-pointer transition"
+                                type="button"
+                                onClick={() => setActivePickerLeague(league)}
+                                disabled={league.isAlreadyImported}
+                                className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-1 hover:border-indigo-400 hover:bg-indigo-50/50 transition cursor-pointer disabled:opacity-60"
+                                title="Click to choose a custom logo"
                               >
-                                {importing === league.id && (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                {currentChosenLogo ? (
+                                  <img
+                                    src={currentChosenLogo}
+                                    alt={league.name}
+                                    className="h-9 w-9 object-contain"
+                                  />
+                                ) : (
+                                  <Shield className="h-6 w-6 text-gray-400 group-hover:text-indigo-600" />
                                 )}
-                                <span>
-                                  {importing === league.id
-                                    ? "Importing..."
-                                    : "Import Team"}
+                                <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[9px] font-bold text-white shadow-xs">
+                                  <Pencil className="h-2.5 w-2.5" />
                                 </span>
                               </button>
-                            )}
+
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-bold text-gray-900">
+                                    {league.name}
+                                  </p>
+                                  {league.isPrivate && (
+                                    <Badge variant="secondary" className="text-[10px]">
+                                      Mini-League
+                                    </Badge>
+                                  )}
+                                  {league.adminName && (
+                                    <Badge variant="outline" className="text-[10px] gap-1">
+                                      <Shield className="h-2.5 w-2.5 text-indigo-500" />
+                                      <span>via {league.adminName}</span>
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                  <span>League #{league.id}</span>
+                                  {currentChosenLogo && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setActivePickerLeague(league)}
+                                      className="text-[11px] font-semibold text-indigo-600 hover:underline cursor-pointer"
+                                    >
+                                      Change logo
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div>
+                              {league.isAlreadyImported ? (
+                                <Badge variant="success" className="gap-1 py-1 px-2.5">
+                                  <Check className="h-3.5 w-3.5" />
+                                  <span>Imported</span>
+                                </Badge>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={() =>
+                                    handleImport(league.id, league.adminFplId)
+                                  }
+                                  disabled={importing === league.id}
+                                >
+                                  {importing === league.id && (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                                  )}
+                                  <span>
+                                    {importing === league.id
+                                      ? "Importing..."
+                                      : "Import Team"}
+                                  </span>
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
-        </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Group List */}
       {groups.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center bg-white">
+        <Card className="border-2 border-dashed border-gray-300 p-8 text-center bg-white">
           <Shield className="h-8 w-8 text-gray-400 mx-auto mb-2" />
           <p className="text-gray-700 font-bold">No teams imported yet</p>
           <p className="text-xs text-gray-500 mt-1">
             Click &quot;Import Group&quot; above to import FPL Classic Leagues as tournament teams.
           </p>
-        </div>
+        </Card>
       ) : (
         <div className="space-y-4">
           {groups.map((group) => {
             const isRenaming = renamingGroup === group.id;
 
             return (
-              <div
+              <Card
                 key={group.id}
-                className="rounded-xl border border-gray-200 bg-white shadow-xs overflow-hidden"
+                className="overflow-hidden border-gray-200 bg-white shadow-xs"
               >
                 {/* Group Header */}
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-4 py-3.5 bg-gray-50/50">
@@ -580,38 +588,43 @@ export function GroupManager({
 
                     {isRenaming ? (
                       <div className="flex flex-wrap items-center gap-2">
-                        <input
+                        <Input
                           type="text"
                           value={renameValue}
                           onChange={(e) => setRenameValue(e.target.value)}
-                          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none"
+                          className="h-8 w-48 text-sm"
                           placeholder="Team name"
                           autoFocus
                         />
-                        <button
+                        <Button
                           type="button"
+                          variant="outline"
+                          size="sm"
                           onClick={() => setActivePickerGroup(group)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                          className="gap-1 text-xs"
                         >
                           <ImageIcon className="h-3.5 w-3.5 text-indigo-600" />
                           <span>Change Logo</span>
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          size="sm"
                           onClick={() => handleUpdateGroup(group.id)}
-                          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs text-white font-bold hover:bg-indigo-700 cursor-pointer shadow-xs"
+                          className="h-8 text-xs"
                         >
                           Save
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setRenamingGroup(null);
                             setRenameValue("");
                             setRenameLogo(null);
                           }}
-                          className="text-xs text-gray-500 hover:text-gray-700 px-2"
+                          className="h-8 text-xs text-gray-500"
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       <div>
@@ -629,50 +642,56 @@ export function GroupManager({
 
                   {!isRenaming && (
                     <div className="flex items-center gap-1">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setActivePickerGroup(group)}
-                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                        className="gap-1 text-xs text-gray-700"
                         title="Change team logo"
                       >
                         <ImageIcon className="h-3.5 w-3.5 text-indigo-600" />
                         <span>Logo</span>
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           setRenamingGroup(group.id);
                           setRenameValue(group.name);
                           setRenameLogo(group.logo);
                         }}
-                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 transition cursor-pointer"
+                        className="gap-1 text-xs text-gray-700"
                       >
                         <Pencil className="h-3.5 w-3.5" />
                         <span>Rename</span>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(group.id)}
-                        className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition cursor-pointer"
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setGroupToDelete(group.id)}
+                        className="gap-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         <span>Delete</span>
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
 
                 {/* Members Table */}
-                <div className="px-4 py-3">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-xs font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100">
-                        <th className="pb-2">Player</th>
-                        <th className="pb-2">Team Name</th>
-                        <th className="pb-2 text-right">FPL ID</th>
-                        <th className="pb-2 text-right">Role</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
+                <div className="px-4 py-2">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-b border-gray-100 hover:bg-transparent">
+                        <TableHead className="py-2 text-xs font-bold uppercase tracking-wider text-gray-400">Player</TableHead>
+                        <TableHead className="py-2 text-xs font-bold uppercase tracking-wider text-gray-400">Team Name</TableHead>
+                        <TableHead className="py-2 text-right text-xs font-bold uppercase tracking-wider text-gray-400">FPL ID</TableHead>
+                        <TableHead className="py-2 text-right text-xs font-bold uppercase tracking-wider text-gray-400">Role</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="divide-y divide-gray-50">
                       {group.members.map((member) => (
-                        <tr
+                        <TableRow
                           key={member.id}
                           onClick={() => setActiveSquadPlayer({ member, group })}
                           className={`cursor-pointer transition ${
@@ -682,7 +701,7 @@ export function GroupManager({
                           }`}
                           title={`Click to view ${member.fplName}'s fantasy squad`}
                         >
-                          <td className="py-2.5 font-medium">
+                          <TableCell className="py-2.5 font-medium">
                             <div className="flex items-center gap-1.5">
                               <span className="hover:text-indigo-600 transition hover:underline">
                                 {member.fplName}
@@ -691,34 +710,58 @@ export function GroupManager({
                                 <Eye className="h-2.5 w-2.5" /> Squad
                               </span>
                             </div>
-                          </td>
-                          <td className="py-2.5 text-gray-500">
+                          </TableCell>
+                          <TableCell className="py-2.5 text-gray-500">
                             {member.fplTeamName || "—"}
-                          </td>
-                          <td className="py-2.5 text-right font-mono text-xs text-gray-600">
+                          </TableCell>
+                          <TableCell className="py-2.5 text-right font-mono text-xs text-gray-600">
                             {member.fplId}
-                          </td>
-                          <td className="py-2.5 text-right">
+                          </TableCell>
+                          <TableCell className="py-2.5 text-right">
                             {member.isAdmin ? (
-                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
+                              <Badge variant="warning" className="text-xs">
                                 Admin (Excluded)
-                              </span>
+                              </Badge>
                             ) : (
                               <span className="text-xs text-indigo-600 font-medium hover:underline">
                                 View Squad
                               </span>
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))}
-                    </tbody>
-                  </table>
+                    </TableBody>
+                  </Table>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
       )}
+
+      {/* Delete Group Confirmation Dialog */}
+      <AlertDialog
+        open={!!groupToDelete}
+        onOpenChange={(open) => !open && setGroupToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Team?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this team from the tournament? Any scheduled matches involving this team will also be affected.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => groupToDelete && handleDelete(groupToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Modal Logo Picker for League Import */}
       {activePickerLeague && (

@@ -3,6 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginAction } from "@/lib/actions";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, Loader2, Trophy } from "lucide-react";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -36,78 +48,74 @@ export default function AdminLoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-12">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg">
-        <div className="space-y-2 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">
+      <Card className="w-full max-w-md shadow-xl border-gray-200">
+        <CardHeader className="space-y-1 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 mb-2">
+            <Trophy className="h-6 w-6" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-gray-900">
             Fantasy Leagues
-          </h1>
-          <p className="text-gray-600">Admin Access</p>
-        </div>
+          </CardTitle>
+          <CardDescription className="text-gray-600">Admin Access Portal</CardDescription>
+        </CardHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <p className="text-sm text-red-800">{error}</p>
+        <CardContent className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Authentication Failed</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                placeholder="admin@tournament.local"
+                required
+              />
             </div>
-          )}
 
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <Button
+              type="submit"
               disabled={loading}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="admin@tournament.local"
-              required
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
+              className="w-full font-semibold"
             >
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="••••••••"
-              required
-            />
-          </div>
+              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              <span>{loading ? "Logging in..." : "Login"}</span>
+            </Button>
+          </form>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-
-        <div className="rounded-md bg-blue-50 p-4">
-          <p className="text-xs text-blue-800">
-            <strong>Demo credentials:</strong>
-            <br />
-            Email: admin@tournament.local
-            <br />
-            Password: admin123
-          </p>
-        </div>
-      </div>
+          <Alert className="bg-blue-50/70 border-blue-200 text-blue-900">
+            <AlertDescription className="text-xs">
+              <strong>Demo credentials:</strong>
+              <br />
+              Email: <code className="font-semibold text-blue-950">admin@tournament.local</code>
+              <br />
+              Password: <code className="font-semibold text-blue-950">admin123</code>
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     </div>
   );
 }

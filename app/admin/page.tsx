@@ -1,7 +1,16 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { TournamentActions } from "@/components/tournament-actions";
-import { Trophy, Plus, Layers, FileText, CheckCircle2 } from "lucide-react";
+import { Trophy, Plus, FileText, CheckCircle2 } from "lucide-react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default async function AdminDashboard() {
   const tournaments = await prisma.tournament.findMany({
@@ -18,71 +27,72 @@ export default async function AdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-lg bg-white p-6 shadow">
+      <Card className="p-6 shadow-xs">
         <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
-        <p className="mt-2 text-gray-600">Manage tournaments and competitions</p>
-      </div>
+        <p className="mt-1 text-sm text-gray-600">Manage tournaments and competitions</p>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <div className="rounded-lg bg-white p-6 shadow flex items-center justify-between">
+        <Card className="p-6 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-600">Total Tournaments</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">
               {tournaments.length}
             </p>
           </div>
-          <div className="p-3 bg-indigo-50 rounded-xl">
-            <Trophy className="h-6 w-6 text-indigo-600" />
+          <div className="p-3 bg-indigo-50 rounded-xl text-indigo-600">
+            <Trophy className="h-6 w-6" />
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-lg bg-white p-6 shadow flex items-center justify-between">
+        <Card className="p-6 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-600">Published</p>
             <p className="text-3xl font-bold text-emerald-600 mt-1">
               {tournaments.filter((t) => t.status === "PUBLISHED").length}
             </p>
           </div>
-          <div className="p-3 bg-emerald-50 rounded-xl">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+          <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600">
+            <CheckCircle2 className="h-6 w-6" />
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-lg bg-white p-6 shadow flex items-center justify-between">
+        <Card className="p-6 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-600">Draft</p>
             <p className="text-3xl font-bold text-amber-600 mt-1">
               {tournaments.filter((t) => t.status === "DRAFT").length}
             </p>
           </div>
-          <div className="p-3 bg-amber-50 rounded-xl">
-            <FileText className="h-6 w-6 text-amber-600" />
+          <div className="p-3 bg-amber-50 rounded-xl text-amber-600">
+            <FileText className="h-6 w-6" />
           </div>
-        </div>
+        </Card>
       </div>
 
-      <div className="rounded-lg bg-white p-6 shadow">
+      <Card className="p-6 shadow-xs">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-gray-900">Tournaments</h3>
-          <Link
-            href="/admin/tournaments/new"
-            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Create Tournament</span>
-          </Link>
+          <Button asChild className="gap-1.5">
+            <Link href="/admin/tournaments/new">
+              <Plus className="h-4 w-4" />
+              <span>Create Tournament</span>
+            </Link>
+          </Button>
         </div>
 
         {tournaments.length === 0 ? (
-          <p className="mt-4 text-gray-600">No tournaments yet. Create your first tournament to get started.</p>
+          <p className="mt-4 text-sm text-gray-600">
+            No tournaments yet. Create your first tournament to get started.
+          </p>
         ) : (
           <div className="mt-4 space-y-3">
             {tournaments.map((tournament) => (
-              <div
+              <Card
                 key={tournament.id}
-                className="space-y-2 rounded-lg border border-gray-200 p-4 hover:bg-gray-50 transition"
+                className="space-y-3 p-4 hover:bg-gray-50/70 transition border-gray-200 shadow-none"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <Link
                       href={`/admin/tournaments/${tournament.id}`}
@@ -90,7 +100,7 @@ export default async function AdminDashboard() {
                     >
                       {tournament.name}
                     </Link>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 mt-0.5">
                       Season {tournament.season} · {tournament.groups.length}{" "}
                       groups · {tournament.rounds.reduce((acc, r) => acc + r.matches.length, 0)} matches ·{" "}
                       <span className="font-medium text-xs text-indigo-600">
@@ -99,17 +109,18 @@ export default async function AdminDashboard() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                        tournament.status === "DRAFT"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : tournament.status === "PUBLISHED"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                      }`}
+                    <Badge
+                      variant={
+                        tournament.status === "PUBLISHED"
+                          ? "success"
+                          : tournament.status === "DRAFT"
+                            ? "warning"
+                            : "secondary"
+                      }
+                      className="font-semibold"
                     >
                       {tournament.status}
-                    </span>
+                    </Badge>
                   </div>
                 </div>
                 <TournamentActions
@@ -118,11 +129,11 @@ export default async function AdminDashboard() {
                   status={tournament.status as "DRAFT" | "PUBLISHED" | "FINISHED"}
                   hasGroups={tournament.groups.length > 0}
                 />
-              </div>
+              </Card>
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

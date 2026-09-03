@@ -4,6 +4,9 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Trophy, ArrowLeft, Sparkles, Handshake } from "lucide-react";
 import { MatchScoreBreakdown } from "@/components/match-squad-client";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export async function generateMetadata(
   props: PageProps<"/matches/[id]">
@@ -82,7 +85,7 @@ export default async function MatchPage(
     });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white">
       {/* Header */}
       <header className="border-b border-white/10 bg-black/20 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
@@ -95,16 +98,15 @@ export default async function MatchPage(
 
       <main className="mx-auto max-w-3xl px-4 py-10">
         {/* Back Link */}
-        <Link
-          href={`/tournaments/${tournament.id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-indigo-400 hover:text-indigo-300 transition"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>{tournament.name}</span>
-        </Link>
+        <Button variant="ghost" size="sm" asChild className="text-indigo-400 hover:text-indigo-300 hover:bg-white/10 mb-4">
+          <Link href={`/tournaments/${tournament.id}`}>
+            <ArrowLeft className="h-4 w-4 mr-1.5" />
+            <span>{tournament.name}</span>
+          </Link>
+        </Button>
 
         {/* Match Header */}
-        <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-6 text-center">
+        <Card className="border-white/10 bg-white/5 p-6 text-center text-white backdrop-blur shadow-lg">
           <p className="text-sm text-gray-400">
             {match.round.name || `Round ${match.round.roundNumber}`} · Gameweek {match.round.gameweek}
           </p>
@@ -123,21 +125,21 @@ export default async function MatchPage(
                   {match.homeGroup?.name || "TBD"}
                 </h2>
                 {match.result && (
-                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-black">
+                  <div className="mt-1">
                     {match.result === "HOME_WIN" ? (
-                      <>
-                        <Sparkles className="h-3 w-3 text-emerald-400" />
-                        <span className="text-emerald-400">+3 PTS (Win)</span>
-                      </>
+                      <Badge variant="success" className="gap-1 text-xs font-black">
+                        <Sparkles className="h-3 w-3" />
+                        <span>+3 PTS (Win)</span>
+                      </Badge>
                     ) : match.result === "DRAW" ? (
-                      <>
-                        <Handshake className="h-3 w-3 text-yellow-400" />
-                        <span className="text-yellow-400">+1 PT (Draw)</span>
-                      </>
+                      <Badge variant="warning" className="gap-1 text-xs font-black">
+                        <Handshake className="h-3 w-3" />
+                        <span>+1 PT (Draw)</span>
+                      </Badge>
                     ) : (
-                      <span className="text-gray-400">0 PTS (Loss)</span>
+                      <span className="text-xs text-gray-400 font-medium">0 PTS (Loss)</span>
                     )}
-                  </span>
+                  </div>
                 )}
               </div>
               {match.homeGroup?.logo ? (
@@ -194,21 +196,21 @@ export default async function MatchPage(
                   {match.awayGroup?.name || "TBD"}
                 </h2>
                 {match.result && (
-                  <span className="mt-1 inline-flex items-center gap-1 text-xs font-black">
+                  <div className="mt-1">
                     {match.result === "AWAY_WIN" ? (
-                      <>
-                        <Sparkles className="h-3 w-3 text-emerald-400" />
-                        <span className="text-emerald-400">+3 PTS (Win)</span>
-                      </>
+                      <Badge variant="success" className="gap-1 text-xs font-black">
+                        <Sparkles className="h-3 w-3" />
+                        <span>+3 PTS (Win)</span>
+                      </Badge>
                     ) : match.result === "DRAW" ? (
-                      <>
-                        <Handshake className="h-3 w-3 text-yellow-400" />
-                        <span className="text-yellow-400">+1 PT (Draw)</span>
-                      </>
+                      <Badge variant="warning" className="gap-1 text-xs font-black">
+                        <Handshake className="h-3 w-3" />
+                        <span>+1 PT (Draw)</span>
+                      </Badge>
                     ) : (
-                      <span className="text-gray-400">0 PTS (Loss)</span>
+                      <span className="text-xs text-gray-400 font-medium">0 PTS (Loss)</span>
                     )}
-                  </span>
+                  </div>
                 )}
               </div>
             </div>
@@ -242,20 +244,20 @@ export default async function MatchPage(
             </p>
           )}
 
-          <div className="mt-2 flex justify-center gap-2">
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+          <div className="mt-3 flex justify-center gap-2">
+            <Badge
+              variant={
                 match.status === "FINALIZED"
-                  ? "bg-emerald-500/20 text-emerald-400"
+                  ? "success"
                   : match.status === "COMPLETED"
-                    ? "bg-blue-500/20 text-blue-400"
-                    : "bg-gray-500/20 text-gray-400"
-              }`}
+                    ? "default"
+                    : "secondary"
+              }
             >
               {match.status}
-            </span>
+            </Badge>
           </div>
-        </div>
+        </Card>
 
         {/* Score Breakdown */}
         {hasScore && (homeScores.length > 0 || awayScores.length > 0) && (
@@ -292,14 +294,14 @@ export default async function MatchPage(
 
         {/* No Scores Yet */}
         {!hasScore && (
-          <div className="mt-8 rounded-xl border border-white/10 bg-white/5 p-8 text-center">
+          <Card className="mt-8 border-white/10 bg-white/5 p-8 text-center text-white backdrop-blur">
             <p className="text-gray-400">
               Scores have not been calculated yet.
             </p>
             <p className="mt-2 text-sm text-gray-500">
               Scores will appear once the Gameweek is complete.
             </p>
-          </div>
+          </Card>
         )}
       </main>
     </div>

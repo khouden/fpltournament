@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { TournamentForm } from "@/components/tournament-form";
 import { notFound } from "next/navigation";
+import { Card } from "@/components/ui/card";
 
 export default async function EditTournamentPage(
   props: PageProps<"/admin/tournaments/[id]/edit">
@@ -27,7 +28,7 @@ export default async function EditTournamentPage(
         <p className="mt-2 text-gray-600">Update tournament details and organizers</p>
       </div>
 
-      <div className="rounded-lg bg-white p-8 shadow">
+      <Card className="p-8 shadow-xs border-gray-200">
         <TournamentForm
           initialData={{
             id: tournament.id,
@@ -44,7 +45,7 @@ export default async function EditTournamentPage(
             })),
           }}
         />
-      </div>
+      </Card>
     </div>
   );
 }

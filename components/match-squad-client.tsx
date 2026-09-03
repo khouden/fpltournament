@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Sparkles, Eye, Shield } from "lucide-react";
 import { FantasyTeamModal } from "./fantasy-team-modal";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export interface MatchPlayerScoreItem {
   id: string;
@@ -75,9 +77,9 @@ export function MatchSquadList({
             <span className="truncate">{teamName} Players</span>
           </div>
           {totalScore !== null && (
-            <span className="shrink-0 font-mono text-[11px] font-bold text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+            <Badge variant="subtle" className="font-mono text-[11px] font-bold text-indigo-300">
               {totalScore} pts
-            </span>
+            </Badge>
           )}
         </div>
 
@@ -108,13 +110,13 @@ export function MatchSquadList({
                     </span>
                   )}
                   {s.activeChip && (
-                    <span className="shrink-0 rounded bg-indigo-500/20 px-1 py-0.2 text-[9px] font-bold text-indigo-300 uppercase">
+                    <Badge variant="secondary" className="px-1 py-0 text-[9px] font-bold uppercase">
                       {s.activeChip === "bboost"
                         ? "BB"
                         : s.activeChip === "3xc"
                           ? "3XC"
                           : s.activeChip}
-                    </span>
+                    </Badge>
                   )}
                   {s.chipDeduction > 0 && (
                     <span className="shrink-0 text-[9px] text-amber-400 font-medium">
@@ -127,55 +129,47 @@ export function MatchSquadList({
                   <span className="opacity-0 group-hover/item:opacity-100 transition text-[10px] text-indigo-300 font-medium flex items-center gap-0.5 hidden xs:flex">
                     <Eye className="h-3 w-3" />
                   </span>
-                  <span
-                    className={`shrink-0 font-mono font-bold px-1.5 py-0.5 rounded text-xs flex items-center gap-1 ${
-                      isTopScorer
-                        ? "bg-amber-400/20 text-amber-300 border border-amber-400/30"
-                        : "bg-white/10 text-white"
-                    }`}
+                  <Badge
+                    variant={isTopScorer ? "warning" : "subtle"}
+                    className="font-mono font-bold text-xs"
                   >
                     {isTopScorer && (
-                      <Sparkles className="h-2.5 w-2.5 text-amber-400" />
+                      <Sparkles className="h-2.5 w-2.5 text-amber-400 mr-1" />
                     )}
                     <span>{s.gameweekPoints}</span>
-                    <span className="text-[9px] font-normal text-gray-400">
-                      pts
-                    </span>
-                  </span>
+                  </Badge>
                 </div>
               </button>
             );
           })}
-        </div>
 
-        {/* Excluded Members (Admin) */}
-        {excluded.length > 0 && (
-          <div className="pt-1.5 border-t border-white/5 space-y-1">
-            {excluded.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setSelectedPlayer(s);
-                }}
-                className="group/admin w-full flex items-center justify-between text-[11px] text-gray-500 hover:text-gray-400 px-1.5 py-0.5 italic hover:bg-white/5 rounded transition cursor-pointer text-left"
-                title={`Click to view ${s.member.fplName}'s fantasy squad`}
-              >
-                <span className="truncate pr-2">
-                  {s.member.fplName}{" "}
-                  <span className="text-[10px] text-gray-600">
-                    (Admin - excluded)
+          {/* Excluded Admin notice in compact squad list */}
+          {excluded.length > 0 && (
+            <div className="pt-1 mt-1 border-t border-white/5 space-y-0.5">
+              {excluded.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedPlayer(s);
+                  }}
+                  className="w-full flex items-center justify-between text-[11px] py-0.5 px-1 rounded text-amber-400/60 hover:text-amber-400 hover:bg-amber-400/10 transition cursor-pointer text-left"
+                  title="Admin (excluded from score calculation)"
+                >
+                  <span className="truncate italic flex items-center gap-1">
+                    <Shield className="h-2.5 w-2.5" />
+                    <span>{s.member.fplName} (Admin)</span>
                   </span>
-                </span>
-                <span className="shrink-0 font-mono line-through text-gray-600">
-                  {s.gameweekPoints} pts
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
+                  <span className="font-mono line-through opacity-75">
+                    {s.gameweekPoints}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Fantasy Team Modal */}
@@ -228,7 +222,7 @@ export function MatchScoreBreakdown({
 
   return (
     <>
-      <div className="rounded-xl border border-white/10 bg-white/5 p-5 shadow-lg">
+      <Card className="border-white/10 bg-white/5 p-5 shadow-lg backdrop-blur">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
@@ -268,13 +262,13 @@ export function MatchScoreBreakdown({
                     {s.member.fplName}
                   </span>
                   {s.activeChip && (
-                    <span className="rounded bg-indigo-500/20 px-1.5 py-0.2 text-[10px] font-bold text-indigo-300 uppercase">
+                    <Badge variant="warning" className="text-[10px] uppercase font-bold">
                       {s.activeChip === "bboost"
                         ? "Bench Boost"
                         : s.activeChip === "3xc"
                           ? "Triple Captain"
                           : s.activeChip}
-                    </span>
+                    </Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-gray-400">
@@ -296,9 +290,9 @@ export function MatchScoreBreakdown({
                   <Eye className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline text-[11px]">Squad</span>
                 </span>
-                <span className="font-mono font-bold text-white text-base bg-white/5 px-2.5 py-0.5 rounded border border-white/5">
+                <Badge variant="subtle" className="font-mono font-bold text-sm px-2.5 py-0.5">
                   {s.gameweekPoints}
-                </span>
+                </Badge>
               </div>
             </button>
           ))}
@@ -314,7 +308,7 @@ export function MatchScoreBreakdown({
 
         {/* Excluded (Admin) */}
         {excluded.length > 0 && (
-          <div className="mt-4 rounded-lg bg-yellow-500/10 p-3">
+          <div className="mt-4 rounded-lg bg-yellow-500/10 p-3 border border-yellow-500/20">
             <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wider mb-2">
               Admin — Excluded from Score
             </p>
@@ -339,7 +333,7 @@ export function MatchScoreBreakdown({
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Fantasy Team Modal */}
       {selectedPlayer && (

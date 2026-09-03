@@ -7,6 +7,19 @@ import {
 } from "@/lib/tournament-actions";
 import { publishTournamentWithValidationAction } from "@/lib/scoring-actions";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 interface TournamentActionsProps {
   tournamentId: string;
@@ -35,6 +48,7 @@ export function TournamentActions({
     if (!result.success) {
       setError(result.error || "Failed to delete");
       setIsLoading(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -65,98 +79,95 @@ export function TournamentActions({
   return (
     <>
       {error && (
-        <div className="rounded-md bg-red-50 p-2 text-xs text-red-800">
-          <p className="font-semibold">{error}</p>
+        <Alert variant="destructive" className="mb-2 py-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle className="text-xs font-semibold">{error}</AlertTitle>
           {validationIssues.length > 0 && (
-            <ul className="mt-1 list-disc list-inside space-y-0.5">
-              {validationIssues.map((issue, idx) => (
-                <li key={idx}>{issue}</li>
-              ))}
-            </ul>
+            <AlertDescription className="text-xs mt-1">
+              <ul className="list-disc list-inside space-y-0.5">
+                {validationIssues.map((issue, idx) => (
+                  <li key={idx}>{issue}</li>
+                ))}
+              </ul>
+            </AlertDescription>
           )}
-        </div>
+        </Alert>
       )}
 
-      <div className="flex gap-1">
-        <Link
-          href={`/admin/tournaments/${tournamentId}/edit`}
-          className="rounded px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-200"
-        >
-          Edit
-        </Link>
-        <Link
-          href={`/admin/tournaments/${tournamentId}/groups`}
-          className="rounded px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
-        >
-          Groups
-        </Link>
-        <Link
-          href={`/admin/tournaments/${tournamentId}/schedule`}
-          className="rounded px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
-        >
-          Schedule
-        </Link>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/tournaments/${tournamentId}/edit`}>Edit</Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/tournaments/${tournamentId}/groups`}>Groups</Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/admin/tournaments/${tournamentId}/schedule`}>Schedule</Link>
+        </Button>
 
         {status === "DRAFT" && (
-          <button
+          <Button
+            variant="default"
+            size="sm"
             onClick={handlePublish}
             disabled={isLoading || !hasGroups}
             title={!hasGroups ? "Add groups before publishing" : "Publish tournament"}
-            className="rounded px-2 py-1 text-xs font-medium text-green-600 hover:bg-green-50 disabled:text-gray-400"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            {isLoading ? "Publishing..." : "Publish"}
-          </button>
+            {isLoading ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                <span>Publishing...</span>
+              </>
+            ) : (
+              "Publish"
+            )}
+          </Button>
         )}
 
         {status === "PUBLISHED" && (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleUnpublish}
             disabled={isLoading}
-            className="rounded px-2 py-1 text-xs font-medium text-yellow-600 hover:bg-yellow-50"
+            className="text-amber-600 border-amber-200 hover:bg-amber-50"
           >
             {isLoading ? "Updating..." : "Unpublish"}
-          </button>
+          </Button>
         )}
 
-        <button
+        <Button
+          variant="destructive"
+          size="sm"
           onClick={() => setShowDeleteConfirm(true)}
           disabled={isLoading}
-          className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
         >
           Delete
-        </button>
+        </Button>
       </div>
 
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="rounded-lg bg-white p-6 shadow-lg">
-            <h3 className="text-lg font-bold text-gray-900">
-              Delete Tournament?
-            </h3>
-            <p className="mt-2 text-sm text-gray-600">
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Tournament?</AlertDialogTitle>
+            <AlertDialogDescription>
               Are you sure you want to delete &quot;{tournamentName}&quot;? This action
-              cannot be undone.
-            </p>
-
-            <div className="mt-4 flex gap-3">
-              <button
-                onClick={handleDelete}
-                disabled={isLoading}
-                className="flex-1 rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-700 disabled:bg-gray-400"
-              >
-                {isLoading ? "Deleting..." : "Delete"}
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={isLoading}
-                className="flex-1 rounded-md border border-gray-300 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              cannot be undone and all associated rounds and matches will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isLoading ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

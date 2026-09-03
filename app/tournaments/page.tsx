@@ -2,6 +2,9 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Trophy, ArrowRight, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "Tournaments — FPL Tournament",
@@ -28,7 +31,7 @@ export default async function TournamentsPage() {
   const finished = tournaments.filter((t) => t.status === "FINISHED");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white">
       {/* Header */}
       <header className="border-b border-white/10 bg-black/20 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
@@ -36,13 +39,12 @@ export default async function TournamentsPage() {
             <Trophy className="h-5 w-5 text-indigo-400" />
             <span>FPL Tournament</span>
           </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1 text-xs text-indigo-300 hover:text-white transition"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>Home</span>
-          </Link>
+          <Button variant="ghost" size="sm" asChild className="text-indigo-300 hover:text-white hover:bg-white/10">
+            <Link href="/">
+              <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+              <span>Home</span>
+            </Link>
+          </Button>
         </div>
       </header>
 
@@ -119,38 +121,37 @@ function TournamentCard({
   return (
     <Link
       href={`/tournaments/${tournament.id}`}
-      className="group rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-indigo-500/50 hover:bg-white/10"
+      className="group block"
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-xl font-bold text-white group-hover:text-indigo-300 transition">
-            {tournament.name}
-          </h3>
-          <p className="mt-1 text-sm text-gray-400">
-            Season {tournament.season}/{tournament.season + 1}
-          </p>
+      <Card className="border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-indigo-500/50 hover:bg-white/10 text-white">
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-white group-hover:text-indigo-300 transition">
+              {tournament.name}
+            </h3>
+            <p className="mt-1 text-sm text-gray-400">
+              Season {tournament.season}/{tournament.season + 1}
+            </p>
+          </div>
+          <Badge
+            variant={tournament.status === "PUBLISHED" ? "success" : "secondary"}
+            className="font-bold"
+          >
+            {tournament.status === "PUBLISHED" ? "ACTIVE" : "FINISHED"}
+          </Badge>
         </div>
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-            tournament.status === "PUBLISHED"
-              ? "bg-emerald-500/20 text-emerald-400"
-              : "bg-gray-500/20 text-gray-400"
-          }`}
-        >
-          {tournament.status === "PUBLISHED" ? "ACTIVE" : "FINISHED"}
-        </span>
-      </div>
-      <div className="mt-4 flex gap-4 text-sm text-gray-400">
-        <span>{tournament.groups.length} Groups</span>
-        <span>
-          {completedMatches}/{totalMatches} Matches
-        </span>
-        <span>{tournament.rounds.length} Rounds</span>
-      </div>
-      <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
-        <span>View Tournament</span>
-        <ArrowRight className="h-4 w-4" />
-      </div>
+        <div className="mt-4 flex gap-4 text-sm text-gray-400">
+          <span>{tournament.groups.length} Groups</span>
+          <span>
+            {completedMatches}/{totalMatches} Matches
+          </span>
+          <span>{tournament.rounds.length} Rounds</span>
+        </div>
+        <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
+          <span>View Tournament</span>
+          <ArrowRight className="h-4 w-4" />
+        </div>
+      </Card>
     </Link>
   );
 }

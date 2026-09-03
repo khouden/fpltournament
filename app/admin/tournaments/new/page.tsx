@@ -1,4 +1,5 @@
 import { TournamentForm } from "@/components/tournament-form";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function NewTournamentPage() {
   return (
@@ -10,9 +11,9 @@ export default function NewTournamentPage() {
         </p>
       </div>
 
-      <div className="rounded-lg bg-white p-8 shadow">
+      <Card className="p-8 shadow-xs border-gray-200">
         <TournamentForm />
-      </div>
+      </Card>
     </div>
   );
 }

@@ -29,6 +29,18 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 
 interface Group {
   id: string;
@@ -165,7 +177,6 @@ export function ScheduleBuilder({
             : r
         )
       );
-      showMsg("Match added");
     } else {
       setError(result.error || "Failed to add match");
     }
@@ -188,7 +199,7 @@ export function ScheduleBuilder({
         prev.map((r) => ({
           ...r,
           matches: r.matches.map((m) =>
-            m.id === matchId ? { ...m, ...result.match } : m
+            m.id === matchId ? (result.match as Match) : m
           ),
         }))
       );
@@ -198,7 +209,6 @@ export function ScheduleBuilder({
   };
 
   const handleDeleteMatch = async (matchId: string, roundId: string) => {
-    if (!confirm("Delete this match?")) return;
     setError("");
     const result = await deleteMatchAction(matchId, tournamentId);
     if (result.success) {
@@ -209,51 +219,34 @@ export function ScheduleBuilder({
             : r
         )
       );
-      showMsg("Match deleted");
     } else {
       setError(result.error || "Failed to delete match");
     }
   };
 
-  // ---- Scoring ----
+  // ---- Scoring Actions ----
   const handleRecalculate = async (matchId: string) => {
     setLoading(`calc-${matchId}`);
     setError("");
     const result = await recalculateMatchAction(matchId, tournamentId);
-    if (result.success && result.result) {
-      setRounds((prev) =>
-        prev.map((r) => ({
-          ...r,
-          matches: r.matches.map((m) =>
-            m.id === matchId
-              ? {
-                  ...m,
-                  homeScore: result.result!.homeScore,
-                  awayScore: result.result!.awayScore,
-                  result: result.result!.result,
-                  winnerId: result.result!.winnerGroupId,
-                  status: result.result!.status,
-                }
-              : m
-          ),
-        }))
-      );
-      showMsg("Match calculated");
+    if (result.success) {
+      showMsg("Match scores updated!");
+      window.location.reload();
     } else {
-      setError(result.error || "Failed to calculate");
+      setError(result.error || "Failed to calculate scores");
     }
     setLoading(null);
   };
 
   const handleFinalize = async (matchId: string) => {
-    if (!confirm("Finalize this match?")) return;
     setLoading(`fin-${matchId}`);
     setError("");
     const result = await finalizeMatchAction(matchId, tournamentId);
     if (result.success) {
+      showMsg("Match finalized!");
       window.location.reload();
     } else {
-      setError(result.error || "Failed to finalize");
+      setError(result.error || "Failed to finalize match");
     }
     setLoading(null);
   };
@@ -263,111 +256,126 @@ export function ScheduleBuilder({
     setError("");
     const result = await recalculateAllScoresAction(tournamentId);
     if (result.success) {
-      showMsg(`Recalculated ${result.count} matches`);
+      showMsg(
+        result.count !== undefined
+          ? `${result.count} match score(s) recalculated!`
+          : "All match scores recalculated!"
+      );
       window.location.reload();
     } else {
-      setError(result.error || "Failed to recalculate");
+      setError(result.error || "Failed to recalculate scores");
     }
     setLoading(null);
   };
 
-  // ---- Validation ----
   const handleValidate = async () => {
     setLoading("validate");
+    setValidationIssues([]);
+    setError("");
     const result = await validateScheduleAction(tournamentId);
-    setValidationIssues(result.issues);
     if (result.isValid) {
-      showMsg("Schedule is valid — ready to publish!");
+      showMsg("Schedule is valid and ready!");
+    } else {
+      setValidationIssues(result.issues);
     }
     setLoading(null);
   };
 
   return (
     <div className="space-y-6">
+      {/* Notifications */}
       {error && (
-        <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 border border-red-200">
-          <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
-          <p className="text-sm text-red-800">{error}</p>
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
+
       {success && (
-        <div className="flex items-center gap-2 rounded-md bg-green-50 p-3 border border-green-200">
-          <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-          <p className="text-sm text-green-800">{success}</p>
-        </div>
+        <Alert variant="success">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertTitle>Success</AlertTitle>
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
       )}
 
       {/* Actions Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setShowAutoGenerate(!showAutoGenerate)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition cursor-pointer"
+      <Card className="p-4 shadow-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() => setShowAutoGenerate(!showAutoGenerate)}
+              className="gap-1.5"
+            >
+              <Zap className="h-4 w-4" />
+              <span>Auto-Generate Round-Robin Fixtures</span>
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleValidate}
+              disabled={loading === "validate"}
+              className="gap-1.5 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 border-indigo-200"
+            >
+              {loading === "validate" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
+              <span>{loading === "validate" ? "Validating..." : "Validate Schedule"}</span>
+            </Button>
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={handleRecalculateAll}
+            disabled={loading === "recalc-all"}
+            className="gap-1.5 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-100 border-emerald-200"
           >
-            <Zap className="h-4 w-4" />
-            <span>Auto-Generate Round-Robin Fixtures</span>
-          </button>
-          <button
-            onClick={handleValidate}
-            disabled={loading === "validate"}
-            className="inline-flex items-center gap-1.5 rounded-md border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition cursor-pointer disabled:opacity-50"
-          >
-            {loading === "validate" ? (
+            {loading === "recalc-all" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <CheckCircle2 className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
             )}
-            <span>{loading === "validate" ? "Validating..." : "Validate Schedule"}</span>
-          </button>
+            <span>
+              {loading === "recalc-all" ? "Recalculating..." : "Recalculate All Scores"}
+            </span>
+          </Button>
         </div>
-
-        <button
-          onClick={handleRecalculateAll}
-          disabled={loading === "recalc-all"}
-          className="inline-flex items-center gap-1.5 rounded-md border border-green-300 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-100 transition cursor-pointer disabled:opacity-50"
-        >
-          {loading === "recalc-all" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-          <span>
-            {loading === "recalc-all" ? "Recalculating..." : "Recalculate All Scores"}
-          </span>
-        </button>
-      </div>
+      </Card>
 
       {/* Auto-Generate Panel */}
       {showAutoGenerate && (
-        <div className="rounded-lg border-2 border-indigo-200 bg-indigo-50/70 p-5 shadow-sm space-y-4">
+        <Card className="border-2 border-indigo-200 bg-indigo-50/70 p-5 shadow-xs space-y-4">
           <div>
-            <h4 className="text-base font-bold text-indigo-950 flex items-center gap-2">
+            <CardTitle className="text-base font-bold text-indigo-950 flex items-center gap-2">
               <Zap className="h-4 w-4 text-indigo-700" />
               <span>Generate Round-Robin League Fixtures</span>
-            </h4>
-            <p className="text-xs text-indigo-700 mt-1">
+            </CardTitle>
+            <CardDescription className="text-xs text-indigo-700 mt-1">
               Automatically creates all Gameweek rounds and matches so every
               group plays against every other group in the tournament.
-            </p>
+            </CardDescription>
           </div>
 
           <div className="flex flex-wrap items-end gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-indigo-900">
+            <div className="space-y-1">
+              <Label htmlFor="startGW" className="text-xs font-semibold text-indigo-900">
                 Starting Gameweek (GW)
-              </label>
-              <input
+              </Label>
+              <Input
+                id="startGW"
                 type="number"
                 min={1}
                 max={38}
                 value={startGW}
                 onChange={(e) => setStartGW(parseInt(e.target.value) || 1)}
-                className="mt-1 w-32 rounded border border-indigo-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none"
+                className="w-32 bg-white"
               />
             </div>
             <div className="text-xs text-indigo-700">
               {groups.length < 2 ? (
-                <span className="inline-flex items-center gap-1 text-red-600 font-semibold">
+                <span className="inline-flex items-center gap-1 text-destructive font-semibold">
                   <AlertTriangle className="h-4 w-4" />
                   <span>Need at least 2 groups imported to generate fixtures.</span>
                 </span>
@@ -385,49 +393,46 @@ export function ScheduleBuilder({
               )}
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={handleAutoGenerate}
                 disabled={loading === "auto-generate" || groups.length < 2}
-                className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-bold text-white shadow hover:bg-indigo-700 disabled:opacity-50 cursor-pointer"
               >
-                {loading === "auto-generate" && <Loader2 className="h-4 w-4 animate-spin" />}
+                {loading === "auto-generate" && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
                 <span>
                   {loading === "auto-generate"
                     ? "Generating..."
                     : "Generate Fixtures Now"}
                 </span>
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => setShowAutoGenerate(false)}
-                className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 cursor-pointer"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Validation Issues */}
       {validationIssues.length > 0 && (
-        <div className="rounded-md bg-yellow-50 border border-yellow-200 p-4">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-yellow-700 shrink-0" />
-            <h4 className="font-semibold text-yellow-800">
-              {validationIssues.length} issue(s) found:
-            </h4>
-          </div>
-          <ul className="mt-2 space-y-1 text-sm text-yellow-700 ml-7">
-            {validationIssues.map((issue, i) => (
-              <li key={i}>• {issue}</li>
-            ))}
-          </ul>
-        </div>
+        <Alert variant="warning">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>{validationIssues.length} issue(s) found:</AlertTitle>
+          <AlertDescription className="mt-2">
+            <ul className="space-y-1 text-sm list-disc list-inside">
+              {validationIssues.map((issue, i) => (
+                <li key={i}>{issue}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Rounds List */}
       {rounds.length === 0 ? (
-        <div className="rounded-lg border-2 border-dashed border-gray-300 bg-white p-8 text-center">
+        <Card className="border-2 border-dashed border-gray-300 bg-white p-8 text-center">
           <Calendar className="h-8 w-8 text-gray-400 mx-auto mb-2" />
           <h3 className="text-base font-bold text-gray-700">
             No Fixtures Scheduled Yet
@@ -436,14 +441,14 @@ export function ScheduleBuilder({
             Use the &quot;Auto-Generate Round-Robin Fixtures&quot; button above or create
             rounds manually below.
           </p>
-        </div>
+        </Card>
       ) : (
         rounds
           .sort((a, b) => a.roundNumber - b.roundNumber)
           .map((round) => (
-            <div
+            <Card
               key={round.id}
-              className="rounded-lg border border-gray-200 bg-white shadow-sm"
+              className="border-gray-200 bg-white shadow-xs overflow-hidden"
             >
               {/* Round Header */}
               <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 bg-gray-50/50">
@@ -456,20 +461,24 @@ export function ScheduleBuilder({
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleAddMatch(round.id)}
-                    className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 cursor-pointer"
+                    className="h-7 text-xs gap-1 text-indigo-700 bg-indigo-50 border-indigo-200"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     <span>Add Match</span>
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleDeleteRound(round.id)}
-                    className="inline-flex items-center gap-1 rounded px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 font-medium cursor-pointer"
+                    className="h-7 text-xs gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                     <span>Delete Round</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -490,26 +499,28 @@ export function ScheduleBuilder({
                           </span>
                           <div className="flex items-center gap-1.5">
                             {/* Status Badge */}
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                            <Badge
+                              variant={
                                 match.status === "FINALIZED"
-                                  ? "bg-green-100 text-green-800"
+                                  ? "success"
                                   : match.status === "COMPLETED"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-gray-100 text-gray-600"
-                              }`}
+                                    ? "default"
+                                    : "secondary"
+                              }
                             >
                               {match.status}
-                            </span>
-                            <button
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               onClick={() =>
                                 handleDeleteMatch(match.id, round.id)
                               }
-                              className="rounded p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                              className="h-6 w-6 text-gray-400 hover:text-red-600"
                               title="Delete match"
                             >
                               <X className="h-3.5 w-3.5" />
-                            </button>
+                            </Button>
                           </div>
                         </div>
 
@@ -525,7 +536,7 @@ export function ScheduleBuilder({
                                 e.target.value
                               )
                             }
-                            className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none"
+                            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                           >
                             <option value="">Select Home Group...</option>
                             {groups.map((g) => (
@@ -549,7 +560,7 @@ export function ScheduleBuilder({
                                 e.target.value
                               )
                             }
-                            className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-900 focus:border-indigo-500 focus:outline-none"
+                            className="rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                           >
                             <option value="">Select Away Group...</option>
                             {groups.map((g) => (
@@ -592,128 +603,140 @@ export function ScheduleBuilder({
                                 )}
                               </div>
                               {match.result && (
-                                <span
-                                  className={`rounded px-2 py-0.5 text-[11px] font-bold ${
-                                    match.result === "DRAW"
-                                      ? "bg-yellow-100 text-yellow-700"
-                                      : "bg-green-100 text-green-700"
-                                  }`}
+                                <Badge
+                                  variant={match.result === "DRAW" ? "warning" : "success"}
+                                  className="text-[11px]"
                                 >
                                   {match.result === "DRAW"
                                     ? "DRAW"
                                     : match.result === "HOME_WIN"
                                       ? `${groupNameById(match.homeGroupId)} WIN`
                                       : `${groupNameById(match.awayGroupId)} WIN`}
-                                </span>
+                                </Badge>
                               )}
                             </div>
                           )}
 
                         {/* Match Actions */}
-                        <div className="flex gap-2 pt-1">
+                        <div className="flex items-center gap-2 pt-1">
                           {match.homeGroupId && match.awayGroupId && (
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => handleRecalculate(match.id)}
                               disabled={loading === `calc-${match.id}`}
-                              className="inline-flex items-center gap-1 rounded bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-50 cursor-pointer"
+                              className="h-7 text-xs text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100"
                             >
-                              {loading === `calc-${match.id}` && <Loader2 className="h-3 w-3 animate-spin" />}
+                              {loading === `calc-${match.id}` && (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              )}
                               <span>
                                 {loading === `calc-${match.id}`
                                   ? "Calculating..."
                                   : "Calculate Score"}
                               </span>
-                            </button>
+                            </Button>
                           )}
                           {match.status === "COMPLETED" && (
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => handleFinalize(match.id)}
                               disabled={loading === `fin-${match.id}`}
-                              className="inline-flex items-center gap-1 rounded bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 hover:bg-green-100 disabled:opacity-50 cursor-pointer"
+                              className="h-7 text-xs text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
                             >
-                              {loading === `fin-${match.id}` && <Loader2 className="h-3 w-3 animate-spin" />}
+                              {loading === `fin-${match.id}` && (
+                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              )}
                               <span>
                                 {loading === `fin-${match.id}`
                                   ? "Finalizing..."
                                   : "Finalize"}
                               </span>
-                            </button>
+                            </Button>
                           )}
                           {match.homeScore !== null && match.awayScore !== null && (
-                            <Link
-                              href={`/matches/${match.id}`}
-                              target="_blank"
-                              className="inline-flex items-center gap-1 rounded bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              className="h-7 text-xs text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100"
                             >
-                              <ExternalLink className="h-3 w-3" />
-                              <span>View Match</span>
-                            </Link>
+                              <Link href={`/matches/${match.id}`} target="_blank">
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                <span>View Match</span>
+                              </Link>
+                            </Button>
                           )}
                         </div>
                       </div>
                     ))
                 )}
               </div>
-            </div>
+            </Card>
           ))
       )}
 
       {/* Manual Add Round */}
       {showAddRound ? (
-        <div className="rounded-lg border-2 border-dashed border-indigo-300 bg-indigo-50 p-4">
-          <h4 className="font-bold text-indigo-900">Add New Round</h4>
+        <Card className="border-2 border-dashed border-indigo-300 bg-indigo-50/70 p-4">
+          <CardTitle className="text-sm font-bold text-indigo-900">Add New Round</CardTitle>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-xs font-medium text-indigo-700">
+            <div className="space-y-1">
+              <Label htmlFor="roundName" className="text-xs font-medium text-indigo-700">
                 Round Name (optional)
-              </label>
-              <input
+              </Label>
+              <Input
+                id="roundName"
                 type="text"
                 value={newRoundName}
                 onChange={(e) => setNewRoundName(e.target.value)}
                 placeholder="e.g., Round 1"
-                className="mt-1 w-full rounded border border-indigo-200 px-2 py-1.5 text-sm"
+                className="bg-white"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-indigo-700">
+            <div className="space-y-1">
+              <Label htmlFor="roundGW" className="text-xs font-medium text-indigo-700">
                 Gameweek *
-              </label>
-              <input
+              </Label>
+              <Input
+                id="roundGW"
                 type="number"
                 value={newRoundGW}
                 onChange={(e) => setNewRoundGW(parseInt(e.target.value))}
                 min={1}
                 max={38}
-                className="mt-1 w-full rounded border border-indigo-200 px-2 py-1.5 text-sm"
+                className="bg-white"
               />
             </div>
           </div>
           <div className="mt-3 flex gap-2">
-            <button
+            <Button
+              size="sm"
               onClick={handleAddRound}
               disabled={loading === "add-round"}
-              className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:bg-gray-400 cursor-pointer"
             >
-              {loading === "add-round" && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading === "add-round" && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
               <span>{loading === "add-round" ? "Creating..." : "Create Round"}</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowAddRound(false)}
-              className="text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
             >
               Cancel
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       ) : (
-        <button
+        <Button
+          variant="outline"
           onClick={() => setShowAddRound(true)}
-          className="inline-flex items-center justify-center gap-1.5 w-full rounded-lg border-2 border-dashed border-gray-300 py-3 text-sm font-medium text-gray-500 hover:border-indigo-300 hover:text-indigo-600 transition cursor-pointer"
+          className="w-full border-2 border-dashed py-5 text-sm font-medium text-gray-500 hover:border-indigo-300 hover:text-indigo-600"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-4 w-4 mr-1.5" />
           <span>Add Round Manually</span>
-        </button>
+        </Button>
       )}
     </div>
   );

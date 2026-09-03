@@ -2,6 +2,16 @@
 
 import type { GroupStanding } from "@/lib/scoring";
 import { Crown } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface LeagueTableProps {
   standings: GroupStanding[];
@@ -10,72 +20,92 @@ interface LeagueTableProps {
 export function LeagueTable({ standings }: LeagueTableProps) {
   if (standings.length === 0) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/5 p-8 text-center text-gray-400 backdrop-blur">
+      <Card className="border-white/10 bg-white/5 p-8 text-center text-gray-400 backdrop-blur">
         No league standings available yet.
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className="space-y-3">
-      <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/40 shadow-xl backdrop-blur">
-        <table className="w-full text-left text-sm text-gray-300">
-          <thead className="border-b border-white/10 bg-white/5 text-[11px] font-bold uppercase tracking-wider text-gray-400">
-            <tr>
-              <th scope="col" className="py-3.5 pl-4 pr-2 text-center w-12">
+      <Card className="overflow-hidden border-white/10 bg-black/40 shadow-xl backdrop-blur">
+        <Table>
+          <TableHeader className="border-b border-white/10 bg-white/5">
+            <TableRow className="border-white/10 hover:bg-transparent">
+              <TableHead className="w-12 py-3.5 pl-4 pr-2 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400">
                 #
-              </th>
-              <th scope="col" className="py-3.5 px-3 min-w-[180px]">
+              </TableHead>
+              <TableHead className="min-w-[180px] py-3.5 px-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">
                 Team / League
-              </th>
-              <th scope="col" className="py-3.5 px-2.5 text-center" title="Matches Played">
+              </TableHead>
+              <TableHead
+                className="py-3.5 px-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400"
+                title="Matches Played"
+              >
                 MP
-              </th>
-              <th scope="col" className="py-3.5 px-2.5 text-center" title="Won (+3 pts)">
+              </TableHead>
+              <TableHead
+                className="py-3.5 px-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400"
+                title="Won (+3 pts)"
+              >
                 W
-              </th>
-              <th scope="col" className="py-3.5 px-2.5 text-center" title="Drawn (+1 pt)">
+              </TableHead>
+              <TableHead
+                className="py-3.5 px-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400"
+                title="Drawn (+1 pt)"
+              >
                 D
-              </th>
-              <th scope="col" className="py-3.5 px-2.5 text-center" title="Lost (0 pts)">
+              </TableHead>
+              <TableHead
+                className="py-3.5 px-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400"
+                title="Lost (0 pts)"
+              >
                 L
-              </th>
-              <th scope="col" className="py-3.5 px-2.5 text-center" title="FPL Points For">
+              </TableHead>
+              <TableHead
+                className="py-3.5 px-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400"
+                title="FPL Points For"
+              >
                 PF
-              </th>
-              <th scope="col" className="py-3.5 px-2.5 text-center" title="FPL Points Against">
+              </TableHead>
+              <TableHead
+                className="py-3.5 px-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400"
+                title="FPL Points Against"
+              >
                 PA
-              </th>
-              <th scope="col" className="py-3.5 px-2.5 text-center" title="Points Difference">
+              </TableHead>
+              <TableHead
+                className="py-3.5 px-2.5 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400"
+                title="Points Difference"
+              >
                 +/-
-              </th>
-              <th
-                scope="col"
-                className="py-3.5 px-4 text-center font-extrabold text-indigo-300"
+              </TableHead>
+              <TableHead
+                className="py-3.5 px-4 text-center text-[11px] font-extrabold uppercase tracking-wider text-indigo-300"
                 title="Total League Points (3 for Win, 1 for Draw)"
               >
                 PTS
-              </th>
-              <th scope="col" className="py-3.5 pr-4 pl-2 text-center hidden md:table-cell">
+              </TableHead>
+              <TableHead className="hidden md:table-cell py-3.5 pr-4 pl-2 text-center text-[11px] font-bold uppercase tracking-wider text-gray-400">
                 Form
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {standings.map((team, idx) => {
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-white/5">
+            {standings.map((team) => {
               const isLeader = team.rank === 1 && team.played > 0;
               const isPositiveDiff = team.pointsDiff > 0;
               const isNegativeDiff = team.pointsDiff < 0;
 
               return (
-                <tr
+                <TableRow
                   key={team.groupId}
-                  className={`transition hover:bg-white/5 ${
+                  className={`border-white/5 transition hover:bg-white/5 ${
                     isLeader ? "bg-amber-500/5 font-medium" : ""
                   }`}
                 >
                   {/* Rank */}
-                  <td className="py-3.5 pl-4 pr-2 text-center font-mono text-xs">
+                  <TableCell className="py-3.5 pl-4 pr-2 text-center font-mono text-xs">
                     <span
                       className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
                         team.rank === 1
@@ -89,10 +119,10 @@ export function LeagueTable({ standings }: LeagueTableProps) {
                     >
                       {team.rank}
                     </span>
-                  </td>
+                  </TableCell>
 
                   {/* Team Name & Logo */}
-                  <td className="py-3.5 px-3">
+                  <TableCell className="py-3.5 px-3">
                     <div className="flex items-center gap-2.5">
                       {team.logo ? (
                         <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/10 p-0.5 border border-white/10 shadow-xs">
@@ -112,47 +142,50 @@ export function LeagueTable({ standings }: LeagueTableProps) {
                           {team.groupName}
                         </span>
                         {isLeader && (
-                          <span className="inline-flex items-center gap-1 rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-300 border border-amber-400/30">
+                          <Badge
+                            variant="warning"
+                            className="gap-1 text-[10px] font-extrabold"
+                          >
                             <Crown className="h-3 w-3" />
                             <span>LEADER</span>
-                          </span>
+                          </Badge>
                         )}
                       </div>
                     </div>
-                  </td>
+                  </TableCell>
 
                   {/* Played */}
-                  <td className="py-3.5 px-2.5 text-center font-mono font-medium text-gray-300">
+                  <TableCell className="py-3.5 px-2.5 text-center font-mono font-medium text-gray-300">
                     {team.played}
-                  </td>
+                  </TableCell>
 
                   {/* Won */}
-                  <td className="py-3.5 px-2.5 text-center font-mono text-emerald-400 font-semibold">
+                  <TableCell className="py-3.5 px-2.5 text-center font-mono text-emerald-400 font-semibold">
                     {team.won}
-                  </td>
+                  </TableCell>
 
                   {/* Drawn */}
-                  <td className="py-3.5 px-2.5 text-center font-mono text-gray-400">
+                  <TableCell className="py-3.5 px-2.5 text-center font-mono text-gray-400">
                     {team.drawn}
-                  </td>
+                  </TableCell>
 
                   {/* Lost */}
-                  <td className="py-3.5 px-2.5 text-center font-mono text-rose-400">
+                  <TableCell className="py-3.5 px-2.5 text-center font-mono text-rose-400">
                     {team.lost}
-                  </td>
+                  </TableCell>
 
                   {/* Points For */}
-                  <td className="py-3.5 px-2.5 text-center font-mono text-xs text-gray-300">
+                  <TableCell className="py-3.5 px-2.5 text-center font-mono text-xs text-gray-300">
                     {team.pointsFor}
-                  </td>
+                  </TableCell>
 
                   {/* Points Against */}
-                  <td className="py-3.5 px-2.5 text-center font-mono text-xs text-gray-400">
+                  <TableCell className="py-3.5 px-2.5 text-center font-mono text-xs text-gray-400">
                     {team.pointsAgainst}
-                  </td>
+                  </TableCell>
 
                   {/* Diff */}
-                  <td
+                  <TableCell
                     className={`py-3.5 px-2.5 text-center font-mono text-xs font-semibold ${
                       isPositiveDiff
                         ? "text-emerald-400"
@@ -162,15 +195,15 @@ export function LeagueTable({ standings }: LeagueTableProps) {
                     }`}
                   >
                     {team.pointsDiff > 0 ? `+${team.pointsDiff}` : team.pointsDiff}
-                  </td>
+                  </TableCell>
 
                   {/* League Points */}
-                  <td className="py-3.5 px-4 text-center font-mono text-base font-black text-indigo-300">
+                  <TableCell className="py-3.5 px-4 text-center font-mono text-base font-black text-indigo-300">
                     {team.leaguePoints}
-                  </td>
+                  </TableCell>
 
                   {/* Form */}
-                  <td className="py-3.5 pr-4 pl-2 text-center hidden md:table-cell">
+                  <TableCell className="hidden md:table-cell py-3.5 pr-4 pl-2 text-center">
                     <div className="flex items-center justify-center gap-1">
                       {team.form.length === 0 ? (
                         <span className="text-xs text-gray-600">-</span>
@@ -191,13 +224,13 @@ export function LeagueTable({ standings }: LeagueTableProps) {
                         ))
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
 
       {/* Rules footer note */}
       <div className="flex flex-wrap items-center justify-between text-[11px] text-gray-400 px-2">

@@ -13,11 +13,10 @@ import {
   ArrowRight,
   Armchair,
   Crown,
-  Ban,
-  CheckCircle2,
-  XCircle,
-  Sparkles,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 export async function generateMetadata(
   props: PageProps<"/tournaments/[id]">
@@ -93,7 +92,7 @@ export default async function TournamentPage(
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white">
       {/* Header */}
       <header className="border-b border-white/10 bg-black/20 backdrop-blur sticky top-0 z-50">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
@@ -101,13 +100,12 @@ export default async function TournamentPage(
             <Trophy className="h-5 w-5 text-indigo-400" />
             <span>FPL LEAGUES</span>
           </Link>
-          <Link
-            href="/tournaments"
-            className="inline-flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white transition"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span>All Leagues</span>
-          </Link>
+          <Button variant="ghost" size="sm" asChild className="text-indigo-300 hover:text-white hover:bg-white/10">
+            <Link href="/tournaments">
+              <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+              <span>All Leagues</span>
+            </Link>
+          </Button>
         </div>
       </header>
 
@@ -121,23 +119,20 @@ export default async function TournamentPage(
             <span className="text-sm font-medium text-gray-300">
               Season {tournament.season}
             </span>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                tournament.status === "PUBLISHED"
-                  ? "bg-emerald-500/20 text-emerald-400"
-                  : "bg-gray-500/20 text-gray-400"
-              }`}
+            <Badge
+              variant={tournament.status === "PUBLISHED" ? "success" : "secondary"}
+              className="font-bold"
             >
               {tournament.status === "PUBLISHED" ? "ACTIVE LEAGUE" : "FINISHED"}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-gray-300 border border-white/10">
+            </Badge>
+            <Badge variant="subtle" className="gap-1.5 text-xs text-gray-300">
               <Armchair className="h-3.5 w-3.5 text-indigo-300" />
               <span>{tournament.allowBenchBoost ? "Bench Boost: On" : "Bench Boost: Off"}</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-gray-300 border border-white/10">
+            </Badge>
+            <Badge variant="subtle" className="gap-1.5 text-xs text-gray-300">
               <Crown className="h-3.5 w-3.5 text-amber-400" />
               <span>{tournament.allowTripleCaptain ? "Triple Captain: On (3x)" : "Triple Captain: Reduced (2x)"}</span>
-            </span>
+            </Badge>
           </div>
         </div>
 
@@ -157,7 +152,7 @@ export default async function TournamentPage(
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <Calendar className="h-5 w-5 text-indigo-400" />
-              <span>Fixtures & Results</span>
+              <span>Fixtures &amp; Results</span>
             </h2>
             <span className="text-xs text-gray-400">
               {tournament.rounds.length} Gameweek Rounds
@@ -166,17 +161,17 @@ export default async function TournamentPage(
 
           <div className="space-y-6">
             {tournament.rounds.map((round) => (
-              <div
+              <Card
                 key={round.id}
-                className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur shadow-lg"
+                className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur shadow-lg text-white"
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-bold text-white">
                     {round.name || `Round ${round.roundNumber}`}
                   </h3>
-                  <span className="rounded-full bg-indigo-500/20 px-3 py-0.5 text-xs font-bold text-indigo-300 border border-indigo-500/30">
+                  <Badge variant="subtle" className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
                     Gameweek {round.gameweek}
-                  </span>
+                  </Badge>
                 </div>
 
                 <div className="space-y-4">
@@ -214,17 +209,18 @@ export default async function TournamentPage(
                             <span className="text-gray-600">•</span>
                             <span className="text-indigo-300 font-medium">GW {round.gameweek}</span>
                           </div>
-                          <span
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${
+                          <Badge
+                            variant={
                               match.status === "FINALIZED"
-                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                ? "success"
                                 : match.status === "COMPLETED"
-                                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                  : "bg-gray-500/20 text-gray-400 border border-white/10"
-                            }`}
+                                  ? "default"
+                                  : "secondary"
+                            }
+                            className="text-[10px] font-extrabold uppercase tracking-wider"
                           >
                             {match.status}
-                          </span>
+                          </Badge>
                         </div>
 
                         {hasScore ? (
@@ -234,14 +230,14 @@ export default async function TournamentPage(
                               {/* Home Side */}
                               <div className="flex items-center justify-center md:justify-end gap-2.5">
                                 {isHomeWin && (
-                                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-400 border border-emerald-500/30">
+                                  <Badge variant="success" className="text-[10px] font-black">
                                     +3 PTS
-                                  </span>
+                                  </Badge>
                                 )}
                                 {isDraw && (
-                                  <span className="rounded bg-yellow-500/20 px-2 py-0.5 text-[10px] font-black text-yellow-400 border border-yellow-500/30">
+                                  <Badge variant="warning" className="text-[10px] font-black">
                                     +1 PT
-                                  </span>
+                                  </Badge>
                                 )}
                                 <span
                                   className={`text-base sm:text-lg font-bold ${
@@ -302,14 +298,14 @@ export default async function TournamentPage(
                                   {away.name}
                                 </span>
                                 {isAwayWin && (
-                                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-black text-emerald-400 border border-emerald-500/30">
+                                  <Badge variant="success" className="text-[10px] font-black">
                                     +3 PTS
-                                  </span>
+                                  </Badge>
                                 )}
                                 {isDraw && (
-                                  <span className="rounded bg-yellow-500/20 px-2 py-0.5 text-[10px] font-black text-yellow-400 border border-yellow-500/30">
+                                  <Badge variant="warning" className="text-[10px] font-black">
                                     +1 PT
-                                  </span>
+                                  </Badge>
                                 )}
                               </div>
                             </div>
@@ -354,9 +350,9 @@ export default async function TournamentPage(
                                 {home.name}
                               </span>
                             </div>
-                            <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30">
+                            <Badge variant="subtle" className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2.5 py-1 border border-indigo-500/30">
                               VS
-                            </span>
+                            </Badge>
                             <div className="flex items-center gap-2">
                               <span className="text-base font-bold text-white">
                                 {away.name}
@@ -373,14 +369,14 @@ export default async function TournamentPage(
                         )}
 
                         <div className="mt-3 pt-2 text-center text-xs text-indigo-400 flex items-center justify-center gap-1 opacity-80 group-hover:opacity-100 group-hover:text-indigo-300 transition border-t border-white/5">
-                          <span>View Match & Player Breakdown</span>
+                          <span>View Match &amp; Player Breakdown</span>
                           <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-1" />
                         </div>
                       </Link>
                     );
                   })}
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </section>
@@ -393,9 +389,9 @@ export default async function TournamentPage(
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {tournament.groups.map((group) => (
-              <div
+              <Card
                 key={group.id}
-                className="flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur hover:border-indigo-500/40 transition"
+                className="flex items-center gap-3.5 rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur hover:border-indigo-500/40 transition text-white"
               >
                 {group.logo ? (
                   <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/10 p-1 border border-white/10">
@@ -426,7 +422,7 @@ export default async function TournamentPage(
                     active players
                   </p>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </section>
@@ -434,5 +430,3 @@ export default async function TournamentPage(
     </div>
   );
 }
-
-

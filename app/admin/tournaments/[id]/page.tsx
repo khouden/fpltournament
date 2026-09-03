@@ -16,6 +16,15 @@ import {
   Crown,
   Ban,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 
 export default async function TournamentManagementPage({
   params,
@@ -65,7 +74,7 @@ export default async function TournamentManagementPage({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Link href="/admin" className="hover:text-indigo-600">
+            <Link href="/admin" className="hover:text-indigo-600 transition">
               Dashboard
             </Link>
             <span>/</span>
@@ -75,27 +84,25 @@ export default async function TournamentManagementPage({
             <h1 className="text-3xl font-bold text-gray-900">
               {tournament.name}
             </h1>
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
-                tournament.status === "DRAFT"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : tournament.status === "PUBLISHED"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
-              }`}
+            <Badge
+              variant={
+                tournament.status === "PUBLISHED"
+                  ? "success"
+                  : tournament.status === "DRAFT"
+                    ? "warning"
+                    : "secondary"
+              }
+              className="font-bold"
             >
               {tournament.status}
-            </span>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                tournament.allowBenchBoost
-                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                  : "bg-amber-50 text-amber-800 border border-amber-200"
-              }`}
+            </Badge>
+            <Badge
+              variant={tournament.allowBenchBoost ? "secondary" : "warning"}
+              className="gap-1 font-medium"
             >
               {tournament.allowBenchBoost ? (
                 <>
-                  <Armchair className="h-3.5 w-3.5" />
+                  <Armchair className="h-3.5 w-3.5 text-indigo-600" />
                   <span>BB: Allowed</span>
                 </>
               ) : (
@@ -104,13 +111,10 @@ export default async function TournamentManagementPage({
                   <span>BB: Disabled</span>
                 </>
               )}
-            </span>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                tournament.allowTripleCaptain
-                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
-                  : "bg-amber-50 text-amber-800 border border-amber-200"
-              }`}
+            </Badge>
+            <Badge
+              variant={tournament.allowTripleCaptain ? "secondary" : "warning"}
+              className="gap-1 font-medium"
             >
               {tournament.allowTripleCaptain ? (
                 <>
@@ -123,14 +127,14 @@ export default async function TournamentManagementPage({
                   <span>TC: Reduced (2x)</span>
                 </>
               )}
-            </span>
+            </Badge>
             {tournament.admins.length > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                <Users className="h-3.5 w-3.5" />
+              <Badge variant="secondary" className="gap-1 font-medium">
+                <Users className="h-3.5 w-3.5 text-indigo-600" />
                 <span>
                   {tournament.admins.length} Admin{tournament.admins.length > 1 ? "s" : ""}
                 </span>
-              </span>
+              </Badge>
             )}
           </div>
         </div>
@@ -138,29 +142,26 @@ export default async function TournamentManagementPage({
         {/* Global Action Buttons */}
         <div className="flex items-center gap-2">
           {tournament.status === "PUBLISHED" && (
-            <Link
-              href={`/tournaments/${tournament.id}`}
-              target="_blank"
-              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition"
-            >
-              <ExternalLink className="h-3.5 w-3.5" />
-              <span>View Public Page</span>
-            </Link>
+            <Button variant="outline" size="sm" asChild className="gap-1.5">
+              <Link href={`/tournaments/${tournament.id}`} target="_blank">
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span>View Public Page</span>
+              </Link>
+            </Button>
           )}
-          <Link
-            href={`/admin/tournaments/${tournament.id}/edit`}
-            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            <span>Edit Info</span>
-          </Link>
+          <Button variant="outline" size="sm" asChild className="gap-1.5">
+            <Link href={`/admin/tournaments/${tournament.id}/edit`}>
+              <Pencil className="h-3.5 w-3.5" />
+              <span>Edit Info</span>
+            </Link>
+          </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase">Season & Admins</p>
+        <Card className="p-4 shadow-xs border-gray-200">
+          <p className="text-xs font-medium text-gray-500 uppercase">Season &amp; Admins</p>
           <p className="mt-1 text-xl font-bold text-gray-900">
             Season {tournament.season}
           </p>
@@ -184,9 +185,9 @@ export default async function TournamentManagementPage({
               </p>
             )}
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <Card className="p-4 shadow-xs border-gray-200">
           <p className="text-xs font-medium text-gray-500 uppercase">Groups</p>
           <p className="mt-1 text-xl font-bold text-gray-900">
             {tournament.groups.length}
@@ -194,17 +195,17 @@ export default async function TournamentManagementPage({
           <p className="text-xs text-gray-500">
             {tournament.groups.reduce((acc, g) => acc + g.members.filter((m) => !m.isAdmin).length, 0)} total players
           </p>
-        </div>
+        </Card>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <Card className="p-4 shadow-xs border-gray-200">
           <p className="text-xs font-medium text-gray-500 uppercase">Gameweek Rounds</p>
           <p className="mt-1 text-xl font-bold text-gray-900">
             {tournament.rounds.length}
           </p>
           <p className="text-xs text-gray-500">Scheduled rounds</p>
-        </div>
+        </Card>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <Card className="p-4 shadow-xs border-gray-200">
           <p className="text-xs font-medium text-gray-500 uppercase">Fixtures</p>
           <p className="mt-1 text-xl font-bold text-gray-900">
             {completedMatches.length} / {allMatches.length}
@@ -212,11 +213,11 @@ export default async function TournamentManagementPage({
           <p className="text-xs text-gray-500">
             {allMatches.filter((m) => m.status === "FINALIZED").length} finalized
           </p>
-        </div>
+        </Card>
       </div>
 
       {/* Live League Standings Table */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      <Card className="p-6 shadow-xs border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -229,25 +230,24 @@ export default async function TournamentManagementPage({
           </div>
         </div>
         <LeagueTable standings={standings} />
-      </div>
+      </Card>
 
       {/* Navigation & Management Hub Cards */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Groups Hub Card */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+        <Card className="p-6 shadow-xs border-gray-200 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <Users className="h-5 w-5 text-indigo-600" />
                 <span>Participating Groups ({tournament.groups.length})</span>
               </h2>
-              <Link
-                href={`/admin/tournaments/${tournament.id}/groups`}
-                className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
-              >
-                <span>Manage Groups</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
+              <Button variant="outline" size="sm" asChild className="gap-1 text-xs text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100">
+                <Link href={`/admin/tournaments/${tournament.id}/groups`}>
+                  <span>Manage Groups</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
             </div>
             <p className="mt-2 text-sm text-gray-600">
               Import Classic Leagues from FPL, verify admin membership, and view team rosters.
@@ -290,23 +290,22 @@ export default async function TournamentManagementPage({
               )}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Schedule Hub Card */}
-        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+        <Card className="p-6 shadow-xs border-gray-200 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-indigo-600" />
-                <span>Schedule & Matches ({tournament.rounds.length} Rounds)</span>
+                <span>Schedule &amp; Matches ({tournament.rounds.length} Rounds)</span>
               </h2>
-              <Link
-                href={`/admin/tournaments/${tournament.id}/schedule`}
-                className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
-              >
-                <span>Configure Schedule</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
+              <Button variant="outline" size="sm" asChild className="gap-1 text-xs text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100">
+                <Link href={`/admin/tournaments/${tournament.id}/schedule`}>
+                  <span>Configure Schedule</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </Button>
             </div>
             <p className="mt-2 text-sm text-gray-600">
               Build rounds, assign Gameweeks, set up knockout fixtures, and resolve winner progression.
@@ -337,14 +336,14 @@ export default async function TournamentManagementPage({
               )}
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Tournament Lifecycle & Control Card */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+      <Card className="p-6 shadow-xs border-gray-200">
         <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
           <Settings className="h-5 w-5 text-gray-700" />
-          <span>Lifecycle & Actions</span>
+          <span>Lifecycle &amp; Actions</span>
         </h2>
         <p className="mt-1 text-sm text-gray-600">
           Validate schedule, publish tournament to public visitors, or recalculate results with live FPL data.
@@ -359,16 +358,15 @@ export default async function TournamentManagementPage({
           />
 
           <div className="flex gap-2">
-            <Link
-              href={`/admin/tournaments/${tournament.id}/schedule`}
-              className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition"
-            >
-              <span>Open Schedule Builder</span>
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            <Button asChild className="gap-1.5">
+              <Link href={`/admin/tournaments/${tournament.id}/schedule`}>
+                <span>Open Schedule Builder</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
           </div>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
