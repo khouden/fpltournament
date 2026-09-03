@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" fill="none">
+  <defs>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#37003C"/>
+      <stop offset="100%" stop-color="#5A0A63"/>
+    </linearGradient>
+    <linearGradient id="shieldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E7FF00"/>
+      <stop offset="100%" stop-color="#00FF87"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield Shape -->
+  <path d="M60 12 L106 28 V76 C106 106 60 128 60 128 C60 128 14 106 14 76 V28 Z" fill="url(#shieldGrad)" stroke="url(#shieldBorder)" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Inner Ball / Star emblem -->
+  <circle cx="60" cy="65" r="22" stroke="url(#shieldBorder)" stroke-width="3" fill="none" opacity="0.8"/>
+  <path d="M60 45 L64 57 L76 57 L66 65 L70 77 L60 70 L50 77 L54 65 L44 57 L56 57 Z" fill="#00FF87"/>
+</svg>

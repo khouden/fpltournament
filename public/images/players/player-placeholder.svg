@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 240" fill="none">
+  <defs>
+    <linearGradient id="avatarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#37003C" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#240027" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00D9FF"/>
+      <stop offset="50%" stop-color="#00FF87"/>
+      <stop offset="100%" stop-color="#E7FF00"/>
+    </linearGradient>
+  </defs>
+  <!-- Player Silhouette Outline -->
+  <circle cx="100" cy="65" r="38" fill="url(#avatarGrad)" stroke="url(#accentGrad)" stroke-width="3"/>
+  <path d="M40 210 C40 145, 70 120, 100 120 C130 120, 160 145, 160 210 Z" fill="url(#avatarGrad)" stroke="url(#accentGrad)" stroke-width="3"/>
+  <!-- Jersey Collar Accent -->
+  <path d="M85 120 L100 140 L115 120" stroke="url(#accentGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
