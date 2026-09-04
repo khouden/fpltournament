@@ -113,13 +113,13 @@ export function TournamentActions({
         </div>
       )}
 
-      <div className="flex items-center gap-2 flex-wrap">
-        {/* Primary: Edit */}
+      <div className="flex items-center gap-2.5 flex-wrap">
+        {/* Secondary: Edit */}
         <Button
           variant="outline"
           size="sm"
           asChild
-          className="h-8 px-3 text-xs font-semibold text-[#1F1F1F] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] transition-colors gap-1.5"
+          className="h-9 px-3.5 text-xs font-semibold text-[#1F1F1F] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] transition-colors gap-1.5 shadow-2xs"
         >
           <Link href={`/admin/tournaments/${tournamentId}/edit`}>
             <Pencil className="h-3.5 w-3.5 text-[#37003C]" />
@@ -132,7 +132,7 @@ export function TournamentActions({
           variant="outline"
           size="sm"
           asChild
-          className="h-8 px-3 text-xs font-medium text-[#444444] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:text-[#1F1F1F] hover:border-[#CCCCCC] transition-colors gap-1.5"
+          className="h-9 px-3.5 text-xs font-semibold text-[#333333] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] transition-colors gap-1.5 shadow-2xs"
         >
           <Link href={`/admin/tournaments/${tournamentId}/groups`}>
             <Users className="h-3.5 w-3.5 text-[#666666]" />
@@ -145,7 +145,7 @@ export function TournamentActions({
           variant="outline"
           size="sm"
           asChild
-          className="h-8 px-3 text-xs font-medium text-[#444444] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:text-[#1F1F1F] hover:border-[#CCCCCC] transition-colors gap-1.5"
+          className="h-9 px-3.5 text-xs font-semibold text-[#333333] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] transition-colors gap-1.5 shadow-2xs"
         >
           <Link href={`/admin/tournaments/${tournamentId}/schedule`}>
             <Calendar className="h-3.5 w-3.5 text-[#666666]" />
@@ -161,7 +161,7 @@ export function TournamentActions({
             onClick={handlePublish}
             disabled={isLoading || !hasGroups}
             title={!hasGroups ? "At least 2 groups required before publishing" : "Publish tournament"}
-            className="h-8 px-3 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors gap-1.5 cursor-pointer disabled:opacity-50"
+            className="h-9 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-[8px] shadow-xs transition-colors gap-1.5 cursor-pointer disabled:opacity-50"
           >
             {isLoading ? (
               <>
@@ -184,7 +184,7 @@ export function TournamentActions({
             size="sm"
             onClick={handleUnpublish}
             disabled={isLoading}
-            className="h-8 px-3 text-xs font-medium border-amber-200 bg-white text-amber-700 hover:bg-amber-50 hover:border-amber-300 transition-colors gap-1.5 cursor-pointer disabled:opacity-50"
+            className="h-9 px-4 text-xs font-semibold border-amber-300 bg-white text-amber-800 hover:bg-amber-50 hover:border-amber-400 rounded-[8px] transition-colors gap-1.5 cursor-pointer disabled:opacity-50"
           >
             {isLoading ? (
               <>
@@ -200,13 +200,13 @@ export function TournamentActions({
           </Button>
         )}
 
-        {/* Destructive: Delete */}
+        {/* Destructive: Delete (visually separated) */}
         <Button
           variant="outline"
           size="sm"
           onClick={() => setShowDeleteConfirm(true)}
           disabled={isLoading}
-          className="h-8 px-3 text-xs font-medium border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors gap-1.5 cursor-pointer disabled:opacity-50 sm:ml-auto"
+          className="h-9 px-3.5 text-xs font-semibold border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 rounded-[8px] transition-colors gap-1.5 cursor-pointer disabled:opacity-50 sm:ml-auto"
           aria-label={`Delete ${tournamentName}`}
         >
           <Trash2 className="h-3.5 w-3.5" />

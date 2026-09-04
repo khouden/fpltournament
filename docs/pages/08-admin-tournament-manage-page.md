@@ -3,7 +3,7 @@
 > **Route:** `/admin/tournaments/[id]`  
 > **Source File:** `app/admin/tournaments/[id]/page.tsx`  
 > **Access Level:** Admin Session Required  
-> **Design Theme:** Clean Light Administrative Theme (`bg-gray-100`, cards `bg-white`)  
+> **Design Theme:** Global FPL Design System (`#37003C` Deep Premier Purple, `#00FF87` Fantasy Green, `#F7F7F7` Background, Poppins Typography)  
 
 ---
 
