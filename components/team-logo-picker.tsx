@@ -87,6 +87,16 @@ export function TeamLogoPicker({
     return list;
   }, [searchQuery, selectedLeague]);
 
+  // Monogram initials for fallback
+  const monogram = useMemo(() => {
+    if (!teamName) return "FC";
+    const parts = teamName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return teamName.slice(0, 2).toUpperCase();
+  }, [teamName]);
+
   const handleConfirm = () => {
     onSelect(selectedPath);
     onClose();
@@ -94,16 +104,16 @@ export function TeamLogoPicker({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0 flex flex-col overflow-hidden bg-white shadow-2xl border-gray-200">
+      <DialogContent className="max-w-3xl max-h-[90vh] p-0 flex flex-col overflow-hidden bg-white shadow-2xl border-[#E5E5E5] rounded-2xl">
         {/* Modal Header */}
-        <DialogHeader className="px-6 py-4 border-b border-gray-100 bg-gray-50/80">
+        <DialogHeader className="px-6 py-4 border-b border-[#E5E5E5] bg-white">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs">
-              <Shield className="h-5 w-5" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#37003C] text-white shadow-xs">
+              <Shield className="h-5 w-5 text-[#00FF87]" />
             </div>
             <div>
-              <DialogTitle className="text-lg font-bold text-gray-900">{title}</DialogTitle>
-              <DialogDescription className="text-xs text-gray-500">
+              <DialogTitle className="text-lg font-bold text-[#1F1F1F]">{title}</DialogTitle>
+              <DialogDescription className="text-xs text-[#777777]">
                 Choose from 390+ authentic club badges across 20 leagues
               </DialogDescription>
             </div>
@@ -112,9 +122,9 @@ export function TeamLogoPicker({
 
         {/* Suggestion Banner */}
         {suggestedLogo && (
-          <div className="mx-6 mt-4 flex items-center justify-between rounded-xl border border-indigo-200 bg-indigo-50/80 p-3 shadow-xs">
+          <div className="mx-6 mt-4 flex items-center justify-between rounded-xl border border-[#37003C]/20 bg-[#37003C]/5 p-3 shadow-xs">
             <div className="flex items-center gap-3">
-              <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1 border border-indigo-100 shadow-xs">
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-white p-1 border border-[#E5E5E5] shadow-xs">
                 <Image
                   src={suggestedLogo.path}
                   alt={suggestedLogo.name}
@@ -125,15 +135,15 @@ export function TeamLogoPicker({
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-bold text-indigo-900">
+                  <span className="text-xs font-bold text-[#37003C]">
                     Suggested for &quot;{teamName}&quot;
                   </span>
-                  <Badge variant="secondary" className="gap-1 text-[10px] font-bold bg-indigo-200/60 text-indigo-800">
+                  <Badge variant="secondary" className="gap-1 text-[10px] font-bold bg-[#00FF87]/20 text-[#008744] border-[#00FF87]/40">
                     <Sparkles className="h-2.5 w-2.5" />
                     <span>Auto-Match</span>
                   </Badge>
                 </div>
-                <p className="text-xs text-indigo-700">
+                <p className="text-xs text-[#666666]">
                   {suggestedLogo.name} ({suggestedLogo.league})
                 </p>
               </div>
@@ -141,9 +151,11 @@ export function TeamLogoPicker({
             <Button
               type="button"
               size="sm"
+              variant="default"
               onClick={() => setSelectedPath(suggestedLogo.path)}
+              className="bg-[#37003C] hover:bg-[#5A0A63] text-white h-8 text-xs font-semibold"
             >
-              <Check className="h-3.5 w-3.5 mr-1" />
+              <Check className="h-3.5 w-3.5 mr-1 text-[#00FF87]" />
               <span>Use Suggested</span>
             </Button>
           </div>
@@ -152,13 +164,13 @@ export function TeamLogoPicker({
         {/* Search & Filters */}
         <div className="px-6 pt-4 pb-2 space-y-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#777777]" />
             <Input
               type="text"
               placeholder="Search club name or league (e.g., Arsenal, Real Madrid, Bayern, Chelsea)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-8 bg-gray-50/50"
+              className="pl-9 pr-8 bg-[#F7F7F7] border-[#E5E5E5] focus-visible:ring-[#37003C]"
               autoFocus
             />
             {searchQuery && (
@@ -167,7 +179,7 @@ export function TeamLogoPicker({
                 variant="ghost"
                 size="icon"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-400 hover:text-gray-600"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-[#777777] hover:text-[#1F1F1F]"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -181,7 +193,11 @@ export function TeamLogoPicker({
               variant={selectedLeague === "ALL" ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedLeague("ALL")}
-              className="rounded-full text-xs h-7 px-3 whitespace-nowrap"
+              className={`rounded-full text-xs h-7 px-3 whitespace-nowrap transition-colors ${
+                selectedLeague === "ALL"
+                  ? "bg-[#37003C] text-white hover:bg-[#5A0A63]"
+                  : "border-[#E5E5E5] text-[#555555] hover:bg-[#F7F7F7]"
+              }`}
             >
               All Leagues ({TEAM_LOGOS.length})
             </Button>
@@ -192,7 +208,11 @@ export function TeamLogoPicker({
                 variant={selectedLeague === league ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedLeague(league)}
-                className="rounded-full text-xs h-7 px-3 whitespace-nowrap"
+                className={`rounded-full text-xs h-7 px-3 whitespace-nowrap transition-colors ${
+                  selectedLeague === league
+                    ? "bg-[#37003C] text-white hover:bg-[#5A0A63]"
+                    : "border-[#E5E5E5] text-[#555555] hover:bg-[#F7F7F7]"
+                }`}
               >
                 {league}
               </Button>
@@ -203,32 +223,32 @@ export function TeamLogoPicker({
         {/* Logos Grid */}
         <div className="flex-1 overflow-y-auto px-6 py-3 min-h-[260px]">
           {filteredLogos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
-              <ImageOff className="h-10 w-10 text-gray-400 mb-2" />
-              <p className="text-sm font-semibold">No logos found</p>
-              <p className="text-xs text-gray-400 mt-1">
+            <div className="flex flex-col items-center justify-center py-12 text-center text-[#777777]">
+              <ImageOff className="h-10 w-10 text-[#CCCCCC] mb-2" />
+              <p className="text-sm font-semibold text-[#1F1F1F]">No logos found</p>
+              <p className="text-xs text-[#777777] mt-1">
                 Try a different search term or select another league.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
-              {/* Option to clear logo */}
+              {/* Option to clear logo / monogram fallback */}
               <button
                 type="button"
                 onClick={() => setSelectedPath(null)}
                 className={`flex flex-col items-center justify-center rounded-xl border p-3 text-center transition cursor-pointer ${
                   selectedPath === null
-                    ? "border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20"
-                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    ? "border-[#37003C] bg-[#37003C]/5 ring-2 ring-[#37003C]/20 shadow-xs"
+                    : "border-[#E5E5E5] hover:border-[#CCCCCC] hover:bg-[#F7F7F7]"
                 }`}
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
-                  <ImageOff className="h-6 w-6" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#37003C] text-white font-extrabold text-base shadow-2xs">
+                  {monogram}
                 </div>
-                <span className="mt-2 text-xs font-bold text-gray-700">
-                  No Logo
+                <span className="mt-2 text-xs font-bold text-[#1F1F1F]">
+                  Default Monogram
                 </span>
-                <span className="text-[10px] text-gray-400">Default badge</span>
+                <span className="text-[10px] text-[#777777]">Initials fallback</span>
               </button>
 
               {filteredLogos.map((logo) => {
@@ -240,13 +260,13 @@ export function TeamLogoPicker({
                     onClick={() => setSelectedPath(logo.path)}
                     className={`group relative flex flex-col items-center justify-between rounded-xl border p-2.5 text-center transition cursor-pointer ${
                       isSelected
-                        ? "border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/30 shadow-xs"
-                        : "border-gray-200 hover:border-indigo-300 hover:bg-gray-50/80"
+                        ? "border-[#37003C] bg-[#37003C]/5 ring-2 ring-[#37003C]/20 shadow-xs"
+                        : "border-[#E5E5E5] hover:border-[#37003C]/40 hover:bg-[#F7F7F7]"
                     }`}
                   >
                     {isSelected && (
-                      <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xs">
-                        <Check className="h-2.5 w-2.5" />
+                      <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#37003C] text-white shadow-xs">
+                        <Check className="h-2.5 w-2.5 text-[#00FF87]" />
                       </span>
                     )}
 
@@ -262,10 +282,10 @@ export function TeamLogoPicker({
                     </div>
 
                     <div className="w-full mt-1.5">
-                      <p className="text-xs font-bold text-gray-900 truncate" title={logo.name}>
+                      <p className="text-xs font-bold text-[#1F1F1F] truncate" title={logo.name}>
                         {logo.name}
                       </p>
-                      <p className="text-[10px] text-gray-500 truncate" title={logo.league}>
+                      <p className="text-[10px] text-[#777777] truncate" title={logo.league}>
                         {logo.league}
                       </p>
                     </div>
@@ -277,9 +297,9 @@ export function TeamLogoPicker({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/80">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-[#E5E5E5] bg-[#F7F7F7]">
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-[#777777]">
               {filteredLogos.length} clubs available
             </span>
             {selectedPath && (
@@ -296,6 +316,7 @@ export function TeamLogoPicker({
               variant="outline"
               size="sm"
               onClick={onClose}
+              className="border-[#E5E5E5] text-[#555555] hover:text-[#1F1F1F]"
             >
               Cancel
             </Button>
@@ -303,6 +324,7 @@ export function TeamLogoPicker({
               type="button"
               size="sm"
               onClick={handleConfirm}
+              className="bg-[#37003C] hover:bg-[#5A0A63] text-white"
             >
               Confirm Selection
             </Button>
