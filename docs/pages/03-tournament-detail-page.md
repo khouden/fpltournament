@@ -3,7 +3,7 @@
 > **Route:** `/tournaments/[id]`  
 > **Source File:** `app/tournaments/[id]/page.tsx`  
 > **Access Level:** Public (Unauthenticated, Drafts blocked via 404)  
-> **Design Theme:** Dark Cosmic Glassmorphism (`slate-900 via-indigo-950 to-slate-900`)  
+> **Design Theme:** Global FPL Design System (Premier Purple `#37003C`, Fantasy Green `#00FF87`, Light Background `#F7F7F7`, White Surfaces `#FFFFFF`)  
 
 ---
 
@@ -25,42 +25,47 @@ The **Tournament Detail & Standings Page** is the premier public dashboard for a
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ STICKY NAVBAR: [Trophy] FPL LEAGUES                      [<- All Leagues]   │
+│ GLOBAL STICKY HEADER: [Logo] FPL TOURNAMENTS         [← All Tournaments]    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ TOURNAMENT HERO:                                                            │
+│   ← ALL TOURNAMENTS                                                         │
+│   [Trophy] COMPETITION DASHBOARD                                            │
 │   H1: Premier League Fantasy Cup 2024                                       │
-│   [Season 2024] [ACTIVE LEAGUE] [Bench Boost: On] [Triple Captain: On (3x)] │
+│   [Season 2024/25] [● ACTIVE] [✓ Bench Boost: On] [✓ Triple Captain: On (3x)]│
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ SECTION 1: LIVE LEAGUE STANDINGS TABLE                                      │
-│   [Trophy] League Standings                                                 │
+│   🏆 LEAGUE STANDINGS                                      [● LIVE TABLE]   │
 │   ┌───────────────────────────────────────────────────────────────────────┐ │
 │   │ # | Team / League        | MP | W | D | L | PF  | PA  | +/- | PTS|Form│ │
-│   │ 1 | 🛡️ London Gunners    |  3 | 3 | 0 | 0 | 215 | 160 | +55 |  9 |WWW │ │
+│   │ 1 | 🛡️ London Gunners 👑  |  3 | 3 | 0 | 0 | 215 | 160 | +55 |  9 |WWW │ │
 │   │ 2 | 🛡️ Red Devils FC     |  3 | 2 | 0 | 1 | 198 | 185 | +13 |  6 |WWL │ │
 │   │ 3 | 🛡️ Cityzen Blues     |  3 | 1 | 1 | 1 | 190 | 190 |   0 |  4 |WDL │ │
 │   │ 4 | 🛡️ Merseyside Reds   |  3 | 0 | 1 | 2 | 170 | 210 | -40 |  1 |DLL │ │
 │   └───────────────────────────────────────────────────────────────────────┘ │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ SECTION 2: FIXTURES & RESULTS BY GAMEWEEK                                   │
-│   [Calendar] Fixtures & Results                      3 Gameweek Rounds      │
+│   📅 Fixtures & Results                              3 Gameweek Rounds      │
 │   ┌───────────────────────────────────────────────────────────────────────┐ │
 │   │ Round 1 · Gameweek 1                                   [COMPLETED]    │ │
 │   │ Match 1                                                               │ │
-│   │   London Gunners (+3 PTS)   [ 72 - 58 ]    Merseyside Reds (0 PTS)    │ │
+│   │   London Gunners (+3 PTS)   [ 72 — 58 ]    Merseyside Reds (0 PTS)    │ │
+│   │                        LONDON GUNNERS WIN                             │ │
 │   │   [Squad Points Breakdown]                 [Squad Points Breakdown]   │ │
 │   │   • Manager A: 28 pts ✨                    • Manager X: 22 pts        │ │
 │   │   • Manager B: 24 pts                      • Manager Y: 18 pts        │ │
-│   │   • Admin (Excluded): ~~15~~               • Admin (Excluded): ~~12~~ │ │
+│   │   • 🛡️ Admin: ~~15 pts~~ [EXCLUDED]         • 🛡️ Admin: ~~12 pts~~     │ │
 │   │   View Match & Player Breakdown ->                                    │ │
 │   └───────────────────────────────────────────────────────────────────────┘ │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ SECTION 3: PARTICIPATING TEAMS                                              │
-│   [Users] Participating Teams (4)                                           │
+│   👥 Participating Teams (4)                                                │
 │   ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        │
 │   │ [Logo]       │ │ [Logo]       │ │ [Logo]       │ │ [Logo]       │        │
 │   │ London Gunner│ │ Red Devils FC│ │ Cityzen Blues│ │ Merseyside R│        │
 │   │ 10 players   │ │ 10 players   │ │ 10 players   │ │ 10 players   │        │
 │   └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ GLOBAL FOOTER                                                               │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -69,47 +74,48 @@ The **Tournament Detail & Standings Page** is the premier public dashboard for a
 ## 3. Deep Component Specifications
 
 ### 3.1 Tournament Meta Header
-- **Title (H1):** `text-4xl font-black text-white tracking-tight`
+- **Title (H1):** `text-3xl sm:text-4xl lg:text-[44px] font-extrabold text-[#37003C] tracking-tight leading-[1.08]`
 - **Metadata Badges:**
-  - **Season:** `Season {tournament.season}` text pill.
-  - **Status Badge:** Green `ACTIVE LEAGUE` or Subdued `FINISHED`.
-  - **Bench Boost Badge:** Contains `Armchair` icon, dynamically reads `Bench Boost: On` or `Bench Boost: Off`.
-  - **Triple Captain Badge:** Contains `Crown` icon, dynamically reads `Triple Captain: On (3x)` or `Triple Captain: Reduced (2x)`.
+  - **Season:** `Season {tournament.season}` text badge.
+  - **Status Badge:** Green `● ACTIVE` with pulsing emerald dot or Subdued neutral `● FINISHED`.
+  - **Bench Boost Badge:** Contains `Armchair` icon, reads `Bench Boost: On` or `Bench Boost: Off` with green indicator dot.
+  - **Triple Captain Badge:** Contains `Crown` icon, reads `Triple Captain: On (3×)` or `Triple Captain: Reduced (2×)`.
 
 ### 3.2 Live League Standings Table (`LeagueTable`)
-- **Container:** Dark glassmorphic card with rounded borders: `bg-black/40 border-white/10 shadow-xl backdrop-blur`.
+- **Container:** Pure white card with clean borders: `bg-white border border-[#E5E5E5] rounded-[16px] shadow-fpl-sm`.
 - **Columns:**
-  1. `#` (Rank): Circle badge with rank number. 1st place gets gold `bg-amber-400 text-slate-950 shadow-sm`, 2nd place gets silver `bg-slate-300`, 3rd gets bronze `bg-amber-700`.
-  2. `Team / League`: Team logo (or 2-letter fallback) + Team name. Leader gets a crown icon indicator.
+  1. `#` (Rank): Circle badge with rank number. 1st place gets gold `bg-[#FFD700] text-[#37003C] font-black`, 2nd place gets silver `bg-[#E2E8F0]`, 3rd gets bronze `bg-[#D97706] text-white`, others neutral gray `bg-[#F0F0F0]`.
+  2. `TEAM / LEAGUE`: Team logo (or 2-letter monogram in `#37003C`) + Team name (`#37003C` bold). Leader gets a crown icon and subtle `#FAF7FB` row tint.
   3. `MP` (Matches Played)
-  4. `W` (Wins: +3 League Points)
+  4. `W` (Wins: +3 League Points, styled in `#008744` bold)
   5. `D` (Draws: +1 League Point)
-  6. `L` (Losses: 0 League Points)
+  6. `L` (Losses: 0 League Points, styled in `#D32F2F`)
   7. `PF` (Points For: Total FPL Gameweek points scored across all matches)
   8. `PA` (Points Against: Total FPL points conceded)
-  9. `+/-` (Points Difference: `PF - PA`, formatted in emerald green if positive, red if negative)
-  10. `PTS` (Total Points: `W * 3 + D * 1`, styled in bold monospace indigo `text-indigo-300 font-extrabold`)
-  11. `Form` (Last 5 matches): Micro-badges (Green `W`, Yellow `D`, Red `L`).
+  9. `+/-` (Points Difference: `PF - PA`, formatted in green `#008744` if positive, red `#D32F2F` if negative)
+  10. `PTS` (Total Points: `W * 3 + D * 1`, styled in bold 20px Poppins `#37003C`)
+  11. `FORM` (Last 5 matches): Micro-badges (Green `W`, Yellow `D`, Red `L`). Hidden on tablet.
 
 ### 3.3 Fixtures & Gameweek Rounds
-- **Round Grouping:** Every round corresponds to a specific FPL Gameweek and is wrapped in an individual card with a `Gameweek {round.gameweek}` badge.
+- **Round Grouping:** Every round corresponds to a specific FPL Gameweek and is wrapped in an individual white card with a `Gameweek {round.gameweek}` badge.
 - **Match Card Structure:**
   - **Meta Header:** Match number, Gameweek number, and status badge (`FINALIZED`, `COMPLETED`, `SCHEDULED`).
   - **Scoreboard Display:**
     - Home team on the left, Away team on the right.
-    - Winner gets an emerald `+3 PTS` badge; in case of a draw, both teams receive an amber `+1 PT` badge.
-    - Large center scoreboard: `{homeScore} - {awayScore}` in `font-mono text-2xl sm:text-3xl font-black text-white`.
+    - Winner gets a green `+3 PTS` badge; in case of a draw, both teams receive an amber `+1 PT` badge.
+    - Large center scoreboard: `{homeScore} — {awayScore}` in Poppins 800 `32–40px` `#37003C`.
     - Outcome banner: Displays `{Team Name} WIN` or `MATCH DRAW`.
+    - Uncalculated matches show `VS` (never `0 - 0`) with `SCHEDULED` status.
   - **Compact Squad Player Breakdown (`MatchSquadList`):**
     - Directly visible inside the match card without needing to navigate away!
     - Lists all members of both competing leagues side-by-side.
     - Displays member name, FPL team name, active chip badges (`BB`, `3XC`), and chip deduction notes (`-X`).
     - Top scorer in each team gets a gold sparkle icon (`Sparkles`).
-    - **Admin Exclusion Display:** The tournament organizer is listed with a `Shield` icon, yellow warning text, and strikethrough points (`line-through opacity-75`), visually confirming their score was not counted toward the team total.
+    - **Admin Exclusion Display:** The tournament organizer is listed with a `Shield` icon, warning text, strikethrough points (`line-through`), and an `EXCLUDED` badge, visually confirming their score was not counted toward the team total.
     - **Squad Modal Trigger:** Clicking any player row opens the full `<FantasyTeamModal />` overlay for that player!
 
 ### 3.4 Participating Teams Grid
-- Displays all participating FPL Classic Leagues.
+- Displays all participating FPL Classic Leagues in a 4-column desktop / 2-column mobile grid.
 - Shows team logo or generated monogram.
 - Shows clean count of active non-admin fantasy players (`{count} active players`).
 

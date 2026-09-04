@@ -53,33 +53,33 @@ export function MatchSquadList({
 
   if (scores.length === 0) {
     return (
-      <div className="rounded-lg bg-white/[0.02] p-3 border border-white/5 text-center text-xs text-gray-500 italic">
-        No player scores recorded
+      <div className="rounded-[10px] bg-[#F9F9F9] p-3 border border-[#EBEBEB] text-center text-xs text-[#888888] italic">
+        No player scores recorded yet
       </div>
     );
   }
 
   return (
     <>
-      <div className="rounded-lg bg-white/[0.03] p-3 border border-white/5 space-y-2">
-        {/* Header */}
-        <div className="flex items-center justify-between text-xs pb-1.5 border-b border-white/5">
-          <div className="flex items-center gap-1.5 font-bold text-gray-200 truncate">
+      <div className="rounded-[12px] bg-[#FBFBFB] p-3 border border-[#E5E5E5] space-y-2">
+        {/* Squad Header */}
+        <div className="flex items-center justify-between text-xs pb-2 border-b border-[#EAEAEA]">
+          <div className="flex items-center gap-2 font-bold text-[#37003C] min-w-0">
             {teamLogo ? (
-              <div className="relative flex h-4 w-4 shrink-0 items-center justify-center rounded bg-white/10 p-0.5">
-                <img src={teamLogo} alt="" className="h-3.5 w-3.5 object-contain" />
+              <div className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white p-0.5 border border-[#E5E5E5]">
+                <img src={teamLogo} alt="" className="h-4 w-4 object-contain" />
               </div>
             ) : (
-              <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-indigo-500/20 text-[9px] font-black text-indigo-300">
+              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#37003C] text-[9px] font-black text-[#00FF87]">
                 {teamName.slice(0, 2).toUpperCase()}
               </div>
             )}
-            <span className="truncate">{teamName} Players</span>
+            <span className="truncate">{teamName} Squad</span>
           </div>
           {totalScore !== null && (
-            <Badge variant="subtle" className="font-mono text-[11px] font-bold text-indigo-300">
+            <span className="font-extrabold text-xs text-[#37003C] bg-[#37003C]/5 px-2 py-0.5 rounded-[6px] border border-[#37003C]/10">
               {totalScore} pts
-            </Badge>
+            </span>
           )}
         </div>
 
@@ -97,47 +97,52 @@ export function MatchSquadList({
                   e.stopPropagation();
                   setSelectedPlayer(s);
                 }}
-                className="group/item w-full flex items-center justify-between text-xs py-1 px-1.5 rounded hover:bg-white/10 active:bg-white/15 transition cursor-pointer text-left border border-transparent hover:border-white/10"
-                title={`Click to view ${s.member.fplName}'s fantasy squad and score`}
+                className="group/item w-full flex items-center justify-between text-xs py-1.5 px-2 rounded-[8px] bg-white hover:bg-[#F3EDF4] active:bg-[#ECE0ED] transition-colors cursor-pointer text-left border border-[#EEEEEE] hover:border-[#37003C]/20 shadow-2xs"
+                title={`Click to inspect ${s.member.fplName}'s fantasy lineup and points`}
               >
                 <div className="flex items-center gap-1.5 min-w-0 pr-2">
-                  <span className="font-semibold text-gray-200 group-hover/item:text-indigo-300 transition truncate">
+                  {isTopScorer && (
+                    <span title="Top Scorer" className="inline-flex shrink-0">
+                      <Sparkles className="h-3 w-3 text-[#D97706]" />
+                    </span>
+                  )}
+                  <span className="font-bold text-[#1F1F1F] group-hover/item:text-[#37003C] transition-colors truncate">
                     {s.member.fplName}
                   </span>
                   {s.member.fplTeamName && (
-                    <span className="text-[10px] text-gray-500 truncate hidden sm:inline">
+                    <span className="text-[10px] text-[#777777] truncate hidden sm:inline">
                       ({s.member.fplTeamName})
                     </span>
                   )}
                   {s.activeChip && (
-                    <Badge variant="secondary" className="px-1 py-0 text-[9px] font-bold uppercase">
+                    <span className="shrink-0 px-1.5 py-0.2 text-[9px] font-extrabold uppercase rounded bg-[#37003C]/10 text-[#37003C]">
                       {s.activeChip === "bboost"
                         ? "BB"
                         : s.activeChip === "3xc"
                           ? "3XC"
                           : s.activeChip}
-                    </Badge>
+                    </span>
                   )}
                   {s.chipDeduction > 0 && (
-                    <span className="shrink-0 text-[9px] text-amber-400 font-medium">
+                    <span className="shrink-0 text-[10px] text-[#D97706] font-semibold">
                       (-{s.chipDeduction})
                     </span>
                   )}
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="opacity-0 group-hover/item:opacity-100 transition text-[10px] text-indigo-300 font-medium flex items-center gap-0.5 hidden xs:flex">
+                  <span className="opacity-0 group-hover/item:opacity-100 transition-opacity text-[10px] text-[#37003C] font-semibold flex items-center gap-0.5 hidden xs:flex">
                     <Eye className="h-3 w-3" />
                   </span>
-                  <Badge
-                    variant={isTopScorer ? "warning" : "subtle"}
-                    className="font-mono font-bold text-xs"
+                  <span
+                    className={`inline-flex items-center justify-center font-bold text-xs px-2 py-0.5 rounded-[6px] ${
+                      isTopScorer
+                        ? "bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]"
+                        : "bg-[#F3F4F6] text-[#1F1F1F]"
+                    }`}
                   >
-                    {isTopScorer && (
-                      <Sparkles className="h-2.5 w-2.5 text-amber-400 mr-1" />
-                    )}
-                    <span>{s.gameweekPoints}</span>
-                  </Badge>
+                    {s.gameweekPoints} pts
+                  </span>
                 </div>
               </button>
             );
@@ -145,7 +150,7 @@ export function MatchSquadList({
 
           {/* Excluded Admin notice in compact squad list */}
           {excluded.length > 0 && (
-            <div className="pt-1 mt-1 border-t border-white/5 space-y-0.5">
+            <div className="pt-1.5 mt-1 border-t border-[#EAEAEA] space-y-1">
               {excluded.map((s) => (
                 <button
                   key={s.id}
@@ -155,16 +160,29 @@ export function MatchSquadList({
                     e.stopPropagation();
                     setSelectedPlayer(s);
                   }}
-                  className="w-full flex items-center justify-between text-[11px] py-0.5 px-1 rounded text-amber-400/60 hover:text-amber-400 hover:bg-amber-400/10 transition cursor-pointer text-left"
-                  title="Admin (excluded from score calculation)"
+                  className="w-full flex items-center justify-between text-xs py-1.5 px-2 rounded-[8px] bg-[#FFFBEB] border border-[#FDE68A] hover:bg-[#FEF3C7] transition-colors cursor-pointer text-left"
+                  title="Organizer · Excluded from team scoring per tournament rules"
                 >
-                  <span className="truncate italic flex items-center gap-1">
-                    <Shield className="h-2.5 w-2.5" />
-                    <span>{s.member.fplName} (Admin)</span>
-                  </span>
-                  <span className="font-mono line-through opacity-75">
-                    {s.gameweekPoints}
-                  </span>
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Shield className="h-3 w-3 text-[#D97706] shrink-0" />
+                    <div className="truncate leading-tight">
+                      <span className="font-semibold text-[#92400E] truncate mr-1">
+                        {s.member.fplName}
+                      </span>
+                      <span className="text-[10px] text-[#B45309] font-medium">
+                        Organizer · Excluded
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#92400E] bg-[#FEF3C7] px-1.5 py-0.2 rounded border border-[#FCD34D]">
+                      EXCLUDED
+                    </span>
+                    <span className="font-semibold text-xs text-[#92400E]/70 line-through">
+                      {s.gameweekPoints} pts
+                    </span>
+                  </div>
                 </button>
               ))}
             </div>
@@ -222,28 +240,39 @@ export function MatchScoreBreakdown({
 
   return (
     <>
-      <Card className="border-white/10 bg-white/5 p-5 shadow-lg backdrop-blur">
+      <Card className="rounded-[16px] border border-[#E5E5E5] bg-white p-5 shadow-fpl-sm">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#EAEAEA]">
           <div className="flex items-center gap-2.5">
-            {logo && (
-              <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 p-0.5 border border-white/10">
+            {logo ? (
+              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white p-1 border border-[#E5E5E5] shadow-xs">
                 <img
                   src={logo}
                   alt={groupName}
-                  className="h-6 w-6 object-contain"
+                  className="h-7 w-7 object-contain"
                 />
               </div>
+            ) : (
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[#37003C] text-xs font-black text-[#00FF87]">
+                {groupName.slice(0, 2).toUpperCase()}
+              </div>
             )}
-            <h3
-              className={`text-lg font-bold ${
-                isWinner ? "text-emerald-400" : "text-white"
-              }`}
-            >
-              {groupName}
-            </h3>
+            <div>
+              <h3
+                className={`text-lg font-bold ${
+                  isWinner ? "text-[#008744]" : "text-[#37003C]"
+                }`}
+              >
+                {groupName}
+              </h3>
+              {isWinner && (
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#008744] bg-[#00FF87]/20 px-1.5 py-0.2 rounded">
+                  Winner (+3 PTS)
+                </span>
+              )}
+            </div>
           </div>
-          <span className="text-2xl font-bold font-mono text-white">{total}</span>
+          <span className="text-2xl font-black text-[#37003C]">{total} pts</span>
         </div>
 
         {/* Included Members */}
@@ -253,28 +282,28 @@ export function MatchScoreBreakdown({
               key={s.id}
               type="button"
               onClick={() => setSelectedPlayer(s)}
-              className="group/item w-full flex items-center justify-between text-sm py-1.5 px-2 rounded-lg hover:bg-white/10 active:bg-white/15 transition cursor-pointer text-left border border-transparent hover:border-white/10"
+              className="group/item w-full flex items-center justify-between text-sm py-2 px-2.5 rounded-[8px] hover:bg-[#F9F9F9] active:bg-[#F0F0F0] transition-colors cursor-pointer text-left border border-transparent hover:border-[#E5E5E5]"
               title={`Click to view ${s.member.fplName}'s fantasy squad and points`}
             >
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-medium group-hover/item:text-indigo-300 transition">
+                  <span className="text-[#1F1F1F] font-bold group-hover/item:text-[#37003C] transition-colors">
                     {s.member.fplName}
                   </span>
                   {s.activeChip && (
-                    <Badge variant="warning" className="text-[10px] uppercase font-bold">
+                    <span className="rounded bg-[#37003C]/10 text-[#37003C] px-1.5 py-0.2 text-[10px] uppercase font-bold">
                       {s.activeChip === "bboost"
                         ? "Bench Boost"
                         : s.activeChip === "3xc"
                           ? "Triple Captain"
                           : s.activeChip}
-                    </Badge>
+                    </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
+                <div className="flex items-center gap-2 text-xs text-[#777777]">
                   {s.member.fplTeamName && <span>{s.member.fplTeamName}</span>}
                   {s.chipDeduction && s.chipDeduction > 0 ? (
-                    <span className="text-amber-400/95 font-medium">
+                    <span className="text-[#D97706] font-semibold">
                       (-{s.chipDeduction} pts{" "}
                       {s.activeChip === "bboost"
                         ? "bench excluded"
@@ -286,47 +315,50 @@ export function MatchScoreBreakdown({
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="opacity-0 group-hover/item:opacity-100 transition text-xs text-indigo-300 flex items-center gap-1">
+                <span className="opacity-0 group-hover/item:opacity-100 transition-opacity text-xs text-[#37003C] font-semibold flex items-center gap-1">
                   <Eye className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline text-[11px]">Squad</span>
                 </span>
-                <Badge variant="subtle" className="font-mono font-bold text-sm px-2.5 py-0.5">
-                  {s.gameweekPoints}
-                </Badge>
+                <span className="font-bold text-sm text-[#37003C] bg-[#F5F5F5] px-2.5 py-1 rounded-[6px]">
+                  {s.gameweekPoints} pts
+                </span>
               </div>
             </button>
           ))}
         </div>
 
-        {/* Total */}
-        <div className="mt-3 border-t border-white/10 pt-2 flex items-center justify-between">
-          <span className="text-sm font-bold text-gray-400">TOTAL</span>
-          <span className="font-mono font-bold text-indigo-400 text-xl">
-            {total}
+        {/* Total Footer */}
+        <div className="mt-4 border-t border-[#EAEAEA] pt-3 flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-[#777777]">TOTAL SQUAD SCORE</span>
+          <span className="font-black text-[#37003C] text-xl">
+            {total} pts
           </span>
         </div>
 
         {/* Excluded (Admin) */}
         {excluded.length > 0 && (
-          <div className="mt-4 rounded-lg bg-yellow-500/10 p-3 border border-yellow-500/20">
-            <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wider mb-2">
-              Admin — Excluded from Score
-            </p>
+          <div className="mt-4 rounded-[12px] bg-[#FFFBEB] p-3.5 border border-[#FDE68A] space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#92400E] uppercase tracking-wider">
+              <Shield className="h-3.5 w-3.5 text-[#D97706]" />
+              <span>Organizer — Excluded from Score</span>
+            </div>
             {excluded.map((s) => (
               <button
                 key={s.id}
                 type="button"
                 onClick={() => setSelectedPlayer(s)}
-                className="w-full flex items-center justify-between text-sm py-1 px-1 rounded hover:bg-yellow-500/15 transition cursor-pointer text-left"
+                className="w-full flex items-center justify-between text-xs py-1.5 px-2 rounded-[6px] hover:bg-[#FEF3C7] transition-colors cursor-pointer text-left"
                 title={`Click to view ${s.member.fplName}'s fantasy squad`}
               >
-                <span className="text-yellow-400/70 italic">
-                  {s.member.fplName}
+                <span className="text-[#92400E] font-semibold truncate mr-2">
+                  {s.member.fplName} (Admin)
                 </span>
-                <div className="flex items-center gap-2">
-                  <Eye className="h-3.5 w-3.5 text-yellow-400/50" />
-                  <span className="font-mono text-yellow-400/70 line-through">
-                    {s.gameweekPoints}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#92400E] bg-[#FEF3C7] px-1.5 py-0.2 rounded border border-[#FCD34D]">
+                    EXCLUDED
+                  </span>
+                  <span className="font-bold text-[#92400E]/70 line-through">
+                    {s.gameweekPoints} pts
                   </span>
                 </div>
               </button>
