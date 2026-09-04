@@ -12,6 +12,7 @@ export interface FantasyHeroProps extends React.HTMLAttributes<HTMLDivElement> {
   playerAlt?: string;
   backgroundNumber?: string | number;
   gradient?: "purple" | "fantasyPrimary" | "darkPurple";
+  visual?: React.ReactNode;
 }
 
 export function FantasyHero({
@@ -23,6 +24,7 @@ export function FantasyHero({
   playerAlt = "Featured Player",
   backgroundNumber,
   gradient = "purple",
+  visual,
   className,
   ...props
 }: FantasyHeroProps) {
@@ -37,7 +39,7 @@ export function FantasyHero({
   return (
     <div
       className={cn(
-        "relative overflow-hidden py-16 sm:py-24 border-b border-[#5A0A63]/50",
+        "relative overflow-hidden py-14 sm:py-20 lg:py-24 border-b border-[#E5E5E5]",
         gradientStyles[gradient],
         isLightGradient ? "text-[#1F1F1F]" : "text-white",
         className
@@ -48,37 +50,57 @@ export function FantasyHero({
       {backgroundNumber && (
         <div
           aria-hidden="true"
-          className="absolute -right-6 -bottom-10 pointer-events-none select-none font-mono font-black text-[160px] sm:text-[240px] text-white/[0.04] leading-none"
+          className={cn(
+            "absolute -right-6 -bottom-10 pointer-events-none select-none font-mono font-black text-[160px] sm:text-[240px] leading-none",
+            isLightGradient ? "text-[#37003C]/[0.05]" : "text-white/[0.04]"
+          )}
         >
           {backgroundNumber}
         </div>
       )}
 
-      {/* Decorative subtle polygon shapes */}
+      {/* Subtle decorative geometric overlay shapes */}
       <div
         aria-hidden="true"
-        className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-[#00FF87]/10 blur-3xl pointer-events-none"
+        className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-white/20 blur-3xl pointer-events-none"
       />
       <div
         aria-hidden="true"
-        className="absolute -bottom-24 right-1/4 h-80 w-80 rounded-full bg-[#E9007F]/15 blur-3xl pointer-events-none"
+        className="absolute -bottom-24 right-1/4 h-80 w-80 rounded-full bg-[#37003C]/10 blur-3xl pointer-events-none"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute top-1/2 right-12 h-64 w-64 rounded-full bg-[#00FF87]/20 blur-2xl pointer-events-none"
+      />
+
+      {/* Diagonal angled polygon accent */}
+      <div
+        aria-hidden="true"
+        className="absolute -bottom-20 -right-20 w-80 h-80 bg-white/15 rotate-12 rounded-3xl pointer-events-none transform"
       />
 
       <Container>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10">
           {/* Content Column */}
-          <div className="lg:col-span-7 space-y-5 text-center lg:text-left">
+          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
             {badge && <div className="inline-block">{badge}</div>}
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.05] text-inherit">
+            <h1
+              className={cn(
+                "text-4xl sm:text-5xl md:text-6xl lg:text-[68px] font-black tracking-tight leading-[1.02] uppercase font-sans",
+                isLightGradient ? "text-[#37003C]" : "text-white"
+              )}
+            >
               {headline}
             </h1>
 
             {subheadline && (
               <p
                 className={cn(
-                  "text-base sm:text-lg max-w-xl leading-relaxed mx-auto lg:mx-0",
-                  isLightGradient ? "text-[#37003C]/80 font-medium" : "text-indigo-200/90"
+                  "text-base sm:text-lg lg:text-[19px] max-w-xl leading-relaxed mx-auto lg:mx-0 font-medium",
+                  isLightGradient
+                    ? "text-[#37003C]/85"
+                    : "text-indigo-200/90"
                 )}
               >
                 {subheadline}
@@ -92,18 +114,22 @@ export function FantasyHero({
             )}
           </div>
 
-          {/* Optional Prominent Player Imagery Column */}
-          {playerImageSrc && (
-            <div className="lg:col-span-5 relative flex justify-center lg:justify-end">
-              <div className="relative h-64 sm:h-80 lg:h-96 w-64 sm:w-80 lg:w-96">
-                <Image
-                  src={playerImageSrc}
-                  alt={playerAlt}
-                  fill
-                  priority
-                  className="object-contain object-bottom drop-shadow-2xl"
-                />
-              </div>
+          {/* Visual Column */}
+          {(visual || playerImageSrc) && (
+            <div className="lg:col-span-5 relative flex justify-center lg:justify-end items-center">
+              {visual ? (
+                visual
+              ) : playerImageSrc ? (
+                <div className="relative h-72 sm:h-96 lg:h-[440px] w-72 sm:w-96 lg:w-[440px]">
+                  <Image
+                    src={playerImageSrc}
+                    alt={playerAlt}
+                    fill
+                    priority
+                    className="object-contain object-bottom drop-shadow-2xl"
+                  />
+                </div>
+              ) : null}
             </div>
           )}
         </div>
