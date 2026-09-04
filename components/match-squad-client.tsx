@@ -240,129 +240,233 @@ export function MatchScoreBreakdown({
 
   return (
     <>
-      <Card className="rounded-[16px] border border-[#E5E5E5] bg-white p-5 shadow-fpl-sm">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#EAEAEA]">
-          <div className="flex items-center gap-2.5">
-            {logo ? (
-              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white p-1 border border-[#E5E5E5] shadow-xs">
-                <img
-                  src={logo}
-                  alt={groupName}
-                  className="h-7 w-7 object-contain"
-                />
-              </div>
-            ) : (
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[#37003C] text-xs font-black text-[#00FF87]">
-                {groupName.slice(0, 2).toUpperCase()}
-              </div>
-            )}
-            <div>
-              <h3
-                className={`text-lg font-bold ${
-                  isWinner ? "text-[#008744]" : "text-[#37003C]"
-                }`}
-              >
-                {groupName}
-              </h3>
-              {isWinner && (
-                <span className="text-[10px] font-black uppercase tracking-wider text-[#008744] bg-[#00FF87]/20 px-1.5 py-0.2 rounded">
-                  Winner (+3 PTS)
-                </span>
+      <Card
+        className={`rounded-2xl border bg-white p-5 sm:p-6 shadow-xs flex flex-col justify-between transition-all ${
+          isWinner
+            ? "border-[#00FF87]/40 border-t-4 border-t-[#00FF87]"
+            : "border-[#E5E5E5]"
+        }`}
+      >
+        <div>
+          {/* Card Header: Team Identity & Total Score */}
+          <div className="flex items-center justify-between mb-5 pb-4 border-b border-[#EAEAEA]">
+            <div className="flex items-center gap-3 min-w-0">
+              {logo ? (
+                <div className="relative flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-white p-1.5 border border-[#E5E5E5] shadow-xs">
+                  <img
+                    src={logo}
+                    alt={groupName}
+                    className="h-8 w-8 sm:h-9 sm:w-9 object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-11 w-11 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-[#37003C] text-sm font-black text-[#00FF87] shadow-xs">
+                  {groupName.slice(0, 2).toUpperCase()}
+                </div>
               )}
-            </div>
-          </div>
-          <span className="text-2xl font-black text-[#37003C]">{total} pts</span>
-        </div>
-
-        {/* Included Members */}
-        <div className="space-y-1.5">
-          {included.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => setSelectedPlayer(s)}
-              className="group/item w-full flex items-center justify-between text-sm py-2 px-2.5 rounded-[8px] hover:bg-[#F9F9F9] active:bg-[#F0F0F0] transition-colors cursor-pointer text-left border border-transparent hover:border-[#E5E5E5]"
-              title={`Click to view ${s.member.fplName}'s fantasy squad and points`}
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#1F1F1F] font-bold group-hover/item:text-[#37003C] transition-colors">
-                    {s.member.fplName}
-                  </span>
-                  {s.activeChip && (
-                    <span className="rounded bg-[#37003C]/10 text-[#37003C] px-1.5 py-0.2 text-[10px] uppercase font-bold">
-                      {s.activeChip === "bboost"
-                        ? "Bench Boost"
-                        : s.activeChip === "3xc"
-                          ? "Triple Captain"
-                          : s.activeChip}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3
+                    className={`text-lg sm:text-xl font-bold truncate ${
+                      isWinner ? "text-[#008744]" : "text-[#1F1F1F]"
+                    }`}
+                  >
+                    {groupName}
+                  </h3>
+                  {isWinner && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-[#008744] bg-[#00FF87]/20 px-2 py-0.5 rounded-full border border-[#00FF87]/30">
+                      Winner (+3 PTS)
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-[#777777]">
-                  {s.member.fplTeamName && <span>{s.member.fplTeamName}</span>}
-                  {s.chipDeduction && s.chipDeduction > 0 ? (
-                    <span className="text-[#D97706] font-semibold">
-                      (-{s.chipDeduction} pts{" "}
-                      {s.activeChip === "bboost"
-                        ? "bench excluded"
-                        : "chip adjustment"}
-                      )
-                    </span>
-                  ) : null}
-                </div>
+                <p className="text-xs text-[#666666] font-medium mt-0.5">
+                  {included.length} Contributing {included.length === 1 ? "Manager" : "Managers"}
+                </p>
               </div>
-
-              <div className="flex items-center gap-2">
-                <span className="opacity-0 group-hover/item:opacity-100 transition-opacity text-xs text-[#37003C] font-semibold flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline text-[11px]">Squad</span>
-                </span>
-                <span className="font-bold text-sm text-[#37003C] bg-[#F5F5F5] px-2.5 py-1 rounded-[6px]">
-                  {s.gameweekPoints} pts
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Total Footer */}
-        <div className="mt-4 border-t border-[#EAEAEA] pt-3 flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#777777]">TOTAL SQUAD SCORE</span>
-          <span className="font-black text-[#37003C] text-xl">
-            {total} pts
-          </span>
-        </div>
-
-        {/* Excluded (Admin) */}
-        {excluded.length > 0 && (
-          <div className="mt-4 rounded-[12px] bg-[#FFFBEB] p-3.5 border border-[#FDE68A] space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#92400E] uppercase tracking-wider">
-              <Shield className="h-3.5 w-3.5 text-[#D97706]" />
-              <span>Organizer — Excluded from Score</span>
             </div>
-            {excluded.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSelectedPlayer(s)}
-                className="w-full flex items-center justify-between text-xs py-1.5 px-2 rounded-[6px] hover:bg-[#FEF3C7] transition-colors cursor-pointer text-left"
-                title={`Click to view ${s.member.fplName}'s fantasy squad`}
-              >
-                <span className="text-[#92400E] font-semibold truncate mr-2">
-                  {s.member.fplName} (Admin)
-                </span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-[#92400E] bg-[#FEF3C7] px-1.5 py-0.2 rounded border border-[#FCD34D]">
-                    EXCLUDED
-                  </span>
-                  <span className="font-bold text-[#92400E]/70 line-through">
-                    {s.gameweekPoints} pts
-                  </span>
+            <div className="text-right shrink-0 pl-3">
+              <span className="text-2xl sm:text-3xl font-extrabold text-[#37003C]">
+                {total}
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-[#666666] ml-1">pts</span>
+            </div>
+          </div>
+
+          {/* Included Managers Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#666666]">
+                INCLUDED MANAGERS
+              </span>
+              <span className="text-xs text-[#8A8A8A] font-medium">
+                Gameweek {gameweek}
+              </span>
+            </div>
+
+            {included.length === 0 ? (
+              <div className="rounded-xl bg-[#F9F9F9] p-4 text-center text-xs text-[#8A8A8A] italic border border-[#EEEEEE]">
+                No included manager scores recorded
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {included.map((s) => {
+                  const hasDeduction = s.chipDeduction > 0;
+                  const chipReason =
+                    s.activeChip === "bboost"
+                      ? "Bench players excluded"
+                      : s.activeChip === "3xc"
+                        ? "Triple Captain adjustment"
+                        : "Chip rule deduction";
+
+                  return (
+                    <div
+                      key={s.id}
+                      className="group/item w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-[#F9F9F9] hover:bg-[#F3EDF4] border border-[#EEEEEE] hover:border-[#37003C]/25 transition-all text-left"
+                    >
+                      {/* Manager Information */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-sm text-[#1F1F1F] group-hover/item:text-[#37003C] transition-colors truncate">
+                            {s.member.fplName}
+                          </span>
+                          {s.activeChip && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+                                hasDeduction
+                                  ? "bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]"
+                                  : "bg-[#37003C]/10 text-[#37003C] border border-[#37003C]/15"
+                              }`}
+                            >
+                              {s.activeChip === "bboost"
+                                ? "Bench Boost"
+                                : s.activeChip === "3xc"
+                                  ? "Triple Captain"
+                                  : s.activeChip === "freehit"
+                                    ? "Free Hit"
+                                    : s.activeChip === "wildcard"
+                                      ? "Wildcard"
+                                      : s.activeChip}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2 text-xs text-[#666666] mt-0.5 flex-wrap">
+                          {s.member.fplTeamName && (
+                            <span className="truncate">{s.member.fplTeamName}</span>
+                          )}
+                          {hasDeduction && (
+                            <span className="text-[#D97706] font-semibold flex items-center gap-1">
+                              • −{s.chipDeduction} pts ({chipReason})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Points Pill & Squad Button */}
+                      <div className="flex items-center gap-2.5 justify-between sm:justify-end shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#EAEAEA]">
+                        {/* Gameweek Points Pill */}
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-[8px] bg-[#37003C]/5 border border-[#37003C]/10 text-xs font-bold text-[#37003C]">
+                          <span className="text-sm font-extrabold mr-1">
+                            {s.gameweekPoints}
+                          </span>
+                          <span className="text-[11px] font-semibold text-[#666666]">pts</span>
+                        </div>
+
+                        {/* Visible Squad Action Button */}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPlayer(s)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[8px] text-xs font-bold text-[#37003C] bg-white hover:bg-[#37003C] hover:text-white border border-[#E5E5E5] hover:border-[#37003C] shadow-2xs transition-colors cursor-pointer"
+                          title={`Inspect ${s.member.fplName}'s 15-player squad lineup`}
+                          aria-label={`View squad for ${s.member.fplName}`}
+                        >
+                          <Eye className="h-3.5 w-3.5 shrink-0" />
+                          <span>Squad</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Team Total Row */}
+          <div className="mt-5 border-t-2 border-[#EAEAEA] pt-4 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-extrabold uppercase tracking-wider text-[#666666]">
+                TEAM TOTAL
+              </span>
+              <p className="text-[11px] text-[#8A8A8A]">
+                Official score calculated from included managers
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="text-2xl sm:text-3xl font-extrabold text-[#37003C]">
+                {total}
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-[#666666] ml-1">pts</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Admin — Excluded from Score Section */}
+        {excluded.length > 0 && (
+          <div className="mt-6 rounded-xl bg-[#FFFBEB] p-4 border border-[#FDE68A] space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[#92400E] uppercase tracking-wider">
+              <Shield className="h-4 w-4 text-[#D97706] shrink-0" />
+              <span>ADMIN — EXCLUDED FROM SCORE</span>
+            </div>
+            <p className="text-[11px] text-[#B45309] leading-snug">
+              Organizer Account · This score does not affect the official team total. Admin squad remains inspectable below.
+            </p>
+
+            <div className="space-y-1.5 pt-1">
+              {excluded.map((s) => (
+                <div
+                  key={s.id}
+                  className="w-full flex items-center justify-between gap-2 p-2.5 rounded-[8px] bg-white/70 border border-[#FDE68A]/60 text-left"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#92400E] font-bold text-xs truncate">
+                        {s.member.fplName}
+                      </span>
+                      <span className="text-[10px] font-semibold text-[#B45309]">
+                        (Admin)
+                      </span>
+                    </div>
+                    {s.member.fplTeamName && (
+                      <p className="text-[10px] text-[#92400E]/80 truncate">
+                        {s.member.fplTeamName}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-[#92400E] bg-[#FEF3C7] px-1.5 py-0.5 rounded border border-[#FCD34D]">
+                      EXCLUDED
+                    </span>
+                    <span
+                      className="font-bold text-xs text-[#92400E]/60 line-through mr-1"
+                      title="Admin points excluded from official score"
+                    >
+                      {s.gameweekPoints} pts
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPlayer(s)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-[6px] text-xs font-bold text-[#92400E] bg-white hover:bg-[#92400E] hover:text-white border border-[#FDE68A] transition-colors cursor-pointer"
+                      title={`Inspect ${s.member.fplName}'s squad`}
+                      aria-label={`View squad for admin ${s.member.fplName}`}
+                    >
+                      <Eye className="h-3 w-3" />
+                      <span>Squad</span>
+                    </button>
+                  </div>
                 </div>
-              </button>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </Card>
