@@ -27,36 +27,38 @@ The **Create Tournament Page** is a comprehensive setup wizard that allows the t
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ADMIN NAVBAR: [Trophy] Fantasy Leagues Admin     admin@test.com  [Logout]   │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ PAGE TITLE:                                                                 │
-│   Create Tournament                                                         │
-│   Set up a new tournament for your FPL league                               │
+│ PAGE HEADER (max-w-4xl):                                                    │
+│   < Back to Dashboard       [Badge: NEW TOURNAMENT]                         │
+│   Create Tournament [Trophy]                                                │
+│   Set up a new FPL competition, configure its scoring rules...              │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ TOURNAMENT FORM CARD:                                                       │
+│ STEP INDICATOR:                                                             │
+│   (1) Basic Info  >  (2) Chip Rules  >  (3) Administrators                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TOURNAMENT WIZARD FORM:                                                     │
 │                                                                             │
-│ 1. BASIC INFORMATION:                                                       │
+│ [Card 1] BASIC INFORMATION                                                  │
 │    Tournament Name *                                                        │
 │    [ Premier League Fantasy Cup 2024                                       ]│
 │    Season *                                                                 │
 │    [ 2024                                                                  ]│
 │                                                                             │
-│ 2. FPL CHIPS CONFIGURATION CARD:                                            │
-│    ⚡ FPL Chips Configuration                                                │
-│    ┌──────────────────────────────────────────────────────────────────────┐ │
-│    │ [Armchair] Bench Boost                       [ENABLED]      [Toggle] │ │
-│    │ Bench points count fully towards match score when played.            │ │
-│    ├──────────────────────────────────────────────────────────────────────┤ │
-│    │ [Crown] Triple Captain                       [ENABLED]      [Toggle] │ │
-│    │ Triple Captain multiplier (3x) counts fully towards match score.     │ │
-│    └──────────────────────────────────────────────────────────────────────┘ │
+│ [Card 2] FPL CHIP RULES                                                     │
+│    [Armchair] Bench Boost                       [ENABLED]      [Toggle]     │
+│    Bench points count fully towards match score when played.                │
+│    ----------------------------------------------------------------------   │
+│    [Crown] Triple Captain                       [ENABLED]      [Toggle]     │
+│    Triple Captain multiplier (3x) counts fully towards match score.         │
 │                                                                             │
-│ 3. TOURNAMENT ADMINS CARD (Multi-Admin Support):                            │
-│    👥 Tournament Admins (1)                                [+ Add Co-Admin] │
+│ [Card 3] TOURNAMENT ADMINISTRATORS                              [+ Add]     │
 │    ℹ️ Why add multiple admins? Private league limits. All admins excluded. │
 │    ┌──────────────────────────────────────────────────────────────────────┐ │
-│    │ 👑 John Doe (Gunners XI)   #123456   [Primary Admin]                 │ │
+│    │ 👑 John Doe (Gunners XI)   #123456   [PRIMARY ADMIN]                 │ │
 │    └──────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
-│ [                     Create Tournament Button                             ]│
+│ [Validation Alert: Tournament has 1 configured admin. Ready to save.]       │
+│                                                                             │
+│ [ Create Tournament Button ] [ Cancel Button ]                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 

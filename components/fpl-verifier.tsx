@@ -55,7 +55,9 @@ export function FPLVerifier({
           setEntryId("");
         }
       } else {
-        setError(result.error || "Failed to verify entry");
+        // Map common API / not found errors to friendly message
+        const isNotFound = result.error?.toLowerCase().includes("not found") || result.error?.includes("404");
+        setError(isNotFound ? "FPL manager not found. Please check the Entry ID." : (result.error || "Failed to verify entry"));
       }
     } catch (err) {
       setError("An error occurred. Please try again.");
@@ -66,18 +68,20 @@ export function FPLVerifier({
   };
 
   return (
-    <Card className="shadow">
+    <Card className="shadow-xs border-[#E5E5E5] bg-white">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="h-5 w-5 text-indigo-600" />
-          <CardTitle className="text-lg font-bold">{title}</CardTitle>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#37003C]/10 text-[#37003C]">
+            <ShieldCheck className="h-4 w-4" />
+          </div>
+          <CardTitle className="text-base font-bold text-[#1F1F1F]">{title}</CardTitle>
         </div>
-        <CardDescription>{description}</CardDescription>
+        <CardDescription className="text-xs text-[#666666]">{description}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="bg-[#E9007F]/10 border-[#E9007F]/30 text-[#E9007F] [&>svg]:text-[#E9007F]">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Verification Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
@@ -85,14 +89,14 @@ export function FPLVerifier({
         )}
 
         {manager && (
-          <Alert variant="success">
-            <CheckCircle2 className="h-4 w-4" />
+          <Alert variant="success" className="bg-emerald-50 border-emerald-200 text-emerald-800">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <AlertTitle>
               Verified: {manager.player_first_name} {manager.player_last_name}
             </AlertTitle>
-            <AlertDescription className="mt-1">
-              Team: <strong>{manager.name}</strong> • Manager ID:{" "}
-              <strong>{manager.id}</strong>
+            <AlertDescription className="mt-1 text-xs">
+              Team: <strong className="font-semibold text-emerald-900">{manager.name}</strong> • Manager ID:{" "}
+              <strong className="font-mono text-emerald-900">{manager.id}</strong>
               {manager.summary_overall_points !== undefined &&
                 ` • Total Points: ${manager.summary_overall_points}`}
             </AlertDescription>
@@ -100,7 +104,7 @@ export function FPLVerifier({
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="entry-id">FPL Entry ID</Label>
+          <Label htmlFor="entry-id" className="text-xs font-semibold text-[#1F1F1F]">FPL Entry ID</Label>
           <Input
             type="text"
             id="entry-id"
@@ -115,6 +119,7 @@ export function FPLVerifier({
             disabled={loading}
             placeholder="e.g., 3040938"
             required
+            className="h-11 focus-visible:ring-[#37003C]"
           />
         </div>
 
@@ -122,7 +127,7 @@ export function FPLVerifier({
           type="button"
           onClick={handleVerify}
           disabled={loading || !entryId.trim()}
-          className="w-full"
+          className="w-full h-11 bg-[#37003C] hover:bg-[#5A0A63] text-white font-semibold transition-colors"
         >
           {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
           <span>{loading ? "Verifying..." : buttonText}</span>
