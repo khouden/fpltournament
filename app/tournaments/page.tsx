@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Trophy, ArrowRight, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Trophy } from "lucide-react";
+import { Header } from "@/components/navigation/header";
+import { Footer } from "@/components/layout/footer";
+import { Container } from "@/components/layout/container";
+import { TournamentCard } from "@/components/football/tournament-card";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Tournaments — FPL Tournament",
@@ -31,127 +34,214 @@ export default async function TournamentsPage() {
   const finished = tournaments.filter((t) => t.status === "FINISHED");
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white">
-      {/* Header */}
-      <header className="border-b border-white/10 bg-black/20 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <Link href="/" className="flex items-center gap-2 text-xl font-bold text-white hover:text-indigo-300 transition">
-            <Trophy className="h-5 w-5 text-indigo-400" />
-            <span>FPL Tournament</span>
-          </Link>
-          <Button variant="ghost" size="sm" asChild className="text-indigo-300 hover:text-white hover:bg-white/10">
-            <Link href="/">
-              <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-              <span>Home</span>
-            </Link>
-          </Button>
-        </div>
-      </header>
+    <div className="min-h-screen flex flex-col bg-[#F7F7F7] text-[#1F1F1F]">
+      {/* Sticky Global FPL Header */}
+      <Header />
 
-      <main className="mx-auto max-w-5xl px-4 py-10">
-        <h1 className="text-4xl font-bold text-white">Tournaments</h1>
-        <p className="mt-2 text-lg text-indigo-300">
-          Browse active and completed tournaments
-        </p>
+      <main className="flex-1 pb-16 sm:pb-24">
+        {/* Page Intro Header */}
+        <section className="relative overflow-hidden bg-white border-b border-[#EAEAEA] py-10 sm:py-14">
+          {/* Subtle decorative background glows */}
+          <div
+            aria-hidden="true"
+            className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#00FF87]/10 blur-3xl pointer-events-none"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute -left-20 -bottom-20 h-72 w-72 rounded-full bg-[#37003C]/5 blur-3xl pointer-events-none"
+          />
 
-        {/* Active Tournaments */}
-        {active.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-lg font-semibold text-emerald-400 uppercase tracking-wider">
-              Active
-            </h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {active.map((t) => (
-                <TournamentCard key={t.id} tournament={t} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Finished Tournaments */}
-        {finished.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-lg font-semibold text-gray-400 uppercase tracking-wider">
-              Completed
-            </h2>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              {finished.map((t) => (
-                <TournamentCard key={t.id} tournament={t} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {tournaments.length === 0 && (
-          <div className="mt-16 text-center">
-            <p className="text-xl text-gray-400">No tournaments published yet</p>
-            <p className="mt-2 text-gray-500">Check back later!</p>
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
-
-function TournamentCard({
-  tournament,
-}: {
-  tournament: {
-    id: string;
-    name: string;
-    season: number;
-    status: string;
-    groups: { id: string }[];
-    rounds: { matches: { status: string }[] }[];
-  };
-}) {
-  const totalMatches = tournament.rounds.reduce(
-    (acc, r) => acc + r.matches.length,
-    0
-  );
-  const completedMatches = tournament.rounds.reduce(
-    (acc, r) =>
-      acc +
-      r.matches.filter(
-        (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
-      ).length,
-    0
-  );
-
-  return (
-    <Link
-      href={`/tournaments/${tournament.id}`}
-      className="group block"
-    >
-      <Card className="border-white/10 bg-white/5 p-6 backdrop-blur transition hover:border-indigo-500/50 hover:bg-white/10 text-white">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-xl font-bold text-white group-hover:text-indigo-300 transition">
-              {tournament.name}
-            </h3>
-            <p className="mt-1 text-sm text-gray-400">
-              Season {tournament.season}/{tournament.season + 1}
-            </p>
-          </div>
-          <Badge
-            variant={tournament.status === "PUBLISHED" ? "success" : "secondary"}
-            className="font-bold"
+          {/* Subtle background typography watermark */}
+          <div
+            aria-hidden="true"
+            className="absolute right-6 -bottom-4 select-none pointer-events-none text-7xl sm:text-8xl lg:text-9xl font-black text-[#37003C]/[0.025] tracking-tighter uppercase leading-none hidden sm:block"
           >
-            {tournament.status === "PUBLISHED" ? "ACTIVE" : "FINISHED"}
-          </Badge>
-        </div>
-        <div className="mt-4 flex gap-4 text-sm text-gray-400">
-          <span>{tournament.groups.length} Groups</span>
-          <span>
-            {completedMatches}/{totalMatches} Matches
-          </span>
-          <span>{tournament.rounds.length} Rounds</span>
-        </div>
-        <div className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-indigo-400 group-hover:text-indigo-300">
-          <span>View Tournament</span>
-          <ArrowRight className="h-4 w-4" />
-        </div>
-      </Card>
-    </Link>
+            TOURNAMENTS
+          </div>
+
+          <Container className="relative z-10">
+            {/* Eyebrow Pill */}
+            <div className="inline-flex items-center gap-2 rounded-[8px] border border-[#37003C]/15 bg-[#37003C]/5 px-3 py-1 text-xs font-black uppercase tracking-wider text-[#37003C] mb-3">
+              <Trophy className="h-3.5 w-3.5 text-[#37003C]" />
+              <span>COMPETITION DIRECTORY</span>
+            </div>
+
+            {/* Title & Description */}
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[#37003C] uppercase leading-[1.05]">
+              Tournaments
+            </h1>
+            <p className="mt-2.5 text-base sm:text-lg text-[#555555] font-medium leading-relaxed max-w-[650px]">
+              Browse active and completed FPL competitions.
+            </p>
+
+            {/* Stat Summary Strip (Derived strictly from existing data) */}
+            {tournaments.length > 0 && (
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <div className="inline-flex items-center gap-2 rounded-[10px] border border-[#E5E5E5] bg-[#F9F9F9] px-3.5 py-1.5 shadow-xs">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#777777]">
+                    ACTIVE
+                  </span>
+                  <span className="text-xs font-black text-[#008744] bg-[#00FF87]/20 px-2 py-0.5 rounded-md">
+                    {active.length}
+                  </span>
+                </div>
+
+                <div className="inline-flex items-center gap-2 rounded-[10px] border border-[#E5E5E5] bg-[#F9F9F9] px-3.5 py-1.5 shadow-xs">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#777777]">
+                    COMPLETED
+                  </span>
+                  <span className="text-xs font-black text-[#555555] bg-[#EBEBEB] px-2 py-0.5 rounded-md">
+                    {finished.length}
+                  </span>
+                </div>
+
+                <div className="inline-flex items-center gap-2 rounded-[10px] border border-[#E5E5E5] bg-[#F9F9F9] px-3.5 py-1.5 shadow-xs">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#777777]">
+                    TOURNAMENTS
+                  </span>
+                  <span className="text-xs font-black text-[#37003C] bg-[#37003C]/10 px-2 py-0.5 rounded-md">
+                    {tournaments.length}
+                  </span>
+                </div>
+              </div>
+            )}
+          </Container>
+        </section>
+
+        {/* Catalog Body Container */}
+        <Container className="pt-10 sm:pt-14">
+          {/* Zero Tournaments Empty State (When zero published & zero completed) */}
+          {tournaments.length === 0 && (
+            <div className="rounded-[16px] border border-[#E5E5E5] bg-white p-10 sm:p-14 text-center shadow-fpl-sm max-w-lg mx-auto mt-4">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#37003C]/10 text-[#37003C] mb-4">
+                <Trophy className="h-7 w-7 text-[#37003C]" />
+              </div>
+              <h2 className="text-xl font-black text-[#37003C] uppercase tracking-tight">
+                No Tournaments Yet
+              </h2>
+              <p className="mt-2 text-sm text-[#777777] max-w-sm mx-auto leading-relaxed">
+                There are no published tournaments available at the moment. Check back later for upcoming competitions.
+              </p>
+              <div className="mt-6">
+                <Button asChild variant="primary" size="default" className="font-extrabold">
+                  <Link href="/">Return to Home</Link>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Active Tournaments Section (Rendered whenever tournaments exist) */}
+          {tournaments.length > 0 && (
+            <section aria-labelledby="active-tournaments-heading">
+              {/* Section Header */}
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4">
+                <div>
+                  <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-[#008744] mb-1">
+                    <span className="h-2.5 w-2.5 rounded-full bg-[#00FF87] animate-fpl-pulse-dot" />
+                    <span>ACTIVE</span>
+                  </div>
+                  <h2
+                    id="active-tournaments-heading"
+                    className="text-2xl sm:text-3xl font-black tracking-tight text-[#37003C]"
+                  >
+                    Active Tournaments
+                  </h2>
+                  <p className="mt-1 text-sm sm:text-base text-[#777777]">
+                    Follow ongoing competitions and their current progress.
+                  </p>
+                </div>
+
+                {active.length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="self-start sm:self-auto border-[#00FF87]/40 bg-[#00FF87]/15 text-[#007038] font-black px-3.5 py-1 text-xs uppercase tracking-wider shadow-xs"
+                  >
+                    {active.length} In Progress
+                  </Badge>
+                )}
+              </div>
+
+              {/* Decorative fantasy gradient accent line */}
+              <div
+                aria-hidden="true"
+                className="mb-8 h-1 w-20 rounded-full bg-gradient-to-r from-[#00D9FF] via-[#00FF87] to-[#E7FF00]"
+              />
+
+              {/* Active Tournament Grid or Empty State when finished exist but no active */}
+              {active.length === 0 ? (
+                <div className="rounded-[14px] border border-[#E5E5E5] bg-white p-8 text-center shadow-fpl-sm max-w-lg mx-auto">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#37003C]/10 text-[#37003C] mb-3">
+                    <Trophy className="h-6 w-6 text-[#37003C]" />
+                  </div>
+                  <h3 className="text-lg font-bold text-[#37003C]">
+                    No active tournaments right now
+                  </h3>
+                  <p className="mt-1 text-sm text-[#777777] max-w-sm mx-auto">
+                    Check back soon for the next competition.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-6 sm:grid-cols-2">
+                  {active.map((t) => (
+                    <TournamentCard
+                      key={t.id}
+                      tournament={t}
+                      variant="active"
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {/* Completed Tournaments Section (Conditional: Only when finished.length > 0) */}
+          {finished.length > 0 && (
+            <section
+              aria-labelledby="completed-tournaments-heading"
+              className="mt-16 sm:mt-24 pt-12 sm:pt-16 border-t border-[#EAEAEA]"
+            >
+              {/* Completed Section Header */}
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
+                <div>
+                  <div className="text-xs font-black uppercase tracking-wider text-[#777777] mb-1">
+                    COMPLETED
+                  </div>
+                  <h2
+                    id="completed-tournaments-heading"
+                    className="text-2xl sm:text-3xl font-black tracking-tight text-[#555555]"
+                  >
+                    Completed Tournaments
+                  </h2>
+                  <p className="mt-1 text-sm sm:text-base text-[#777777]">
+                    Browse previous competitions and their results.
+                  </p>
+                </div>
+
+                <Badge
+                  variant="outline"
+                  className="self-start sm:self-auto border-[#E5E5E5] bg-[#F4F4F5] text-[#555555] font-extrabold px-3 py-1 text-xs uppercase tracking-wider"
+                >
+                  {finished.length} Completed
+                </Badge>
+              </div>
+
+              {/* Completed Tournaments Grid */}
+              <div className="grid gap-6 sm:grid-cols-2">
+                {finished.map((t) => (
+                  <TournamentCard
+                    key={t.id}
+                    tournament={t}
+                    variant="completed"
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+        </Container>
+      </main>
+
+      {/* Global FPL Footer */}
+      <Footer />
+    </div>
   );
 }

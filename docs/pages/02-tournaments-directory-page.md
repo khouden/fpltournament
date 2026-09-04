@@ -3,7 +3,7 @@
 > **Route:** `/tournaments`  
 > **Source File:** `app/tournaments/page.tsx`  
 > **Access Level:** Public (Unauthenticated)  
-> **Design Theme:** Dark Indigo Mesh (`slate-900 via-indigo-950 to-slate-900`)  
+> **Design Theme:** Global FPL Design System (Premier Purple `#37003C`, Light Background `#F7F7F7`, Clean White Surfaces `#FFFFFF`, Fantasy Green `#00FF87`)  
 
 ---
 
@@ -26,43 +26,62 @@ The **Tournaments Directory Page** is the central catalog of all competitions ru
 ## 2. UI & Visual Architecture
 
 ### 2.1 Theme & Aesthetics
-- **Background Gradient:** `bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white`.
-- **Top Bar:** Translucent dark bar (`border-b border-white/10 bg-black/20 backdrop-blur`) with direct return navigation to `/`.
-- **Glass Cards:** Cards use `border-white/10 bg-white/5 backdrop-blur`, glowing with an indigo border on hover (`hover:border-indigo-500/50 hover:bg-white/10`).
+- **Background:** Light clean canvas (`bg-[#F7F7F7] text-[#1F1F1F]`).
+- **Global Header:** Sticky Premier Purple header (`bg-[#37003C] text-white border-b border-[#5A0A63]`) with active route indication.
+- **Surface Cards:** Clean white surfaces (`border border-[#E5E5E5] bg-white rounded-[14px] shadow-fpl-sm hover:shadow-fpl-md hover:-translate-y-0.5 hover:border-[#37003C]/30`).
 - **Section Headers:**
-  - Active section: Crisp emerald uppercase text (`text-lg font-semibold text-emerald-400 uppercase tracking-wider`).
-  - Completed section: Subdued slate uppercase text (`text-lg font-semibold text-gray-400 uppercase tracking-wider`).
+  - Active section: Pulsing green live dot with bold uppercase badge (`● ACTIVE`) and bold `#37003C` heading.
+  - Completed section: Subdued slate uppercase badge (`COMPLETED`) with neutral `#555555` heading.
+- **Visual Accent:** Fantasy gradient line beneath active heading (`from-[#00D9FF] via-[#00FF87] to-[#E7FF00]`).
 
 ### 2.2 Layout Wireframe
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ HEADER: [Trophy] FPL Tournament                               [<- Home]    │
+│ HEADER: [Trophy] FPL TOURNAMENTS      [Tournaments] [Rules] ...   [View CTA]│
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ PAGE TITLE:                                                                 │
-│   H1: Tournaments                                                           │
-│   P: Browse active and completed tournaments                                │
+│ PAGE INTRO:                                                                 │
+│   [Competition Directory]                                                   │
+│   H1: TOURNAMENTS                                                           │
+│   P: Browse active and completed FPL competitions.                          │
+│   STATS: [Active: 3]  [Completed: 1]  [Total: 4]                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ ACTIVE TOURNAMENTS SECTION:                                                 │
-│   ACTIVE                                                                    │
+│   ● ACTIVE                                                                  │
+│   Active Tournaments                                                        │
+│   Follow ongoing competitions and their current progress.                   │
+│   ━━━━━━━━━━━━━━━━ (Fantasy Gradient Accent Line)                           │
+│                                                                             │
 │   ┌──────────────────────────────┐  ┌──────────────────────────────┐        │
+│   │ [ACTIVE]             2024/25 │  │ [ACTIVE]             2024/25 │        │
 │   │ Champions Fantasy Cup        │  │ Premier Knockout 2024        │        │
-│   │ Season 2024/2025             │  │ Season 2024/2025             │        │
-│   │ [ACTIVE] Badge               │  │ [ACTIVE] Badge               │        │
-│   │ 4 Groups • 6/12 Matches      │  │ 8 Groups • 14/28 Matches     │        │
-│   │ 3 Rounds                     │  │ 5 Rounds                     │        │
-│   │ View Tournament ->           │  │ View Tournament ->           │        │
+│   │ Custom FPL knockout ...      │  │ Custom FPL knockout ...      │        │
+│   │ ──────────────────────────── │  │ ──────────────────────────── │        │
+│   │  GROUPS   MATCHES   ROUNDS   │  │  GROUPS   MATCHES   ROUNDS   │        │
+│   │    4       6 / 12      3     │  │    8      14 / 28      5     │        │
+│   │ [██████████░░░░░░░░░░░░░░░░] │  │ [██████████░░░░░░░░░░░░░░░░] │        │
+│   │ ──────────────────────────── │  │ ──────────────────────────── │        │
+│   │ Bench Boost ✓ Triple Cap ✓   │  │ Bench Boost ✓ Triple Cap ✓   │        │
+│   │ View Tournament            → │  │ View Tournament            → │        │
 │   └──────────────────────────────┘  └──────────────────────────────┘        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ COMPLETED TOURNAMENTS SECTION:                                              │
 │   COMPLETED                                                                 │
+│   Completed Tournaments                                                     │
+│   Browse previous competitions and their results.                           │
+│                                                                             │
 │   ┌──────────────────────────────┐  ┌──────────────────────────────┐        │
-│   │ Winter Classic 2023          │  │ Summer Cup 2023              │        │
-│   │ Season 2023/2024             │  │ Season 2023/2024             │        │
-│   │ [FINISHED] Badge             │  │ [FINISHED] Badge             │        │
-│   │ 4 Groups • 12/12 Matches     │  │ 4 Groups • 12/12 Matches     │        │
-│   │ View Tournament ->           │  │ View Tournament ->           │        │
+│   │ [COMPLETED]          2023/24 │  │                              │        │
+│   │ Winter Classic 2023          │  │                              │        │
+│   │ Custom FPL knockout ...      │  │                              │        │
+│   │  GROUPS   MATCHES   ROUNDS   │  │                              │        │
+│   │    4      12 / 12      3     │  │                              │        │
+│   │ [██████████████████████████] │  │                              │        │
+│   │ Bench Boost ✓ Triple Cap ✓   │  │                              │        │
+│   │ View Tournament            → │  │                              │        │
 │   └──────────────────────────────┘  └──────────────────────────────┘        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ FOOTER: Global FPL Footer with Platform Links and Copyright                 │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -71,34 +90,41 @@ The **Tournaments Directory Page** is the central catalog of all competitions ru
 ## 3. Component Inventory & Interactive Elements
 
 ### 3.1 Directory Header Navigation
-- **Branding:** Left-aligned `Trophy` icon in `indigo-400` with bold text `FPL Tournament` linking back to the home page (`/`).
-- **Back Button:** Ghost button on the right containing `ArrowLeft` and label `Home`, allowing visitors to return to `/` with a single click.
+- Uses the shared `<Header />` component (`<DesktopHeader />` and `<MobileHeader />`).
+- Deep purple branding `#37003C` with active underline indicator on `/tournaments`.
 
-### 3.2 Page Heading Block
-- **Title (H1):** `text-4xl font-bold text-white`
-- **Subtitle:** `text-lg text-indigo-300` explaining the directory purpose.
+### 3.2 Page Intro Header
+- **Eyebrow Pill:** Soft purple container `#37003C/5` with trophy icon and uppercase `COMPETITION DIRECTORY` label.
+- **Title (H1):** `text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[#37003C] uppercase`.
+- **Subtitle:** `text-base sm:text-lg text-[#555555] font-medium leading-relaxed max-w-[650px]`.
+- **Stat Summary Strip:** 3 pills derived directly from existing server query:
+  - Active: `{active.length}`
+  - Completed: `{finished.length}`
+  - Total: `{tournaments.length}`
 
-### 3.3 Active Section (`active.length > 0`)
-- Renders only when one or more tournaments are in `PUBLISHED` status.
-- Card grid displays active competitions with distinct green `ACTIVE` status pills (`variant="success"`).
-- Season notation formatted as a standard football season: `Season {tournament.season}/{tournament.season + 1}`.
+### 3.3 Active Section (`tournaments.length > 0`)
+- Renders active tournaments in a 2-column responsive grid (`grid gap-6 sm:grid-cols-2`).
+- Eyebrow badge: pulsing green dot (`animate-fpl-pulse-dot`) + `ACTIVE`.
+- Season notation formatted as a standard football season: `2024/25`.
+- If `active.length === 0` but `finished.length > 0`, renders a clean dedicated section message rather than hiding the directory.
 
 ### 3.4 Completed Section (`finished.length > 0`)
 - Renders historical tournaments with `status === "FINISHED"`.
-- Features secondary slate badges (`variant="secondary"`).
+- Uses `variant="completed"` on `<TournamentCard />`.
+- Spaced generously (`mt-16 sm:mt-24 pt-12 sm:pt-16 border-t border-[#EAEAEA]`).
 
 ### 3.5 `TournamentCard` Component Specification
-- **Card Container:** Clickable Next.js `<Link href="/tournaments/[id]">` wrapper styled with Tailwind `group` utilities.
-- **Title:** `text-xl font-bold text-white group-hover:text-indigo-300 transition`.
-- **Season Label:** `text-sm text-gray-400`.
-- **Status Badge:**
-  - `ACTIVE`: Emerald badge with bold uppercase text.
-  - `FINISHED`: Muted secondary badge.
-- **Metric Row:** Flex row showing:
-  - `{groups.length} Groups`
-  - `{completedMatches}/{totalMatches} Matches`
-  - `{rounds.length} Rounds`
-- **CTA Indicator:** Inline footer link `View Tournament` with `ArrowRight` icon.
+- **Card Container:** Clickable Next.js `<Link href="/tournaments/[id]">` wrapper styled with `group` utilities and visible focus rings.
+- **Top Accent Line:** Subtle gradient line on top border (active: neon gradient, completed: subtle brand purple).
+- **Header:** Status badge on left (`ACTIVE` / `COMPLETED`) and season notation on right (`2024/25`).
+- **Title & Subtitle:** Bold title with line-clamping and category descriptor.
+- **Metric Row:** 3 distinct metric boxes:
+  - Groups: `{groups.length}`
+  - Matches: `{completedMatches} / {totalMatches}`
+  - Rounds: `{rounds.length}`
+- **Match Progress Bar:** Full-width `<ProgressBar />` with ARIA progress semantics and brand color gradient.
+- **Chip Rules:** Responsive badges for `Bench Boost` (`BB`) and `Triple Captain` (`TC`).
+- **CTA:** `View Tournament →` in `#37003C` with hover translation.
 
 ---
 
@@ -143,19 +169,32 @@ const completedMatches = tournament.rounds.reduce(
 
 | Screen Size | Behavior |
 | :--- | :--- |
-| **Mobile (< 640px)** | Single-column cards. Header padding compacts to `px-4`. Typography scales appropriately for mobile screens. |
-| **Tablet (640px - 1024px)** | 2-column grid (`sm:grid-cols-2`). Cards display side-by-side with equal heights. |
-| **Desktop (> 1024px)** | Centered layout within `max-w-5xl`. Hover border animations and icon translation active on pointer devices. |
+| **Mobile (< 640px)** | Single-column cards. Header collapses to hamburger menu. Stat strip wraps neatly. Chip rule labels collapse to abbreviations (`BB`, `TC`). |
+| **Tablet (640px - 1024px)** | 2-column grid (`sm:grid-cols-2`). Cards display side-by-side with equal heights. Full chip labels shown. |
+| **Desktop (> 1024px)** | 2-column grid within global container (`max-w-7xl`). Subtle hover elevation and arrow transition active on pointer devices. |
 
 ---
 
 ## 6. Edge Cases & Empty States
 
 ### Zero Published Tournaments
-If no tournaments have been published yet (`tournaments.length === 0`), the page presents a friendly centered empty state:
+If no tournaments have been published yet (`tournaments.length === 0`), the page presents a centered empty state card with trophy icon and a return to home button:
 ```tsx
-<div className="mt-16 text-center">
-  <p className="text-xl text-gray-400">No tournaments published yet</p>
-  <p className="mt-2 text-gray-500">Check back later!</p>
+<div className="rounded-[16px] border border-[#E5E5E5] bg-white p-10 sm:p-14 text-center shadow-fpl-sm max-w-lg mx-auto mt-4">
+  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#37003C]/10 text-[#37003C] mb-4">
+    <Trophy className="h-7 w-7 text-[#37003C]" />
+  </div>
+  <h2 className="text-xl font-black text-[#37003C] uppercase tracking-tight">
+    No Tournaments Yet
+  </h2>
+  <p className="mt-2 text-sm text-[#777777] max-w-sm mx-auto leading-relaxed">
+    There are no published tournaments available at the moment. Check back later for upcoming competitions.
+  </p>
+  <div className="mt-6">
+    <Button asChild variant="primary" size="default" className="font-extrabold">
+      <Link href="/">Return to Home</Link>
+    </Button>
+  </div>
 </div>
 ```
+
