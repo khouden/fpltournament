@@ -1,7 +1,20 @@
-/**
- * FPL (Fantasy Premier League) API Service
- * Handles all interactions with the official FPL API with caching and fallback
- */
+import {
+  FPLDeadlineError,
+  checkFPLDeadlineStatus,
+  isFPLDeadlineActive,
+  assertNotInFPLDeadline,
+  recordFPLDeadlineSignal,
+  recordFPLSuccessSignal,
+  type FPLDeadlineStatus,
+} from "./fpl-deadline";
+
+export {
+  FPLDeadlineError,
+  checkFPLDeadlineStatus,
+  isFPLDeadlineActive,
+  assertNotInFPLDeadline,
+};
+export type { FPLDeadlineStatus };
 
 const FPL_API_BASE = "https://fantasy.premierleague.com/api";
 const CACHE_DURATION_MS = 60 * 60 * 1000; // 1 hour
@@ -263,10 +276,18 @@ const MOCK_GW_POINTS: Record<string, number> = {
   "999222_5": 70,
 
   // GW6 mock scenarios for chip testing:
+  "1234567_6": 40, // Admin (excluded)
   "555555_6": 75, // played bench boost: total 75 pts (15 on bench -> 60 without BB)
   "666666_6": 66, // played triple captain: total 66 pts (captain base 12 pts, 3x=36 -> 2x=24 -> -12 deduction -> 54 pts)
   "777777_6": 55, // played free hit: 55 pts (counted normally)
   "888888_6": 48, // played wildcard: 48 pts (counted normally)
+
+  // GW7 mock scenarios:
+  "1234567_7": 40,
+  "111111_7": 45,
+  "222222_7": 55,
+  "555555_7": 60,
+  "666666_7": 65,
 };
 
 // Mock chips per manager & gameweek
@@ -285,6 +306,11 @@ const MOCK_GW_CHIPS: Record<
 };
 
 async function fetchFPL<T>(endpoint: string): Promise<T> {
+  // If FPL is known to be in deadline mode, fail fast immediately
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError();
+  }
+
   const cacheKey = getCacheKey("fpl", endpoint);
 
   // Try cache first
@@ -308,14 +334,46 @@ async function fetchFPL<T>(endpoint: string): Promise<T> {
     });
     clearTimeout(timeoutId);
 
+    if (
+      response.status === 503 ||
+      response.status === 403 ||
+      response.status === 502 ||
+      response.status === 504
+    ) {
+      recordFPLDeadlineSignal(
+        `FPL server returned HTTP ${response.status} (${response.statusText || "Service Updating"})`
+      );
+      throw new FPLDeadlineError(
+        `Fantasy Premier League API is temporarily unavailable (HTTP ${response.status}). The game is currently updating for the deadline.`
+      );
+    }
+
     if (!response.ok) {
       throw new Error(`FPL API error: ${response.status} ${response.statusText}`);
     }
 
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/html")) {
+      const text = await response.text();
+      if (
+        text.toLowerCase().includes("game is being updated") ||
+        text.toLowerCase().includes("updating") ||
+        text.toLowerCase().includes("service unavailable")
+      ) {
+        recordFPLDeadlineSignal("FPL HTML maintenance page: Game is being updated");
+        throw new FPLDeadlineError();
+      }
+      throw new Error("Received unexpected HTML response from FPL API");
+    }
+
     const data = (await response.json()) as T;
+    recordFPLSuccessSignal();
     setInCache(cacheKey, data);
     return data;
   } catch (error) {
+    if (error instanceof FPLDeadlineError) {
+      throw error;
+    }
     throw new Error(
       `Failed to fetch from FPL API (${endpoint}): ${error instanceof Error ? error.message : String(error)}`
     );
@@ -326,6 +384,9 @@ async function fetchFPL<T>(endpoint: string): Promise<T> {
  * Get manager details by entry ID
  */
 export async function getManager(entryId: number): Promise<FPLManager> {
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError("Cannot fetch manager details during an active FPL deadline.");
+  }
   try {
     const data = await fetchFPL<{
       id: number;
@@ -351,6 +412,7 @@ export async function getManager(entryId: number): Promise<FPLManager> {
       current_event: data.current_event,
     };
   } catch (error) {
+    if (error instanceof FPLDeadlineError) throw error;
     // Check mock fallback for demo IDs
     if (MOCK_MANAGERS[entryId]) {
       return MOCK_MANAGERS[entryId];
@@ -363,6 +425,10 @@ export async function getManager(entryId: number): Promise<FPLManager> {
  * Get all classic leagues for a manager
  */
 export async function getManagerLeagues(entryId: number): Promise<FPLLeague[]> {
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError("Cannot fetch manager leagues during an active FPL deadline.");
+  }
+
   // Check mock managers first for demo IDs
   if (MOCK_MANAGERS[entryId] || entryId === 1234567) {
     const memberLeagues = Object.values(MOCK_LEAGUES)
@@ -385,6 +451,7 @@ export async function getManagerLeagues(entryId: number): Promise<FPLLeague[]> {
     }
     return [];
   } catch (error) {
+    if (error instanceof FPLDeadlineError) throw error;
     throw error;
   }
 }
@@ -395,6 +462,10 @@ export async function getManagerLeagues(entryId: number): Promise<FPLLeague[]> {
 export async function getLeague(
   leagueId: number
 ): Promise<{ league: FPLLeague; standings: FPLLeagueEntry[] }> {
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError("Cannot fetch league standings during an active FPL deadline.");
+  }
+
   // Check mock leagues first for demo IDs
   if (MOCK_LEAGUES[leagueId]) {
     return {
@@ -414,6 +485,7 @@ export async function getLeague(
       standings: response.standings?.results || [],
     };
   } catch (error) {
+    if (error instanceof FPLDeadlineError) throw error;
     throw error;
   }
 }
@@ -435,6 +507,12 @@ export async function verifyManagerInLeague(
   entryId: number,
   leagueId: number
 ): Promise<{ isValid: boolean; error?: string }> {
+  if (isFPLDeadlineActive()) {
+    return {
+      isValid: false,
+      error: "Manager verification is paused during the FPL Gameweek deadline.",
+    };
+  }
   try {
     const manager = await getManager(entryId);
 
@@ -642,6 +720,13 @@ export async function getManagerGameweekPoints(
   gameweek: number,
   options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true
 ): Promise<FPLGameweekScore> {
+  // If FPL is in deadline mode, strictly disallow calculating scores!
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError(
+      "Cannot calculate gameweek scores during an active FPL deadline. Points are updating."
+    );
+  }
+
   const allowBenchBoost =
     typeof options === "boolean" ? options : options.allowBenchBoost ?? true;
   const allowTripleCaptain =
@@ -680,6 +765,8 @@ export async function getManagerGameweekPoints(
     };
   }
 
+  let lastError: unknown = null;
+
   try {
     // Try event picks endpoint first
     const picksData = await fetchFPL<{
@@ -708,9 +795,6 @@ export async function getManagerGameweekPoints(
       let chipDeduction = 0;
 
       if (activeChip === "bboost") {
-        // In FPL API, entry_history.points_on_bench is 0 during Bench Boost because all 15 players
-        // are treated as active starters in FPL's calculation.
-        // To accurately get the bench points, calculate the sum of gameweek points for picks 12-15.
         if (picksData.picks && picksData.picks.length > 0) {
           const liveMap = await getGameweekLiveElementsMap(gameweek);
           const benchPicks = picksData.picks.filter((p) => p.position > 11);
@@ -724,11 +808,9 @@ export async function getManagerGameweekPoints(
         }
 
         if (!allowBenchBoost) {
-          // Exclude bench points so only starting 11 count
           chipDeduction = benchPoints;
         }
       } else if (activeChip === "3xc" && !allowTripleCaptain) {
-        // Identify captain element to deduct 1x base points (reducing 3x to 2x)
         const captainPick = picksData.picks?.find(
           (p) => p.multiplier === 3 || (p.is_captain && p.multiplier > 1)
         );
@@ -754,7 +836,12 @@ export async function getManagerGameweekPoints(
         adjustedNetPoints,
       };
     }
-  } catch {
+  } catch (err) {
+    lastError = err;
+    if (err instanceof FPLDeadlineError) {
+      throw err;
+    }
+
     // Try history endpoint as fallback
     try {
       const historyData = await fetchFPL<{
@@ -799,23 +886,20 @@ export async function getManagerGameweekPoints(
           adjustedNetPoints,
         };
       }
-    } catch {
-      // Fallback
+    } catch (historyErr) {
+      if (historyErr instanceof FPLDeadlineError) {
+        throw historyErr;
+      }
+      lastError = historyErr;
     }
   }
 
-  // Generate fallback score between 30 and 70 for simulation
-  const pseudoRandomScore = 40 + ((entryId * 17 + gameweek * 23) % 45);
-  return {
-    entryId,
-    gameweek,
-    points: pseudoRandomScore,
-    eventTransfersCost: 0,
-    netPoints: pseudoRandomScore,
-    activeChip: null,
-    chipDeduction: 0,
-    adjustedNetPoints: pseudoRandomScore,
-  };
+  // Strictly eliminate fake random scores! Throw genuine error on failure.
+  throw new Error(
+    `Failed to retrieve FPL gameweek points for entry ${entryId} (GW${gameweek}): ${
+      lastError instanceof Error ? lastError.message : "FPL API data unavailable"
+    }`
+  );
 }
 
 /**
@@ -949,6 +1033,12 @@ export async function getManagerGameweekSquad(
   gameweek: number,
   options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true
 ): Promise<FantasyTeamSquadView> {
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError(
+      "Fantasy squad picks are locked by the Premier League during the Gameweek deadline. Lineups will be unlocked once matches kick off."
+    );
+  }
+
   const allowBenchBoost =
     typeof options === "boolean" ? options : options.allowBenchBoost ?? true;
   const allowTripleCaptain =

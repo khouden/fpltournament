@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/db";
-import { getManagerGameweekPoints } from "@/lib/fpl";
+import {
+  getManagerGameweekPoints,
+  isFPLDeadlineActive,
+  FPLDeadlineError,
+} from "@/lib/fpl";
 
 export interface MemberScoreBreakdown {
   memberId: string;
@@ -48,6 +52,12 @@ export async function calculateGroupScore(
   adminFplIds: number | number[],
   options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true
 ): Promise<GroupScoreResult> {
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError(
+      "Cannot calculate group score during an active FPL deadline. Fantasy Premier League points are updating."
+    );
+  }
+
   const group = await prisma.group.findUnique({
     where: { id: groupId },
     include: { members: true },
@@ -118,6 +128,12 @@ export async function calculateMatchScore(
   matchId: string,
   forceRecalculate = false
 ): Promise<MatchScoreResult> {
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError(
+      "Cannot calculate match score during an active FPL deadline. Points are updating."
+    );
+  }
+
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
@@ -328,6 +344,12 @@ export async function recalculateTournamentScores(
   tournamentId: string,
   forceRecalculate = false
 ): Promise<MatchScoreResult[]> {
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError(
+      "Cannot recalculate tournament scores during an active FPL deadline. Please wait until the deadline window completes."
+    );
+  }
+
   const rounds = await prisma.round.findMany({
     where: { tournamentId },
     include: {

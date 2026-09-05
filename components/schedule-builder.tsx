@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   createRoundAction,
   deleteRoundAction,
@@ -32,6 +32,7 @@ import {
   Trophy,
   Layers,
   Check,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -97,6 +98,23 @@ export function ScheduleBuilder({
   const [loading, setLoading] = useState<string | null>(null);
   const [validationIssues, setValidationIssues] = useState<string[]>([]);
   const [validationSuccess, setValidationSuccess] = useState(false);
+  const [isDeadlineActive, setIsDeadlineActive] = useState(false);
+  const [deadlineReason, setDeadlineReason] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/fpl/status")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.isDeadline) {
+          setIsDeadlineActive(true);
+          setDeadlineReason(data.reason || "FPL Gameweek deadline in progress");
+        } else {
+          setIsDeadlineActive(false);
+          setDeadlineReason(null);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Auto-generate round-robin state
   const [showAutoGenerate, setShowAutoGenerate] = useState(false);
@@ -312,6 +330,12 @@ export function ScheduleBuilder({
 
   // ---- Scoring Actions ----
   const handleRecalculate = async (matchId: string) => {
+    if (isDeadlineActive) {
+      setError(
+        "Score calculation is disabled during the official FPL Gameweek deadline. Fantasy Premier League points are not finalized while the game is updating. Please try again after the deadline window."
+      );
+      return;
+    }
     setLoading(`calc-${matchId}`);
     setError("");
     const result = await recalculateMatchAction(matchId, tournamentId);
@@ -319,6 +343,9 @@ export function ScheduleBuilder({
       showMsg("Match scores calculated from official FPL data!");
       window.location.reload();
     } else {
+      if (result.isDeadline) {
+        setIsDeadlineActive(true);
+      }
       setError(
         result.error ||
           "Failed to calculate match score. Please verify FPL connection."
@@ -342,6 +369,12 @@ export function ScheduleBuilder({
 
   const executeRecalculateAll = async () => {
     setConfirmRecalcAllOpen(false);
+    if (isDeadlineActive) {
+      setError(
+        "Bulk score recalculation is paused during the official FPL Gameweek deadline. Please wait until the deadline window completes."
+      );
+      return;
+    }
     setLoading("recalc-all");
     setError("");
     const result = await recalculateAllScoresAction(tournamentId);
@@ -353,6 +386,9 @@ export function ScheduleBuilder({
       );
       window.location.reload();
     } else {
+      if (result.isDeadline) {
+        setIsDeadlineActive(true);
+      }
       setError(
         result.error ||
           "Failed to recalculate scores. Please verify FPL connection."
@@ -500,24 +536,63 @@ export function ScheduleBuilder({
             <Button
               variant="outline"
               onClick={() => setConfirmRecalcAllOpen(true)}
-              disabled={loading === "recalc-all" || allMatches.length === 0}
-              className="h-10 px-4 text-xs sm:text-sm font-semibold text-emerald-800 border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 hover:border-emerald-400 rounded-[8px] transition-colors gap-2 shadow-2xs w-full lg:w-auto"
-              title="Recalculate scores for all unfinalized matches"
+              disabled={
+                loading === "recalc-all" ||
+                allMatches.length === 0 ||
+                isDeadlineActive
+              }
+              className={`h-10 px-4 text-xs sm:text-sm font-semibold rounded-[8px] transition-colors gap-2 shadow-2xs w-full lg:w-auto ${
+                isDeadlineActive
+                  ? "text-amber-800 border-amber-300 bg-amber-50/70 cursor-not-allowed"
+                  : "text-emerald-800 border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100 hover:border-emerald-400"
+              }`}
+              title={
+                isDeadlineActive
+                  ? "Score recalculation is disabled during the official FPL Gameweek deadline"
+                  : "Recalculate scores for all unfinalized matches"
+              }
             >
               {loading === "recalc-all" ? (
                 <Loader2 className="h-4 w-4 animate-spin text-emerald-700" />
+              ) : isDeadlineActive ? (
+                <Clock className="h-4 w-4 text-amber-700" />
               ) : (
                 <RefreshCw className="h-4 w-4 text-emerald-700" />
               )}
               <span>
                 {loading === "recalc-all"
                   ? "Recalculating..."
+                  : isDeadlineActive
+                  ? "Recalculation Paused (Deadline)"
                   : "Recalculate All"}
               </span>
             </Button>
           </div>
         </div>
       </section>
+
+      {/* FPL Deadline Alert Banner */}
+      {isDeadlineActive && (
+        <Alert className="animate-fpl-fade-in border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-purple-900/10 to-transparent text-[#37003C] shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/20 text-amber-700 mt-0.5 shrink-0">
+              <Clock className="h-5 w-5 animate-pulse" />
+            </div>
+            <div className="space-y-1 min-w-0">
+              <AlertTitle className="font-extrabold text-sm sm:text-base text-[#37003C] flex items-center gap-2">
+                <span>FPL Gameweek Deadline Active</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white">
+                  Scoring Paused
+                </span>
+              </AlertTitle>
+              <AlertDescription className="text-xs sm:text-sm text-[#555555] leading-relaxed">
+                {deadlineReason ||
+                  "The official Fantasy Premier League servers are processing gameweek updates and transfers. Live match score recalculation is temporarily disabled until the deadline window completes."}
+              </AlertDescription>
+            </div>
+          </div>
+        </Alert>
+      )}
 
       {/* 3. Notifications & Validation States */}
       {error && (
@@ -1285,21 +1360,35 @@ export function ScheduleBuilder({
                                             handleRecalculate(match.id)
                                           }
                                           disabled={
-                                            loading === `calc-${match.id}`
+                                            loading === `calc-${match.id}` ||
+                                            isDeadlineActive
                                           }
-                                          className="h-8 px-3 text-xs font-semibold text-[#37003C] border-[#37003C]/20 bg-white hover:bg-[#37003C]/5 hover:border-[#37003C]/40 rounded-[6px] gap-1.5 shadow-2xs"
+                                          title={
+                                            isDeadlineActive
+                                              ? "Score recalculation is disabled during the official FPL Gameweek deadline"
+                                              : undefined
+                                          }
+                                          className={`h-8 px-3 text-xs font-semibold rounded-[6px] gap-1.5 shadow-2xs ${
+                                            isDeadlineActive
+                                              ? "text-amber-800 border-amber-300 bg-amber-50/60 cursor-not-allowed"
+                                              : "text-[#37003C] border-[#37003C]/20 bg-white hover:bg-[#37003C]/5 hover:border-[#37003C]/40"
+                                          }`}
                                         >
                                           {loading === `calc-${match.id}` ? (
                                             <Loader2 className="h-3.5 w-3.5 animate-spin text-[#37003C]" />
+                                          ) : isDeadlineActive ? (
+                                            <Clock className="h-3.5 w-3.5 text-amber-700" />
                                           ) : (
                                             <RefreshCw className="h-3.5 w-3.5 text-[#37003C]" />
                                           )}
                                           <span>
                                             {loading === `calc-${match.id}`
                                               ? "Recalculating..."
-                                              : hasScores
-                                                ? "Recalculate Score"
-                                                : "Calculate Score"}
+                                              : isDeadlineActive
+                                                ? "Deadline Paused"
+                                                : hasScores
+                                                  ? "Recalculate Score"
+                                                  : "Calculate Score"}
                                           </span>
                                         </Button>
                                       )}

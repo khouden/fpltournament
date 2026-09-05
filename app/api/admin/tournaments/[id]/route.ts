@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getManager } from "@/lib/fpl";
+import { getManager, FPLDeadlineError } from "@/lib/fpl";
 import { recalculateTournamentScores } from "@/lib/scoring";
 import { safeRevalidate } from "@/lib/safe-revalidate";
 import { NextRequest, NextResponse } from "next/server";
@@ -144,9 +144,13 @@ export async function PATCH(
 
     return NextResponse.json({ tournament });
   } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
+    const status = isDeadline ? 503 : 400;
     const message =
       error instanceof Error ? error.message : "Failed to update tournament";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message, isDeadline: !!isDeadline }, { status });
   }
 }
 

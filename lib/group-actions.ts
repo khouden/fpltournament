@@ -1,7 +1,13 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { getLeague, getManagerLeagues, verifyManagerInLeague } from "@/lib/fpl";
+import {
+  getLeague,
+  getManagerLeagues,
+  verifyManagerInLeague,
+  isFPLDeadlineActive,
+  FPLDeadlineError,
+} from "@/lib/fpl";
 import { safeRevalidate } from "@/lib/safe-revalidate";
 import { suggestLogoForTeamName } from "@/lib/team-logos";
 import { requireAdminSession } from "@/lib/auth-server";
@@ -48,6 +54,15 @@ export async function getAdminLeaguesForTournamentAction(
 ) {
   try {
     await requireAdminSession();
+
+    if (isFPLDeadlineActive()) {
+      return {
+        success: false,
+        error:
+          "FPL leagues are temporarily unavailable: The Fantasy Premier League API is updating for the gameweek deadline.",
+        isDeadline: true,
+      };
+    }
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: {
@@ -124,10 +139,14 @@ export async function getAdminLeaguesForTournamentAction(
       adminFplId: tournament.adminFplId,
     };
   } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
     return {
       success: false,
       error:
         error instanceof Error ? error.message : "Failed to fetch admin leagues",
+      isDeadline: !!isDeadline,
     };
   }
 }
@@ -144,6 +163,16 @@ export async function importLeagueAsGroupAction(
 ) {
   try {
     await requireAdminSession();
+
+    if (isFPLDeadlineActive()) {
+      return {
+        success: false,
+        error:
+          "Cannot import teams during an active FPL deadline. Fantasy Premier League endpoints are locked while the game is updating. Please try again after the deadline window.",
+        isDeadline: true,
+      };
+    }
+
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
       include: {
@@ -250,11 +279,18 @@ export async function importLeagueAsGroupAction(
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
 
-    return { success: true, group };
+    return {
+      success: true,
+      group,
+    };
   } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to import group",
+      isDeadline: !!isDeadline,
     };
   }
 }

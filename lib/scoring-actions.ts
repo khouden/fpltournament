@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { calculateMatchScore, recalculateTournamentScores } from "@/lib/scoring";
+import { isFPLDeadlineActive, FPLDeadlineError } from "@/lib/fpl";
 import { validateScheduleAction } from "@/lib/schedule-actions";
 import { safeRevalidate } from "@/lib/safe-revalidate";
 import { requireAdminSession } from "@/lib/auth-server";
@@ -12,6 +13,16 @@ import { requireAdminSession } from "@/lib/auth-server";
 export async function recalculateMatchAction(matchId: string, tournamentId: string) {
   try {
     await requireAdminSession();
+
+    if (isFPLDeadlineActive()) {
+      return {
+        success: false,
+        error:
+          "Score calculation is disabled during the FPL Gameweek deadline. Fantasy Premier League points are not finalized while the game is updating. Please try again after the deadline window.",
+        isDeadline: true,
+      };
+    }
+
     const result = await calculateMatchScore(matchId, true);
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/matches`);
@@ -20,9 +31,13 @@ export async function recalculateMatchAction(matchId: string, tournamentId: stri
     safeRevalidate(`/matches/${matchId}`);
     return { success: true, result };
   } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to calculate match score",
+      isDeadline: !!isDeadline,
     };
   }
 }
@@ -33,6 +48,16 @@ export async function recalculateMatchAction(matchId: string, tournamentId: stri
 export async function recalculateAllScoresAction(tournamentId: string) {
   try {
     await requireAdminSession();
+
+    if (isFPLDeadlineActive()) {
+      return {
+        success: false,
+        error:
+          "Bulk score recalculation is paused during the FPL Gameweek deadline. Please wait until the deadline window completes.",
+        isDeadline: true,
+      };
+    }
+
     const results = await recalculateTournamentScores(tournamentId, true);
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/matches`);
@@ -40,9 +65,13 @@ export async function recalculateAllScoresAction(tournamentId: string) {
     safeRevalidate(`/tournaments/${tournamentId}`);
     return { success: true, count: results.length };
   } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to recalculate scores",
+      isDeadline: !!isDeadline,
     };
   }
 }
@@ -53,6 +82,16 @@ export async function recalculateAllScoresAction(tournamentId: string) {
 export async function finalizeMatchAction(matchId: string, tournamentId: string) {
   try {
     await requireAdminSession();
+
+    if (isFPLDeadlineActive()) {
+      return {
+        success: false,
+        error:
+          "Cannot finalize match during the FPL Gameweek deadline while official points are updating.",
+        isDeadline: true,
+      };
+    }
+
     // 1. Calculate score to ensure latest values are saved
     await calculateMatchScore(matchId, true);
 
@@ -78,9 +117,13 @@ export async function finalizeMatchAction(matchId: string, tournamentId: string)
 
     return { success: true };
   } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to finalize match",
+      isDeadline: !!isDeadline,
     };
   }
 }

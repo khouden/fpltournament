@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   getAdminLeaguesForTournamentAction,
   importLeagueAsGroupAction,
@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertTriangle,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,6 +126,23 @@ export function GroupManager({
 
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [isDeadlineActive, setIsDeadlineActive] = useState(false);
+  const [deadlineReason, setDeadlineReason] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/fpl/status")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.isDeadline) {
+          setIsDeadlineActive(true);
+          setDeadlineReason(data.reason || "FPL Gameweek deadline in progress");
+        } else {
+          setIsDeadlineActive(false);
+          setDeadlineReason(null);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const showToast = (msg: string) => {
     setSuccessMsg(msg);
@@ -181,6 +199,12 @@ export function GroupManager({
   };
 
   const handleImport = async (leagueId: number, adminFplId?: number) => {
+    if (isDeadlineActive) {
+      setError(
+        "Cannot import teams during an active FPL deadline. Fantasy Premier League endpoints are locked while the game is updating. Please try again after the deadline window."
+      );
+      return;
+    }
     setImporting(leagueId);
     setError("");
     const chosenLogo = importLogos[leagueId] || null;
@@ -203,6 +227,9 @@ export function GroupManager({
       setExpandedMembers((prev) => ({ ...prev, [newGroup.id]: true }));
       showToast(`Imported "${newGroup.name}" as an official tournament team!`);
     } else {
+      if (result.isDeadline) {
+        setIsDeadlineActive(true);
+      }
       setError(result.error || "Failed to import group");
     }
     setImporting(null);
@@ -323,6 +350,29 @@ export function GroupManager({
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           <AlertTitle className="font-bold">Success</AlertTitle>
           <AlertDescription className="text-xs sm:text-sm font-medium">{successMsg}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* FPL Deadline Alert Banner */}
+      {isDeadlineActive && (
+        <Alert className="animate-fpl-fade-in border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-purple-900/10 to-transparent text-[#37003C] shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/20 text-amber-700 mt-0.5 shrink-0">
+              <Clock className="h-5 w-5 animate-pulse" />
+            </div>
+            <div className="space-y-1 min-w-0">
+              <AlertTitle className="font-extrabold text-sm sm:text-base text-[#37003C] flex items-center gap-2">
+                <span>FPL Gameweek Deadline in Progress</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white">
+                  Imports Paused
+                </span>
+              </AlertTitle>
+              <AlertDescription className="text-xs sm:text-sm text-[#555555] leading-relaxed">
+                {deadlineReason ||
+                  "The official Fantasy Premier League API is updating for the Gameweek deadline. Importing new teams and syncing rosters are temporarily paused until the deadline window closes."}
+              </AlertDescription>
+            </div>
+          </div>
         </Alert>
       )}
 
@@ -636,13 +686,27 @@ export function GroupManager({
                             <Button
                               size="sm"
                               onClick={() => handleImport(league.id, league.adminFplId)}
-                              disabled={importing === league.id}
-                              className="h-8 px-3.5 text-xs font-bold bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] gap-1.5 shadow-2xs"
+                              disabled={importing === league.id || isDeadlineActive}
+                              title={
+                                isDeadlineActive
+                                  ? "Cannot import teams during an active FPL Gameweek deadline"
+                                  : undefined
+                              }
+                              className={`h-8 px-3.5 text-xs font-bold rounded-[8px] gap-1.5 shadow-2xs ${
+                                isDeadlineActive
+                                  ? "bg-amber-600/70 cursor-not-allowed text-white"
+                                  : "bg-[#37003C] hover:bg-[#5A0A63] text-white"
+                              }`}
                             >
                               {importing === league.id ? (
                                 <>
                                   <Loader2 className="h-3.5 w-3.5 animate-spin text-current" />
                                   <span>Importing...</span>
+                                </>
+                              ) : isDeadlineActive ? (
+                                <>
+                                  <Clock className="h-3.5 w-3.5 text-amber-200" />
+                                  <span>Deadline Lock</span>
                                 </>
                               ) : (
                                 <>

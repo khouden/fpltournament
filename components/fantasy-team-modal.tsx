@@ -12,6 +12,7 @@ import {
   List,
   Shield,
   RefreshCw,
+  Clock,
 } from "lucide-react";
 import type { FantasyTeamSquadView, FantasyPlayerPick } from "@/lib/fpl";
 import {
@@ -65,8 +66,8 @@ export function FantasyTeamModal({
   const [logoFailed, setLogoFailed] = useState(false);
   const [retryTrigger, setRetryTrigger] = useState(0);
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [isDeadline, setIsDeadline] = useState(false);
 
-  // Sync state when modal closes without setting state in effect
   if (isOpen !== prevIsOpen) {
     setPrevIsOpen(isOpen);
     if (!isOpen) {
@@ -74,6 +75,7 @@ export function FantasyTeamModal({
       setError(null);
       setLogoFailed(false);
       setLoading(false);
+      setIsDeadline(false);
     }
   }
 
@@ -105,14 +107,20 @@ export function FantasyTeamModal({
         );
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `HTTP error ${res.status}`);
+          const errorObj = new Error(errData.error || `HTTP error ${res.status}`);
+          if (errData.isDeadline || res.status === 503) {
+            (errorObj as { isDeadline?: boolean }).isDeadline = true;
+          }
+          throw errorObj;
         }
         const data = await res.json();
         if (isMounted) {
           setSquad(data.squad || null);
+          setIsDeadline(false);
         }
       } catch (err) {
         if (isMounted && !(err instanceof DOMException && err.name === "AbortError")) {
+          setIsDeadline(Boolean((err as { isDeadline?: boolean })?.isDeadline));
           setError(
             err instanceof Error ? err.message : "Failed to retrieve fantasy squad"
           );
@@ -363,8 +371,46 @@ export function FantasyTeamModal({
             </div>
           )}
 
-          {/* Error State with Retry */}
-          {error && !loading && (
+          {/* FPL Deadline Locked State */}
+          {error && !loading && isDeadline && (
+            <div className="my-8 max-w-md mx-auto text-center p-6 bg-white rounded-2xl border border-amber-200/80 shadow-md animate-fpl-fade-in">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/20 to-purple-900/10 border border-amber-500/30 text-amber-700 mb-4 shadow-xs">
+                <Clock className="h-7 w-7 animate-pulse text-amber-600" />
+              </div>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white mb-2">
+                Deadline Locked
+              </span>
+              <h3 className="text-base font-extrabold text-[#37003C]">
+                Squad Picks Hidden by Premier League
+              </h3>
+              <p className="text-xs sm:text-sm text-[#666666] mt-2 leading-relaxed">
+                The official Fantasy Premier League website locks player picks and lineups while processing the Gameweek deadline. Full squad selections will be accessible once the game update completes and matches kick off.
+              </p>
+              <div className="mt-5 flex justify-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetry}
+                  className="gap-1.5 font-bold border-[#E5E5E5] text-[#37003C] hover:bg-[#F7F7F7] shadow-2xs"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Check Status</span>
+                </Button>
+                <a
+                  href={fplProfileUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-[8px] bg-[#37003C] text-white hover:bg-[#200023] transition-colors"
+                >
+                  <span>Official FPL Profile</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Standard Error State with Retry */}
+          {error && !loading && !isDeadline && (
             <div className="my-6 max-w-md mx-auto">
               <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
                 <AlertCircle className="h-4 w-4 text-red-600" />

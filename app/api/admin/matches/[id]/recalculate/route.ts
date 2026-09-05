@@ -21,7 +21,11 @@ export async function POST(
     const result = await recalculateMatchAction(id, match.round.tournamentId);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+      const status = result.isDeadline ? 503 : 400;
+      return NextResponse.json(
+        { error: result.error, isDeadline: result.isDeadline },
+        { status }
+      );
     }
 
     return NextResponse.json({ result: result.result });

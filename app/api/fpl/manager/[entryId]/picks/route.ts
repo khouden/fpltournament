@@ -1,4 +1,4 @@
-import { getManagerGameweekSquad } from "@/lib/fpl";
+import { getManagerGameweekSquad, FPLDeadlineError } from "@/lib/fpl";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -29,8 +29,15 @@ export async function GET(
 
     return NextResponse.json({ squad });
   } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
+    const status = isDeadline ? 503 : 500;
     const message =
       error instanceof Error ? error.message : "Failed to retrieve fantasy squad";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: message, isDeadline: !!isDeadline },
+      { status }
+    );
   }
 }

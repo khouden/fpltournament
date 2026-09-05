@@ -1,4 +1,4 @@
-import { getManager } from "@/lib/fpl";
+import { getManager, FPLDeadlineError } from "@/lib/fpl";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -16,13 +16,17 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ manager });
   } catch (error) {
-    console.error("FPL verification error:", error);
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
+    const status = isDeadline ? 503 : 500;
     return NextResponse.json(
       {
         error:
           error instanceof Error ? error.message : "Failed to verify entry",
+        isDeadline: !!isDeadline,
       },
-      { status: 500 }
+      { status }
     );
   }
 }

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { getManager, verifyManagerInLeague } from "@/lib/fpl";
+import { getManager, verifyManagerInLeague, FPLDeadlineError } from "@/lib/fpl";
 import { recalculateTournamentScores } from "@/lib/scoring";
 import { safeRevalidate } from "@/lib/safe-revalidate";
 import { NextRequest, NextResponse } from "next/server";
@@ -42,7 +42,10 @@ async function validateTournament(data: {
     }
     try {
       await getManager(admin.fplId);
-    } catch {
+    } catch (err) {
+      if (err instanceof FPLDeadlineError) {
+        throw err;
+      }
       throw new Error(
         `Invalid admin FPL ID (${admin.fplId}) or FPL API unavailable. Please verify all admin entry IDs.`
       );
@@ -116,9 +119,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(tournament, { status: 201 });
   } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
+    const status = isDeadline ? 503 : 400;
     const message =
       error instanceof Error ? error.message : "Failed to create tournament";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message, isDeadline: !!isDeadline }, { status });
   }
 }
 
@@ -198,9 +205,13 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(tournament);
   } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
+    const status = isDeadline ? 503 : 400;
     const message =
       error instanceof Error ? error.message : "Failed to update tournament";
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message, isDeadline: !!isDeadline }, { status });
   }
 }
 
