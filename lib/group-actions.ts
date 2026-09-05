@@ -362,12 +362,31 @@ export async function renameGroupAction(
   });
 }
 
+export interface DeleteGroupOptions {
+  deleteSchedule?: boolean;
+}
+
+export interface DeleteGroupResult {
+  success: boolean;
+  error?: string;
+  isScheduled?: boolean;
+  matchesCount?: number;
+  scheduleDeleted?: boolean;
+}
+
 /**
- * Delete a group from a tournament
+ * Delete a group from a tournament.
+ * If the group is scheduled in matches and deleteSchedule is true, the tournament's
+ * schedule (rounds, matches, and member scores) is also deleted.
  */
-export async function deleteGroupAction(groupId: string, tournamentId: string) {
+export async function deleteGroupAction(
+  groupId: string,
+  tournamentId: string,
+  options?: DeleteGroupOptions
+): Promise<DeleteGroupResult> {
   try {
     await requireAdminSession();
+
     // Check if group is referenced in matches
     const matchesCount = await prisma.match.count({
       where: {
@@ -375,21 +394,61 @@ export async function deleteGroupAction(groupId: string, tournamentId: string) {
       },
     });
 
-    if (matchesCount > 0) {
+    if (matchesCount > 0 && !options?.deleteSchedule) {
       return {
         success: false,
-        error: "Cannot delete group because it is scheduled in matches. Remove the matches first.",
+        error:
+          "Cannot delete group because it is scheduled in matches. Remove the matches first.",
+        isScheduled: true,
+        matchesCount,
       };
     }
 
-    await prisma.group.delete({
-      where: { id: groupId },
+    await prisma.$transaction(async (tx) => {
+      if (options?.deleteSchedule) {
+        // Find existing rounds for tournament
+        const existingRounds = await tx.round.findMany({
+          where: { tournamentId },
+          select: { id: true },
+        });
+        const roundIds = existingRounds.map((r) => r.id);
+
+        if (roundIds.length > 0) {
+          // Delete match member scores first
+          await tx.matchMemberScore.deleteMany({
+            where: { match: { roundId: { in: roundIds } } },
+          });
+          // Delete matches
+          await tx.match.deleteMany({
+            where: { roundId: { in: roundIds } },
+          });
+          // Delete rounds
+          await tx.round.deleteMany({
+            where: { tournamentId },
+          });
+        }
+
+        // If tournament was published, set status back to DRAFT since schedule is empty
+        await tx.tournament.updateMany({
+          where: { id: tournamentId, status: "PUBLISHED" },
+          data: { status: "DRAFT" },
+        });
+      }
+
+      await tx.group.delete({
+        where: { id: groupId },
+      });
     });
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
 
-    return { success: true };
+    return {
+      success: true,
+      scheduleDeleted: !!options?.deleteSchedule,
+    };
   } catch (error) {
     return {
       success: false,
@@ -397,3 +456,4 @@ export async function deleteGroupAction(groupId: string, tournamentId: string) {
     };
   }
 }
+

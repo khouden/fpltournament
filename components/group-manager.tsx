@@ -34,6 +34,7 @@ import {
   ChevronUp,
   AlertTriangle,
   Clock,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,7 @@ export interface Group {
   logo: string | null;
   fplLeagueId: number | null;
   members: GroupMember[];
+  matchesCount?: number;
 }
 
 export interface GroupManagerProps {
@@ -112,6 +114,14 @@ export function GroupManager({
   // Delete confirmation
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
   const [deletingGroup, setDeletingGroup] = useState(false);
+
+  // Delete Schedule confirmation when group has scheduled matches
+  const [scheduleDeleteModalGroup, setScheduleDeleteModalGroup] = useState<{
+    id: string;
+    name: string;
+    matchesCount: number;
+  } | null>(null);
+  const [deletingSchedule, setDeletingSchedule] = useState(false);
 
   // Expandable members state per group (keyed by groupId)
   const [expandedMembers, setExpandedMembers] = useState<Record<string, boolean>>({});
@@ -290,10 +300,50 @@ export function GroupManager({
       showToast(`Team "${deleted?.name || ""}" deleted`);
       setGroupToDelete(null);
     } else {
-      setError(result.error || "Failed to delete team");
-      setGroupToDelete(null);
+      if (result.isScheduled) {
+        const deleted = groups.find((g) => g.id === groupId);
+        setGroupToDelete(null);
+        setScheduleDeleteModalGroup({
+          id: groupId,
+          name: deleted?.name || "Team",
+          matchesCount: result.matchesCount || 1,
+        });
+      } else {
+        setError(result.error || "Failed to delete team");
+        setGroupToDelete(null);
+      }
     }
     setDeletingGroup(false);
+  };
+
+  const handleDeleteWithSchedule = async (groupId: string, groupName: string) => {
+    setDeletingSchedule(true);
+    setError("");
+    const result = await deleteGroupAction(groupId, tournamentId, {
+      deleteSchedule: true,
+    });
+    if (result.success) {
+      const deleted = groups.find((g) => g.id === groupId);
+      setGroups((prev) =>
+        prev
+          .filter((g) => g.id !== groupId)
+          .map((g) => ({ ...g, matchesCount: 0 }))
+      );
+      if (deleted?.fplLeagueId) {
+        setLeagues((prev) =>
+          prev.map((l) =>
+            l.id === deleted.fplLeagueId ? { ...l, isAlreadyImported: false } : l
+          )
+        );
+      }
+      showToast(
+        `Tournament schedule deleted and group "${groupName}" removed successfully.`
+      );
+      setScheduleDeleteModalGroup(null);
+    } else {
+      setError(result.error || "Failed to delete schedule and group");
+    }
+    setDeletingSchedule(false);
   };
 
   const handleAutoSuggestAllLogos = () => {
@@ -892,8 +942,18 @@ export function GroupManager({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setGroupToDelete(group.id)}
-                          className="h-8 px-2.5 text-xs font-semibold text-[#E9007F] hover:text-[#d00072] hover:bg-[#E9007F]/10 gap-1"
+                          onClick={() => {
+                            if (group.matchesCount && group.matchesCount > 0) {
+                              setScheduleDeleteModalGroup({
+                                id: group.id,
+                                name: group.name,
+                                matchesCount: group.matchesCount,
+                              });
+                            } else {
+                              setGroupToDelete(group.id);
+                            }
+                          }}
+                          className="h-8 px-2.5 text-xs font-semibold text-[#E9007F] hover:text-[#d00072] hover:bg-[#E9007F]/10 gap-1 cursor-pointer"
                           title="Delete team"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1036,7 +1096,7 @@ export function GroupManager({
               </AlertDialogTitle>
             </div>
             <AlertDialogDescription className="text-xs sm:text-sm text-[#777777] mt-2">
-              This will remove the imported tournament group and its roster snapshot. Any scheduled matches involving this team will also be affected.
+              This will remove the imported tournament group and its roster snapshot.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-4 gap-2">
@@ -1052,6 +1112,87 @@ export function GroupManager({
               className="bg-[#E9007F] hover:bg-[#d00072] text-white font-bold"
             >
               {deletingGroup ? "Deleting..." : "Delete Group"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Schedule to Remove Group Confirmation Dialog */}
+      <AlertDialog
+        open={!!scheduleDeleteModalGroup}
+        onOpenChange={(open) =>
+          !open && !deletingSchedule && setScheduleDeleteModalGroup(null)
+        }
+      >
+        <AlertDialogContent className="max-w-md sm:max-w-lg rounded-2xl border-[#E5E5E5] bg-white p-6 shadow-2xl animate-fpl-fade-in">
+          <AlertDialogHeader className="space-y-3">
+            <div className="flex items-center gap-3 text-[#E9007F]">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#E9007F]/10 border border-[#E9007F]/20">
+                <AlertTriangle className="h-6 w-6 text-[#E9007F]" />
+              </div>
+              <div>
+                <AlertDialogTitle className="text-lg sm:text-xl font-black text-[#1F1F1F] tracking-tight">
+                  Delete Schedule to Remove Group?
+                </AlertDialogTitle>
+                <p className="text-xs text-[#777777] font-medium">
+                  Matches are currently scheduled for this team
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2 text-left">
+              <div className="flex items-start gap-2 text-amber-900 font-bold text-xs sm:text-sm">
+                <Calendar className="h-4 w-4 shrink-0 mt-0.5 text-amber-700" />
+                <span>
+                  Group &ldquo;{scheduleDeleteModalGroup?.name}&rdquo; is scheduled in{" "}
+                  <span className="font-extrabold underline decoration-amber-500">
+                    {scheduleDeleteModalGroup?.matchesCount} fixture
+                    {scheduleDeleteModalGroup?.matchesCount === 1 ? "" : "s"}
+                  </span>
+                </span>
+              </div>
+              <p className="text-xs text-amber-950/80 leading-relaxed pl-6">
+                To delete this group, the tournament match schedule (all rounds, fixtures, and recorded scores) must be removed. You can regenerate fixtures afterwards.
+              </p>
+            </div>
+
+            <AlertDialogDescription className="text-xs sm:text-sm text-[#555555] leading-relaxed text-left">
+              Do you want to delete the tournament schedule and permanently remove <strong>{scheduleDeleteModalGroup?.name}</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter className="mt-5 gap-2 sm:gap-3">
+            <AlertDialogCancel
+              disabled={deletingSchedule}
+              onClick={() => setScheduleDeleteModalGroup(null)}
+              className="border-[#E5E5E5] text-[#555555] hover:text-[#1F1F1F] text-xs sm:text-sm font-semibold h-10 px-4 cursor-pointer"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (scheduleDeleteModalGroup) {
+                  handleDeleteWithSchedule(
+                    scheduleDeleteModalGroup.id,
+                    scheduleDeleteModalGroup.name
+                  );
+                }
+              }}
+              disabled={deletingSchedule}
+              className="bg-[#E9007F] hover:bg-[#d00072] text-white font-bold text-xs sm:text-sm h-10 px-4 gap-2 shadow-xs cursor-pointer"
+            >
+              {deletingSchedule ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  <span>Deleting Schedule &amp; Group...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete Schedule &amp; Remove Group</span>
+                </>
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

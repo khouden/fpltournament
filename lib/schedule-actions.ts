@@ -505,3 +505,48 @@ export async function validateScheduleAction(
   };
 }
 
+/**
+ * Clear the entire match schedule (rounds, matches, and member scores) for a tournament.
+ */
+export async function clearScheduleAction(tournamentId: string) {
+  try {
+    await requireAdminSession();
+    await prisma.$transaction(async (tx) => {
+      const existingRounds = await tx.round.findMany({
+        where: { tournamentId },
+        select: { id: true },
+      });
+      const roundIds = existingRounds.map((r) => r.id);
+
+      if (roundIds.length > 0) {
+        await tx.matchMemberScore.deleteMany({
+          where: { match: { roundId: { in: roundIds } } },
+        });
+        await tx.match.deleteMany({
+          where: { roundId: { in: roundIds } },
+        });
+        await tx.round.deleteMany({
+          where: { tournamentId },
+        });
+      }
+
+      await tx.tournament.updateMany({
+        where: { id: tournamentId, status: "PUBLISHED" },
+        data: { status: "DRAFT" },
+      });
+    });
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to clear schedule",
+    };
+  }
+}
+

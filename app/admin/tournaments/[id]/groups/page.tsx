@@ -18,7 +18,15 @@ export default async function GroupsPage(
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       },
       groups: {
-        include: { members: true },
+        include: {
+          members: true,
+          _count: {
+            select: {
+              homeMatches: true,
+              awayMatches: true,
+            },
+          },
+        },
         orderBy: { createdAt: "asc" },
       },
       rounds: {
@@ -197,7 +205,14 @@ export default async function GroupsPage(
       <GroupManager
         tournamentId={tournament.id}
         tournamentName={tournament.name}
-        initialGroups={tournament.groups}
+        initialGroups={tournament.groups.map((g) => ({
+          id: g.id,
+          name: g.name,
+          logo: g.logo,
+          fplLeagueId: g.fplLeagueId,
+          members: g.members,
+          matchesCount: (g._count?.homeMatches || 0) + (g._count?.awayMatches || 0),
+        }))}
         initialAdmins={tournament.admins.map((a) => ({
           fplId: a.fplId,
           name: a.name,
@@ -208,6 +223,7 @@ export default async function GroupsPage(
         allowBenchBoost={tournament.allowBenchBoost}
         allowTripleCaptain={tournament.allowTripleCaptain}
       />
+
 
       {/* 5. Bottom Wizard Navigation Footer */}
       <div className="rounded-[16px] border border-[#E5E5E5] bg-white p-4 sm:p-5 shadow-fpl-sm flex flex-col sm:flex-row items-center justify-between gap-4">

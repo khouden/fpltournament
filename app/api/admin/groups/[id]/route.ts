@@ -57,16 +57,40 @@ export async function DELETE(
       return NextResponse.json({ error: "Group not found" }, { status: 404 });
     }
 
-    const result = await deleteGroupAction(id, group.tournamentId);
-
-    if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+    const url = new URL(request.url);
+    let deleteSchedule = url.searchParams.get("deleteSchedule") === "true";
+    try {
+      const body = await request.json();
+      if (body?.deleteSchedule) {
+        deleteSchedule = true;
+      }
+    } catch {
+      // Body is optional for DELETE requests
     }
 
-    return NextResponse.json({ success: true });
+    const result = await deleteGroupAction(id, group.tournamentId, {
+      deleteSchedule,
+    });
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          error: result.error,
+          isScheduled: result.isScheduled,
+          matchesCount: result.matchesCount,
+        },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      scheduleDeleted: result.scheduleDeleted,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to delete group";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
