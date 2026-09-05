@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { TournamentForm } from "@/components/tournament-form";
+import { TournamentWizardStepper } from "@/components/tournament-wizard-stepper";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronRight, Settings } from "lucide-react";
@@ -67,9 +68,16 @@ export default async function EditTournamentPage({
           <Settings className="h-6 w-6 text-[#555555]" />
         </h1>
         <p className="text-sm sm:text-base text-[#666666]">
-          Update tournament details and organizers.
+          Update tournament details, banner, scoring rules, and organizers.
         </p>
       </div>
+
+      {/* 4-Step Creation/Setup Wizard Navigation */}
+      <TournamentWizardStepper
+        currentStep={1}
+        tournamentId={tournament.id}
+        tournamentStatus={tournament.status as "DRAFT" | "PUBLISHED" | "FINISHED"}
+      />
 
       {/* 3. Pre-populated Editing Form */}
       <TournamentForm

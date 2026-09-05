@@ -2,7 +2,8 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { GroupManager } from "@/components/group-manager";
-import { ArrowRight, ChevronRight, Crown, Shield } from "lucide-react";
+import { TournamentWizardStepper } from "@/components/tournament-wizard-stepper";
+import { ArrowLeft, ArrowRight, ChevronRight, Crown, Shield, Users, Info, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function GroupsPage(
@@ -32,6 +33,8 @@ export default async function GroupsPage(
   }
 
   const defaultGameweek = tournament.rounds[0]?.gameweek || 1;
+  const isDraft = tournament.status === "DRAFT";
+  const hasEnoughGroups = tournament.groups.length >= 2;
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fpl-fade-in">
@@ -58,7 +61,7 @@ export default async function GroupsPage(
           </nav>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F1F1F] tracking-tight leading-tight">
-            Manage Groups
+            Manage Groups &amp; Rosters
           </h1>
           <p className="text-xs sm:text-sm text-[#666666] font-medium max-w-2xl">
             Import FPL leagues, manage participating teams, and review tournament rosters.
@@ -66,22 +69,64 @@ export default async function GroupsPage(
         </div>
 
         {/* Header Action: Navigate to Schedule */}
-        <div className="shrink-0 self-start sm:self-center">
+        <div className="shrink-0 self-start sm:self-center flex items-center gap-2">
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             asChild
-            className="h-9 px-3.5 text-xs font-semibold text-[#1F1F1F] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] transition-colors gap-1.5 shadow-2xs"
+            className="h-9 px-4 text-xs font-bold bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] transition-colors gap-2 shadow-xs cursor-pointer"
           >
-            <Link href={`/admin/tournaments/${id}/schedule`}>
-              <span>Schedule</span>
-              <ArrowRight className="h-4 w-4 text-[#37003C]" />
+            <Link href={`/admin/tournaments/${id}/schedule?wizard=true`}>
+              <span>Next: Schedule</span>
+              <ArrowRight className="h-4 w-4 text-[#00FF87]" />
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* 2. Tournament Context Card */}
+      {/* 2. Wizard Stepper Bar */}
+      <TournamentWizardStepper
+        currentStep={2}
+        tournamentId={tournament.id}
+        tournamentStatus={tournament.status as "DRAFT" | "PUBLISHED" | "FINISHED"}
+      />
+
+      {/* Wizard Guidance Banner */}
+      {isDraft && (
+        <div className="rounded-[12px] border border-[#00FF87]/40 bg-[#00FF87]/10 p-4 text-[#1F1F1F] shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fpl-fade-in">
+          <div className="flex items-start gap-3">
+            <div className="h-8 w-8 rounded-full bg-[#37003C] text-[#00FF87] flex items-center justify-center shrink-0 text-xs font-black mt-0.5 sm:mt-0">
+              2
+            </div>
+            <div>
+              <p className="text-xs sm:text-sm font-extrabold text-[#37003C]">
+                Step 2 of 4: Add Participating Groups
+              </p>
+              <p className="text-xs text-[#555555] mt-0.5">
+                Import or configure at least 2 groups. Once ready, proceed to build your tournament match schedule.
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0 self-end sm:self-center flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border ${
+                hasEnoughGroups
+                  ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                  : "bg-amber-100 text-amber-800 border-amber-300"
+              }`}
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>
+                {tournament.groups.length}{" "}
+                {tournament.groups.length === 1 ? "Group" : "Groups"} Added
+              </span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Tournament Context Card */}
       <section
         aria-label="Tournament Context"
         className="rounded-[14px] border border-[#E5E5E5] bg-white p-4 sm:p-5 shadow-fpl-sm"
@@ -148,7 +193,7 @@ export default async function GroupsPage(
         </div>
       </section>
 
-      {/* 3. Group Manager Workspace */}
+      {/* 4. Group Manager Workspace */}
       <GroupManager
         tournamentId={tournament.id}
         tournamentName={tournament.name}
@@ -163,6 +208,40 @@ export default async function GroupsPage(
         allowBenchBoost={tournament.allowBenchBoost}
         allowTripleCaptain={tournament.allowTripleCaptain}
       />
+
+      {/* 5. Bottom Wizard Navigation Footer */}
+      <div className="rounded-[16px] border border-[#E5E5E5] bg-white p-4 sm:p-5 shadow-fpl-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+          className="h-10 px-4 text-xs font-semibold text-[#555555] hover:text-[#1F1F1F] border-[#D5D5D5] bg-white hover:bg-[#F9F9F9] rounded-[8px] gap-2 w-full sm:w-auto cursor-pointer"
+        >
+          <Link href={`/admin/tournaments/${tournament.id}/edit`}>
+            <ArrowLeft className="h-4 w-4" />
+            <span>Step 1: Tournament Details</span>
+          </Link>
+        </Button>
+
+        <div className="text-center sm:text-right flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-end">
+          <span className="text-xs text-[#777777] font-medium hidden md:inline">
+            {hasEnoughGroups
+              ? `${tournament.groups.length} groups configured — ready for fixtures`
+              : "Add at least 2 groups to generate fixtures"}
+          </span>
+
+          <Button
+            size="sm"
+            asChild
+            className="h-10 px-6 text-xs sm:text-sm font-bold bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] gap-2 shadow-sm w-full sm:w-auto cursor-pointer"
+          >
+            <Link href={`/admin/tournaments/${tournament.id}/schedule?wizard=true`}>
+              <span>Step 3: Continue to Schedule</span>
+              <ArrowRight className="h-4 w-4 text-[#00FF87]" />
+            </Link>
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

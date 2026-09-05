@@ -124,6 +124,7 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
   const [adminError, setAdminError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitAction, setSubmitAction] = useState<"next_step" | "save_exit">("next_step");
 
   const handlePrimaryVerified = (manager: FPLManager) => {
     setAdminError("");
@@ -213,7 +214,16 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
         throw new Error(data.error || "Failed to save tournament");
       }
 
-      router.push("/admin");
+      const savedTournament = await response.json();
+      const targetId = isEdit ? initialData?.id : savedTournament?.id;
+
+      if (submitAction === "next_step" && targetId) {
+        router.push(`/admin/tournaments/${targetId}/groups?wizard=true`);
+      } else if (isEdit && targetId) {
+        router.push(`/admin/tournaments/${targetId}`);
+      } else {
+        router.push("/admin");
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -242,51 +252,56 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
 
   return (
     <div className="space-y-6 sm:space-y-8">
-      {/* Visual Step Indicator */}
-      <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-4 overflow-x-auto pb-2 scrollbar-hide text-sm font-medium">
-        <div className="flex items-center gap-2 shrink-0 text-[#37003C]">
+      {/* Visual Form Sections Tracker */}
+      <div className="flex items-center justify-between flex-wrap gap-2 pb-1 text-xs">
+        <span className="font-bold text-[#777777] uppercase tracking-wider text-[10px]">
+          Step 1 Form Sections:
+        </span>
+        <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto scrollbar-hide text-xs font-semibold">
+          <div className="flex items-center gap-1.5 shrink-0 text-[#37003C]">
+            <div
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                step1Complete
+                  ? "bg-[#00FF87] text-[#37003C]"
+                  : "bg-[#37003C] text-white"
+              }`}
+            >
+              {step1Complete ? <Check className="h-3 w-3" /> : "1"}
+            </div>
+            <span>01 Basic Info</span>
+          </div>
+          <ChevronRight className="h-3.5 w-3.5 text-[#CCCCCC] shrink-0" />
+          <div className="flex items-center gap-1.5 shrink-0 text-[#37003C]">
+            <div
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                step2Complete
+                  ? "bg-[#00FF87] text-[#37003C]"
+                  : "bg-[#E5E5E5] text-[#777777]"
+              }`}
+            >
+              {step2Complete ? <Check className="h-3 w-3" /> : "2"}
+            </div>
+            <span>02 Chip Rules</span>
+          </div>
+          <ChevronRight className="h-3.5 w-3.5 text-[#CCCCCC] shrink-0" />
           <div
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-              step1Complete
-                ? "bg-[#00FF87] text-[#37003C]"
-                : "bg-[#37003C] text-white"
+            className={`flex items-center gap-1.5 shrink-0 ${
+              step3Complete ? "text-[#37003C]" : "text-[#777777]"
             }`}
           >
-            {step1Complete ? <Check className="h-3.5 w-3.5" /> : "1"}
+            <div
+              className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
+                step3Complete
+                  ? "bg-[#00FF87] text-[#37003C]"
+                  : step1Complete && step2Complete
+                  ? "bg-[#37003C] text-white"
+                  : "bg-[#E5E5E5] text-[#777777]"
+              }`}
+            >
+              {step3Complete ? <Check className="h-3 w-3" /> : "3"}
+            </div>
+            <span>03 Administrators</span>
           </div>
-          <span className="font-semibold">01 Basic Info</span>
-        </div>
-        <ChevronRight className="h-4 w-4 text-[#BDBDBD] shrink-0" />
-        <div className="flex items-center gap-2 shrink-0 text-[#37003C]">
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-              step2Complete
-                ? "bg-[#00FF87] text-[#37003C]"
-                : "bg-[#E5E5E5] text-[#777777]"
-            }`}
-          >
-            {step2Complete ? <Check className="h-3.5 w-3.5" /> : "2"}
-          </div>
-          <span className="font-semibold">02 Chip Rules</span>
-        </div>
-        <ChevronRight className="h-4 w-4 text-[#BDBDBD] shrink-0" />
-        <div
-          className={`flex items-center gap-2 shrink-0 ${
-            step3Complete ? "text-[#37003C]" : "text-[#777777]"
-          }`}
-        >
-          <div
-            className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-              step3Complete
-                ? "bg-[#00FF87] text-[#37003C]"
-                : step1Complete && step2Complete
-                ? "bg-[#37003C] text-white"
-                : "bg-[#E5E5E5] text-[#777777]"
-            }`}
-          >
-            {step3Complete ? <Check className="h-3.5 w-3.5" /> : "3"}
-          </div>
-          <span className="font-semibold">03 Administrators</span>
         </div>
       </div>
 
@@ -1000,33 +1015,54 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Button
               type="submit"
+              onClick={() => setSubmitAction("next_step")}
               disabled={loading || admins.length === 0}
-              className="flex-1 h-12 bg-[#37003C] hover:bg-[#5A0A63] text-white font-bold text-base rounded-[10px] shadow-sm transition-all duration-200 disabled:opacity-70"
+              className="flex-1 h-12 bg-[#37003C] hover:bg-[#5A0A63] text-white font-bold text-sm sm:text-base rounded-[10px] shadow-sm transition-all duration-200 disabled:opacity-70 gap-2 cursor-pointer"
             >
-              {loading && <Loader2 className="h-5 w-5 animate-spin mr-2" />}
+              {loading && submitAction === "next_step" ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Sparkles className="h-5 w-5 text-[#00FF87]" />
+              )}
               <span>
-                {loading
+                {loading && submitAction === "next_step"
                   ? isEdit
-                    ? "Saving Changes..."
-                    : "Creating Tournament..."
+                    ? "Saving & Proceeding..."
+                    : "Creating & Proceeding..."
                   : isEdit
-                  ? "Save Changes"
-                  : "Create Tournament"}
+                  ? "Save & Continue to Groups →"
+                  : "Create & Continue to Groups →"}
               </span>
             </Button>
+
+            <Button
+              type="submit"
+              variant="outline"
+              onClick={() => setSubmitAction("save_exit")}
+              disabled={loading || admins.length === 0}
+              className="h-12 px-5 font-semibold border-[#D5D5D5] bg-white text-[#1F1F1F] hover:bg-[#F7F7F7] hover:border-[#37003C]/40 rounded-[10px] transition-colors cursor-pointer"
+            >
+              {loading && submitAction === "save_exit" ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              <span>
+                {isEdit ? "Save Changes Only" : "Save Draft & Exit"}
+              </span>
+            </Button>
+
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={() =>
                 isEdit
                   ? router.push(`/admin/tournaments/${initialData?.id}`)
                   : router.push("/admin")
               }
               disabled={loading}
-              className="h-12 px-6 font-semibold border-[#E5E5E5] text-[#555555] hover:bg-[#FAFAFA] hover:text-[#1F1F1F] rounded-[10px]"
+              className="h-12 px-4 font-semibold text-[#666666] hover:text-[#1F1F1F] rounded-[10px]"
             >
               Cancel
             </Button>

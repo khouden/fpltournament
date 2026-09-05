@@ -21,8 +21,10 @@ import {
   Shield,
   CheckCircle2,
   ImageIcon,
+  Rocket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TournamentWizardStepper } from "@/components/tournament-wizard-stepper";
 
 export default async function TournamentManagementPage({
   params,
@@ -223,7 +225,21 @@ export default async function TournamentManagementPage({
         </div>
 
         {/* Global Header Action Buttons */}
-        <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center">
+        <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center flex-wrap">
+          {tournament.status === "DRAFT" && (
+            <Button
+              variant="default"
+              size="sm"
+              asChild
+              className="h-9 px-3.5 text-xs font-bold bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] transition-colors gap-1.5 shadow-xs cursor-pointer"
+            >
+              <Link href={`/admin/tournaments/${tournament.id}/publish`}>
+                <Rocket className="h-3.5 w-3.5 text-[#00FF87]" />
+                <span>Review &amp; Publish</span>
+              </Link>
+            </Button>
+          )}
+
           {tournament.status === "PUBLISHED" && (
             <Button
               variant="outline"
@@ -255,6 +271,41 @@ export default async function TournamentManagementPage({
           </Button>
         </div>
       </section>
+
+      {/* Setup Wizard Progress for Draft Tournaments */}
+      {tournament.status === "DRAFT" && (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#777777]">
+              Tournament Setup Wizard Progress
+            </h2>
+            <Link
+              href={
+                tournament.groups.length < 2
+                  ? `/admin/tournaments/${tournament.id}/groups?wizard=true`
+                  : allMatches.length === 0
+                  ? `/admin/tournaments/${tournament.id}/schedule?wizard=true`
+                  : `/admin/tournaments/${tournament.id}/publish`
+              }
+              className="text-xs font-bold text-[#37003C] hover:underline flex items-center gap-1"
+            >
+              <span>Continue Setup</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <TournamentWizardStepper
+            currentStep={
+              tournament.groups.length < 2
+                ? 2
+                : allMatches.length === 0
+                ? 3
+                : 4
+            }
+            tournamentId={tournament.id}
+            tournamentStatus="DRAFT"
+          />
+        </div>
+      )}
 
       {/* 3. 4-Card Key Metrics Grid */}
       <section
