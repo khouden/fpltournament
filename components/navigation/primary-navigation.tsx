@@ -15,8 +15,6 @@ export interface NavItem {
 export const DEFAULT_NAV_ITEMS: NavItem[] = [
   { label: "Tournaments", href: "/tournaments" },
   { label: "Scoring Rules", href: "/#scoring-rules" },
-  { label: "Design System", href: "/design-system", badge: "UI" },
-  { label: "Admin Portal", href: "/admin" },
 ];
 
 export function PrimaryNavigation({

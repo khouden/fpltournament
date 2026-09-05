@@ -77,6 +77,7 @@ export default async function EditTournamentPage({
           id: tournament.id,
           name: tournament.name,
           season: tournament.season,
+          banner: tournament.banner,
           adminFplId: Number(tournament.adminFplId),
           allowBenchBoost: tournament.allowBenchBoost,
           allowTripleCaptain: tournament.allowTripleCaptain,

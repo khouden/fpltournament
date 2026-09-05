@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="premSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0a0314"/>
+      <stop offset="60%" stop-color="#210026"/>
+      <stop offset="100%" stop-color="#37003C"/>
+    </linearGradient>
+    <linearGradient id="floodClusterL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6"/>
+      <stop offset="30%" stop-color="#00D9FF" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00D9FF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="floodClusterR" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.6"/>
+      <stop offset="30%" stop-color="#00FF87" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#00FF87" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="turfGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#042B14"/>
+      <stop offset="25%" stop-color="#0A4C24"/>
+      <stop offset="50%" stop-color="#083E1D"/>
+      <stop offset="75%" stop-color="#0A4C24"/>
+      <stop offset="100%" stop-color="#042B14"/>
+    </linearGradient>
+    <linearGradient id="accentStripe" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00D9FF" stop-opacity="0"/>
+      <stop offset="30%" stop-color="#00D9FF" stop-opacity="0.8"/>
+      <stop offset="70%" stop-color="#00FF87" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00FF87" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky Base -->
+  <rect width="1200" height="400" fill="url(#premSky)"/>
+
+  <!-- Dramatic Stadium Floodlight Beams -->
+  <polygon points="60,20 0,400 380,400" fill="url(#floodClusterL)"/>
+  <polygon points="1140,20 820,400 1200,400" fill="url(#floodClusterR)"/>
+  <polygon points="200,10 100,400 520,400" fill="url(#floodClusterL)" opacity="0.45"/>
+  <polygon points="1000,10 680,400 1100,400" fill="url(#floodClusterR)" opacity="0.45"/>
+
+  <!-- Stadium Structural Trusswork -->
+  <line x1="0" y1="50" x2="1200" y2="50" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="2"/>
+  <line x1="0" y1="90" x2="1200" y2="90" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5"/>
+  <line x1="60" y1="20" x2="140" y2="90" stroke="#00D9FF" stroke-opacity="0.3" stroke-width="2"/>
+  <line x1="140" y1="20" x2="220" y2="90" stroke="#00D9FF" stroke-opacity="0.3" stroke-width="2"/>
+  <line x1="1060" y1="20" x2="980" y2="90" stroke="#00FF87" stroke-opacity="0.3" stroke-width="2"/>
+  <line x1="1140" y1="20" x2="1060" y2="90" stroke="#00FF87" stroke-opacity="0.3" stroke-width="2"/>
+
+  <!-- Floodlight Light Fixtures -->
+  <circle cx="60" cy="20" r="8" fill="#FFFFFF" opacity="0.95"/>
+  <circle cx="60" cy="20" r="22" fill="#00D9FF" opacity="0.25"/>
+  <circle cx="200" cy="10" r="7" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="1000" cy="10" r="7" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="1140" cy="20" r="8" fill="#FFFFFF" opacity="0.95"/>
+  <circle cx="1140" cy="20" r="22" fill="#00FF87" opacity="0.25"/>
+
+  <!-- Stadium Grandstands -->
+  <path d="M0,230 Q600,190 1200,230 L1200,400 L0,400 Z" fill="#18041D" opacity="0.95"/>
+
+  <!-- Pitch Surface -->
+  <path d="M0,310 Q600,280 1200,310 L1200,400 L0,400 Z" fill="url(#turfGradient)"/>
+
+  <!-- Vibrant Pitch Light Line & Chalk Outline -->
+  <path d="M0,310 Q600,280 1200,310" stroke="url(#accentStripe)" stroke-width="3"/>
+  <ellipse cx="600" cy="350" rx="360" ry="45" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="2" fill="none"/>
+  <line x1="600" y1="305" x2="600" y2="395" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="2"/>
+</svg>

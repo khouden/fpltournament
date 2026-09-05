@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { LeagueTable } from "@/components/league-table";
 import { calculateLeagueStandings } from "@/lib/scoring";
@@ -105,29 +106,57 @@ export default async function TournamentPage(
 
       <main className="flex-1 pb-16 sm:pb-24">
         {/* Tournament Identity Hero Header */}
-        <section className="relative overflow-hidden bg-white border-b border-[#E5E5E5] py-8 sm:py-12">
-          {/* Decorative FPL background glows & geometry */}
-          <div
-            aria-hidden="true"
-            className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#00FF87]/10 blur-3xl pointer-events-none"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute -left-20 -bottom-20 h-80 w-80 rounded-full bg-[#37003C]/5 blur-3xl pointer-events-none"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute right-8 bottom-0 select-none pointer-events-none text-8xl lg:text-9xl font-black text-[#37003C]/[0.025] tracking-tighter uppercase leading-none hidden md:block"
-          >
-            FPL
-          </div>
+        <section
+          className={`relative overflow-hidden border-b border-[#E5E5E5] py-10 sm:py-14 ${
+            tournament.banner
+              ? "bg-[#18001D] text-white"
+              : "bg-white text-[#1F1F1F]"
+          }`}
+        >
+          {/* If banner is present: cinematic background banner with FPL overlay */}
+          {tournament.banner ? (
+            <div className="absolute inset-0 z-0">
+              <Image
+                src={tournament.banner}
+                alt={tournament.name}
+                fill
+                priority
+                unoptimized={tournament.banner.startsWith("http")}
+                className="object-cover object-center scale-[1.02] filter blur-[0.5px] brightness-[0.85]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#1E0024]/95 via-[#37003C]/85 to-[#120015]/95" />
+              <div className="absolute inset-0 bg-radial from-transparent via-[#1F0022]/30 to-[#0A000C]/75" />
+            </div>
+          ) : (
+            <>
+              {/* Decorative FPL background glows & geometry */}
+              <div
+                aria-hidden="true"
+                className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#00FF87]/10 blur-3xl pointer-events-none"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute -left-20 -bottom-20 h-80 w-80 rounded-full bg-[#37003C]/5 blur-3xl pointer-events-none"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute right-8 bottom-0 select-none pointer-events-none text-8xl lg:text-9xl font-black text-[#37003C]/[0.025] tracking-tighter uppercase leading-none hidden md:block"
+              >
+                FPL
+              </div>
+            </>
+          )}
 
           <Container className="relative z-10">
             {/* Top Navigation Row: Back Action */}
             <div className="mb-4 sm:mb-6">
               <Link
                 href="/tournaments"
-                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider text-[#37003C] hover:text-[#5A0A63] transition-colors group"
+                className={`inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider transition-colors group ${
+                  tournament.banner
+                    ? "text-white/80 hover:text-white"
+                    : "text-[#37003C] hover:text-[#5A0A63]"
+                }`}
               >
                 <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
                 <span>ALL TOURNAMENTS</span>
@@ -138,73 +167,143 @@ export default async function TournamentPage(
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="space-y-3.5 max-w-3xl">
                 {/* Eyebrow Trophy Pill */}
-                <div className="inline-flex items-center gap-2 rounded-[8px] border border-[#37003C]/15 bg-[#37003C]/5 px-3 py-1 text-xs font-black uppercase tracking-wider text-[#37003C]">
-                  <Trophy className="h-3.5 w-3.5 text-[#37003C]" />
+                <div
+                  className={`inline-flex items-center gap-2 rounded-[8px] border px-3 py-1 text-xs font-black uppercase tracking-wider ${
+                    tournament.banner
+                      ? "border-[#00FF87]/50 bg-[#00FF87]/15 text-[#00FF87]"
+                      : "border-[#37003C]/15 bg-[#37003C]/5 text-[#37003C]"
+                  }`}
+                >
+                  <Trophy
+                    className={`h-3.5 w-3.5 ${
+                      tournament.banner ? "text-[#00FF87]" : "text-[#37003C]"
+                    }`}
+                  />
                   <span>COMPETITION DASHBOARD</span>
                 </div>
 
                 {/* Tournament Title */}
-                <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight text-[#37003C] leading-[1.08] break-words">
+                <h1
+                  className={`text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight leading-[1.08] break-words ${
+                    tournament.banner
+                      ? "text-white drop-shadow-md"
+                      : "text-[#37003C]"
+                  }`}
+                >
                   {tournament.name}
                 </h1>
 
                 {/* Tournament Metadata Badges */}
                 <div className="flex flex-wrap items-center gap-2.5 pt-1">
                   {/* Season Badge */}
-                  <span className="inline-flex items-center gap-1 rounded-[8px] border border-[#E5E5E5] bg-[#F9F9F9] px-3 py-1 text-xs font-bold text-[#555555]">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-[8px] border px-3 py-1 text-xs font-bold ${
+                      tournament.banner
+                        ? "border-white/20 bg-white/10 text-white/90 backdrop-blur-xs"
+                        : "border-[#E5E5E5] bg-[#F9F9F9] text-[#555555]"
+                    }`}
+                  >
                     Season {tournament.season}
                   </span>
 
                   {/* Status Badge */}
                   {isActive ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-[#00FF87]/50 bg-[#00FF87]/20 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-[#008744]">
+                    <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-[#00FF87]/50 bg-[#00FF87]/20 px-3 py-1 text-xs font-extrabold uppercase tracking-wider text-[#00FF87]">
                       <span className="h-2 w-2 rounded-full bg-[#00FF87] animate-fpl-pulse-dot" />
                       ACTIVE
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-[#D5D5D5] bg-[#EBEBEB] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[#555555]">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-[8px] border px-3 py-1 text-xs font-bold uppercase tracking-wider ${
+                        tournament.banner
+                          ? "border-white/20 bg-white/15 text-white/80"
+                          : "border-[#D5D5D5] bg-[#EBEBEB] text-[#555555]"
+                      }`}
+                    >
                       ● FINISHED
                     </span>
                   )}
 
                   {/* Bench Boost Rule Badge */}
-                  <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-[#E5D5E7] bg-[#F3EDF4] px-3 py-1 text-xs font-bold text-[#37003C]">
-                    <Armchair className="h-3.5 w-3.5 text-[#5A0A63]" />
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-[8px] border px-3 py-1 text-xs font-bold ${
+                      tournament.banner
+                        ? "border-white/20 bg-white/10 text-white backdrop-blur-xs"
+                        : "border-[#E5D5E7] bg-[#F3EDF4] text-[#37003C]"
+                    }`}
+                  >
+                    <Armchair
+                      className={`h-3.5 w-3.5 ${
+                        tournament.banner ? "text-[#00FF87]" : "text-[#5A0A63]"
+                      }`}
+                    />
                     <span>
-                      {tournament.allowBenchBoost ? "Bench Boost: On" : "Bench Boost: Off"}
+                      {tournament.allowBenchBoost
+                        ? "Bench Boost: On"
+                        : "Bench Boost: Off"}
                     </span>
                     {tournament.allowBenchBoost && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#008744]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#00FF87]" />
                     )}
                   </span>
 
                   {/* Triple Captain Rule Badge */}
-                  <span className="inline-flex items-center gap-1.5 rounded-[8px] border border-[#E5D5E7] bg-[#F3EDF4] px-3 py-1 text-xs font-bold text-[#37003C]">
-                    <Crown className="h-3.5 w-3.5 text-[#E9007F]" />
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-[8px] border px-3 py-1 text-xs font-bold ${
+                      tournament.banner
+                        ? "border-white/20 bg-white/10 text-white backdrop-blur-xs"
+                        : "border-[#E5D5E7] bg-[#F3EDF4] text-[#37003C]"
+                    }`}
+                  >
+                    <Crown
+                      className={`h-3.5 w-3.5 ${
+                        tournament.banner ? "text-[#00D9FF]" : "text-[#E9007F]"
+                      }`}
+                    />
                     <span>
                       {tournament.allowTripleCaptain
                         ? "Triple Captain: On (3×)"
                         : "Triple Captain: Reduced (2×)"}
                     </span>
                     {tournament.allowTripleCaptain && (
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#008744]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#00D9FF]" />
                     )}
                   </span>
                 </div>
               </div>
 
               {/* Decorative Fantasy Accent Widget on Desktop */}
-              <div className="hidden lg:flex flex-col items-center justify-center rounded-[18px] border border-[#E5E5E5] bg-gradient-to-br from-[#FAF7FB] to-[#F3EDF4] p-5 text-center min-w-[220px] shadow-2xs">
-                <div className="h-12 w-12 rounded-xl bg-[#37003C] text-[#00FF87] flex items-center justify-center shadow-fpl-sm mb-2.5">
+              <div
+                className={`hidden lg:flex flex-col items-center justify-center rounded-[18px] border p-5 text-center min-w-[220px] shadow-2xs ${
+                  tournament.banner
+                    ? "border-white/20 bg-black/40 backdrop-blur-md text-white"
+                    : "border-[#E5E5E5] bg-gradient-to-br from-[#FAF7FB] to-[#F3EDF4]"
+                }`}
+              >
+                <div
+                  className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-fpl-sm mb-2.5 ${
+                    tournament.banner
+                      ? "bg-[#00FF87] text-[#37003C]"
+                      : "bg-[#37003C] text-[#00FF87]"
+                  }`}
+                >
                   <Trophy className="h-6 w-6" />
                 </div>
-                <span className="text-[11px] font-black uppercase tracking-wider text-[#777777]">
+                <span
+                  className={`text-[11px] font-black uppercase tracking-wider ${
+                    tournament.banner ? "text-white/75" : "text-[#777777]"
+                  }`}
+                >
                   TOURNAMENT FORMAT
                 </span>
-                <span className="text-sm font-extrabold text-[#37003C] mt-0.5">
+                <span
+                  className={`text-sm font-extrabold mt-0.5 ${
+                    tournament.banner ? "text-white" : "text-[#37003C]"
+                  }`}
+                >
                   Head-to-Head League
                 </span>
-                <span className="text-[10px] text-[#008744] font-bold bg-[#00FF87]/20 px-2 py-0.5 rounded-full mt-1.5">
+                <span className="text-[10px] text-[#00FF87] font-bold bg-[#00FF87]/20 border border-[#00FF87]/30 px-2 py-0.5 rounded-full mt-1.5">
                   +3 W · +1 D · 0 L
                 </span>
               </div>

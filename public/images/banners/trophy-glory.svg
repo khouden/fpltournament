@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="purpleGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#24002A"/>
+      <stop offset="50%" stop-color="#37003C"/>
+      <stop offset="100%" stop-color="#140018"/>
+    </linearGradient>
+    <radialGradient id="goldBurst" cx="50%" cy="45%" r="45%">
+      <stop offset="0%" stop-color="#FFE600" stop-opacity="0.3"/>
+      <stop offset="40%" stop-color="#E9007F" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#37003C" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="trophyGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF385"/>
+      <stop offset="50%" stop-color="#FFD700"/>
+      <stop offset="100%" stop-color="#D4AF37"/>
+    </linearGradient>
+    <linearGradient id="ribbonCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00D9FF" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#00FF87" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1200" height="400" fill="url(#purpleGoldGrad)"/>
+
+  <!-- Radial Golden Sunburst Glow -->
+  <circle cx="600" cy="180" r="300" fill="url(#goldBurst)"/>
+
+  <!-- Geometric Rays Emanating from Trophy -->
+  <polygon points="600,180 520,0 560,0" fill="#FFE600" fill-opacity="0.04"/>
+  <polygon points="600,180 640,0 680,0" fill="#FFE600" fill-opacity="0.04"/>
+  <polygon points="600,180 300,50 340,30" fill="#FFE600" fill-opacity="0.03"/>
+  <polygon points="600,180 860,30 900,50" fill="#FFE600" fill-opacity="0.03"/>
+  <polygon points="600,180 150,150 180,120" fill="#FFE600" fill-opacity="0.025"/>
+  <polygon points="600,180 1020,120 1050,150" fill="#FFE600" fill-opacity="0.025"/>
+
+  <!-- Floating Confetti & Light Shimmer Particles -->
+  <circle cx="350" cy="100" r="3" fill="#FFE600" opacity="0.7"/>
+  <circle cx="480" cy="70" r="2" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="530" cy="120" r="2.5" fill="#00FF87" opacity="0.6"/>
+  <circle cx="670" cy="110" r="3" fill="#00D9FF" opacity="0.6"/>
+  <circle cx="720" cy="60" r="2" fill="#FFE600" opacity="0.8"/>
+  <circle cx="850" cy="130" r="2.5" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="280" cy="180" r="2" fill="#E9007F" opacity="0.5"/>
+  <circle cx="920" cy="190" r="2" fill="#E9007F" opacity="0.5"/>
+
+  <!-- Trophy Silhouette Centerpiece -->
+  <!-- Trophy Plinth / Base -->
+  <rect x="550" y="270" width="100" height="20" rx="3" fill="url(#trophyGold)" opacity="0.85"/>
+  <polygon points="565,270 635,270 625,240 575,240" fill="url(#trophyGold)" opacity="0.9"/>
+  <!-- Stem -->
+  <rect x="590" y="215" width="20" height="25" fill="url(#trophyGold)" opacity="0.9"/>
+  <!-- Cup Body -->
+  <path d="M545,120 C545,195 580,215 600,215 C620,215 655,195 655,120 Z" fill="url(#trophyGold)" opacity="0.95"/>
+  <!-- Cup Lip -->
+  <ellipse cx="600" cy="120" rx="55" ry="10" fill="#FFF8B0" opacity="0.95"/>
+  <!-- Handles -->
+  <path d="M545,130 C510,130 510,185 555,185" stroke="url(#trophyGold)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <path d="M655,130 C690,130 690,185 645,185" stroke="url(#trophyGold)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- Crown / Star Accent -->
+  <polygon points="600,95 604,105 615,106 606,113 609,123 600,117 591,123 594,113 585,106 596,105" fill="#FFFFFF" opacity="0.9"/>
+
+  <!-- Bottom Dynamic Stage Banner Wave -->
+  <path d="M0,330 Q600,290 1200,330 L1200,400 L0,400 Z" fill="#1B001E" opacity="0.95"/>
+  <path d="M0,330 Q600,290 1200,330" stroke="url(#ribbonCyan)" stroke-width="3"/>
+</svg>

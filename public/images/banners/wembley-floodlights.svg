@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="nightGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0F0013"/>
+      <stop offset="60%" stop-color="#24002A"/>
+      <stop offset="100%" stop-color="#37003C"/>
+    </linearGradient>
+    <linearGradient id="archGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00D9FF" stop-opacity="0.1"/>
+      <stop offset="50%" stop-color="#00FF87" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#00D9FF" stop-opacity="0.1"/>
+    </linearGradient>
+    <linearGradient id="spotlightCone" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45"/>
+      <stop offset="40%" stop-color="#00FF87" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#00FF87" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1200" height="400" fill="url(#nightGradient)"/>
+
+  <!-- Iconic Stadium Wembley Arch -->
+  <path d="M100,400 Q600,-40 1100,400" stroke="url(#archGlow)" stroke-width="4" fill="none"/>
+  <path d="M110,400 Q600,-28 1090,400" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="1.5" fill="none"/>
+
+  <!-- Center Dramatic Spotlight Cone -->
+  <polygon points="600,0 250,400 950,400" fill="url(#spotlightCone)"/>
+
+  <!-- Crossing Beams -->
+  <polygon points="150,50 350,400 700,400" fill="#00D9FF" fill-opacity="0.06"/>
+  <polygon points="1050,50 500,400 850,400" fill="#00FF87" fill-opacity="0.06"/>
+
+  <!-- Silhouette Stadium Bowl -->
+  <path d="M0,260 Q600,210 1200,260 L1200,400 L0,400 Z" fill="#17011D" opacity="0.9"/>
+  <path d="M0,320 Q600,285 1200,320 L1200,400 L0,400 Z" fill="#082A16" opacity="0.7"/>
+
+  <!-- Field Perimeter LED Ribbon -->
+  <path d="M0,320 Q600,285 1200,320" stroke="#00FF87" stroke-opacity="0.5" stroke-width="2"/>
+
+  <!-- Light Flare Points -->
+  <circle cx="600" cy="5" r="4" fill="#FFFFFF"/>
+  <circle cx="600" cy="5" r="14" fill="#00FF87" opacity="0.4"/>
+  <circle cx="280" cy="90" r="3" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="920" cy="90" r="3" fill="#FFFFFF" opacity="0.8"/>
+</svg>

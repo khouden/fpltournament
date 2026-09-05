@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
+import Image from "next/image";
 import { TournamentActions } from "@/components/tournament-actions";
 import {
   Trophy,
@@ -152,15 +153,28 @@ export default async function AdminDashboard() {
                   key={tournament.id}
                   className="group rounded-[14px] border border-[#E5E5E5] bg-white p-5 sm:p-6 shadow-fpl-sm hover:border-[#37003C]/30 hover:shadow-fpl-md transition-all duration-200"
                 >
-                  {/* Top Row: Title Link & Status Badge */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-3.5 border-b border-[#F0F0F0]">
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/admin/tournaments/${tournament.id}`}
-                        className="text-lg sm:text-xl font-bold text-[#1F1F1F] group-hover:text-[#37003C] transition-colors leading-tight inline-block hover:underline"
-                      >
-                        {tournament.name}
-                      </Link>
+                  {/* Top Row: Thumbnail + Title Link & Status Badge */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3.5 border-b border-[#F0F0F0]">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {tournament.banner && (
+                        <div className="relative h-11 w-18 sm:h-12 sm:w-20 rounded-[8px] overflow-hidden bg-[#1F0022] shrink-0 border border-[#E5E5E5] shadow-2xs">
+                          <Image
+                            src={tournament.banner}
+                            alt=""
+                            fill
+                            unoptimized={tournament.banner.startsWith("http")}
+                            className="object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/admin/tournaments/${tournament.id}`}
+                          className="text-lg sm:text-xl font-bold text-[#1F1F1F] group-hover:text-[#37003C] transition-colors leading-tight inline-block hover:underline truncate max-w-full"
+                        >
+                          {tournament.name}
+                        </Link>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       {tournament.status === "PUBLISHED" ? (

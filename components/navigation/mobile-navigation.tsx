@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Trophy, ArrowRight, Shield, BookOpen, LayoutGrid, Palette } from "lucide-react";
+import { Trophy, ArrowRight, BookOpen, LayoutGrid } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,8 +20,6 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
     { label: "Home", href: "/", icon: <Trophy className="h-4 w-4 text-[#00FF87]" /> },
     { label: "Tournaments", href: "/tournaments", icon: <LayoutGrid className="h-4 w-4 text-[#00D9FF]" /> },
     { label: "Scoring Rules", href: "/#scoring-rules", icon: <BookOpen className="h-4 w-4 text-[#E7FF00]" /> },
-    { label: "Design System", href: "/design-system", icon: <Palette className="h-4 w-4 text-[#E9007F]" /> },
-    { label: "Admin Portal", href: "/admin", icon: <Shield className="h-4 w-4 text-[#00FF87]" /> },
   ];
 
   return (

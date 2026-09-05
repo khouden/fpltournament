@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="100%" height="100%" fill="none">
+  <defs>
+    <linearGradient id="neonDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14001A"/>
+      <stop offset="40%" stop-color="#2D0033"/>
+      <stop offset="70%" stop-color="#37003C"/>
+      <stop offset="100%" stop-color="#0B000E"/>
+    </linearGradient>
+    <linearGradient id="neonCyanGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00D9FF"/>
+      <stop offset="100%" stop-color="#00FF87"/>
+    </linearGradient>
+    <linearGradient id="neonPink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E9007F"/>
+      <stop offset="100%" stop-color="#5A0A63"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#FFFFFF" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1200" height="400" fill="url(#neonDark)"/>
+
+  <!-- Subtle High-Tech Grid -->
+  <rect width="1200" height="400" fill="url(#grid)"/>
+
+  <!-- Angled Dynamic Speed Chevrons & Stripes -->
+  <path d="M-100,400 L250,0 L380,0 L30,400 Z" fill="url(#neonPink)" opacity="0.45"/>
+  <path d="M120,400 L470,0 L530,0 L180,400 Z" fill="url(#neonCyanGreen)" opacity="0.25"/>
+  <path d="M350,400 L700,0 L780,0 L430,400 Z" fill="#00D9FF" opacity="0.12"/>
+  <path d="M600,400 L950,0 L1070,0 L720,400 Z" fill="url(#neonPink)" opacity="0.3"/>
+  <path d="M850,400 L1200,0 L1260,0 L910,400 Z" fill="url(#neonCyanGreen)" opacity="0.4"/>
+
+  <!-- Glowing Neon Accent Strips -->
+  <line x1="240" y1="0" x2="-110" y2="400" stroke="#00D9FF" stroke-width="3" opacity="0.8"/>
+  <line x1="520" y1="0" x2="170" y2="400" stroke="#00FF87" stroke-width="3.5" opacity="0.9"/>
+  <line x1="940" y1="0" x2="590" y2="400" stroke="#E9007F" stroke-width="2.5" opacity="0.75"/>
+  <line x1="1190" y1="0" x2="840" y2="400" stroke="#00FF87" stroke-width="3" opacity="0.85"/>
+
+  <!-- Hexagonal Football Net Lattice on Right Side -->
+  <g opacity="0.15" stroke="#FFFFFF" stroke-width="1.5" fill="none">
+    <polygon points="1050,150 1080,135 1110,150 1110,180 1080,195 1050,180"/>
+    <polygon points="1110,150 1140,135 1170,150 1170,180 1140,195 1110,180"/>
+    <polygon points="1080,195 1110,180 1140,195 1140,225 1110,240 1080,225"/>
+    <polygon points="1020,195 1050,180 1080,195 1080,225 1050,240 1020,225"/>
+    <polygon points="1050,240 1080,225 1110,240 1110,270 1080,285 1050,270"/>
+  </g>
+
+  <!-- High-tech Floating Points -->
+  <circle cx="240" cy="80" r="4" fill="#00D9FF" opacity="0.9"/>
+  <circle cx="520" cy="180" r="4" fill="#00FF87" opacity="0.9"/>
+  <circle cx="940" cy="220" r="4" fill="#E9007F" opacity="0.9"/>
+  <circle cx="1100" cy="90" r="3" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="700" cy="300" r="3" fill="#00D9FF" opacity="0.7"/>
+</svg>

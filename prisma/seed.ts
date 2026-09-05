@@ -52,6 +52,7 @@ async function main() {
     data: {
       name: "FPL Champions League 2024/25",
       season: 2024,
+      banner: "/images/banners/champions-arena.svg",
       adminFplId: ADMIN_FPL_ID,
       allowBenchBoost: true,
       allowTripleCaptain: true,
@@ -283,6 +284,7 @@ async function main() {
     data: {
       name: "Premier League H2H Masters 2024/25",
       season: 2024,
+      banner: "/images/banners/premier-stadium.svg",
       adminFplId: ADMIN_FPL_ID,
       allowBenchBoost: false, // Showcase BB disabled
       allowTripleCaptain: true,
@@ -540,6 +542,7 @@ async function main() {
     data: {
       name: "European Super League 2024/25",
       season: 2024,
+      banner: "/images/banners/wembley-floodlights.svg",
       adminFplId: ADMIN_FPL_ID,
       allowBenchBoost: true,
       allowTripleCaptain: false, // TC reduced to 2x
@@ -713,6 +716,7 @@ async function main() {
     data: {
       name: "FPL Winter Classic 2023/24",
       season: 2023,
+      banner: "/images/banners/trophy-glory.svg",
       adminFplId: ADMIN_FPL_ID,
       allowBenchBoost: true,
       allowTripleCaptain: true,
@@ -824,6 +828,7 @@ async function main() {
     data: {
       name: "Sunday League Invitational 2025/26",
       season: 2025,
+      banner: "/images/banners/emerald-pitch.svg",
       adminFplId: ADMIN_FPL_ID,
       allowBenchBoost: true,
       allowTripleCaptain: true,

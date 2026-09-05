@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name,
         season: body.season,
+        banner: body.banner ? String(body.banner).trim() : null,
         adminFplId: primaryAdmin.fplId,
         allowBenchBoost: body.allowBenchBoost ?? true,
         allowTripleCaptain: body.allowTripleCaptain ?? true,
@@ -178,6 +179,12 @@ export async function PUT(request: NextRequest) {
         data: {
           name: body.name,
           season: body.season,
+          banner:
+            body.banner !== undefined
+              ? body.banner
+                ? String(body.banner).trim()
+                : null
+              : undefined,
           adminFplId: primaryAdmin ? primaryAdmin.fplId : undefined,
           allowBenchBoost: body.allowBenchBoost ?? true,
           allowTripleCaptain: body.allowTripleCaptain ?? true,

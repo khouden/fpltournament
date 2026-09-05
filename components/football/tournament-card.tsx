@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, Check, Minus } from "lucide-react";
+import Image from "next/image";
+import { ArrowRight, Check, Minus, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/stats/progress-bar";
@@ -9,6 +10,7 @@ export interface TournamentCardData {
   id: string;
   name: string;
   season: number;
+  banner?: string | null;
   allowBenchBoost?: boolean;
   allowTripleCaptain?: boolean;
   status: string;
@@ -55,6 +57,8 @@ export function TournamentCard({
   const allowBB = tournament.allowBenchBoost ?? true;
   const allowTC = tournament.allowTripleCaptain ?? true;
 
+  const hasBanner = !!tournament.banner;
+
   return (
     <Link
       href={`/tournaments/${tournament.id}`}
@@ -65,50 +69,107 @@ export function TournamentCard({
     >
       <article
         className={cn(
-          "relative overflow-hidden rounded-[14px] border border-[#E5E5E5] bg-white p-5 sm:p-6 transition-all duration-200",
+          "relative overflow-hidden rounded-[14px] border border-[#E5E5E5] bg-white p-5 sm:p-6 transition-all duration-200 flex flex-col justify-between",
           "shadow-fpl-sm hover:shadow-fpl-md hover:-translate-y-0.5 hover:border-[#37003C]/30",
           isCompleted && "bg-white/95 border-[#E8E8E8]"
         )}
       >
-        {/* Subtle top accent gradient line */}
-        <div
-          aria-hidden="true"
-          className={cn(
-            "absolute inset-x-0 top-0 h-[3px] transition-opacity",
-            isPublished
-              ? "bg-gradient-to-r from-[#00D9FF] via-[#00FF87] to-[#E7FF00] opacity-85 group-hover:opacity-100"
-              : "bg-gradient-to-r from-[#5A0A63] to-[#37003C] opacity-40 group-hover:opacity-75"
-          )}
-        />
+        {/* If card has banner: render cinematic top banner header */}
+        {hasBanner ? (
+          <div className="relative -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 mb-4 h-32 sm:h-36 bg-[#1F0022] overflow-hidden">
+            <Image
+              src={tournament.banner!}
+              alt={tournament.name}
+              fill
+              unoptimized={tournament.banner!.startsWith("http")}
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            {/* Gradient Overlays for contrast */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20" />
+            <div
+              aria-hidden="true"
+              className={cn(
+                "absolute inset-x-0 top-0 h-[3px]",
+                isPublished
+                  ? "bg-gradient-to-r from-[#00D9FF] via-[#00FF87] to-[#E7FF00]"
+                  : "bg-gradient-to-r from-[#5A0A63] to-[#37003C]"
+              )}
+            />
 
-        {/* Top Header Row: Status Badge on Left, Season on Right */}
-        <div className="flex items-center justify-between gap-2 pt-1">
-          {isPublished ? (
-            <Badge
-              variant="outline"
-              className="gap-1.5 border-[#00FF87]/40 bg-[#00FF87]/15 text-[#008744] font-black uppercase tracking-wider text-[11px] px-2.5 py-0.5 rounded-full"
-            >
-              <span className="h-2 w-2 rounded-full bg-[#00FF87] animate-fpl-pulse-dot" />
-              <span>ACTIVE</span>
-            </Badge>
-          ) : (
-            <Badge
-              variant="outline"
-              className="gap-1.5 border-[#D0D0D0] bg-[#F4F4F5] text-[#555555] font-bold uppercase tracking-wider text-[11px] px-2.5 py-0.5 rounded-full"
-            >
-              <span>COMPLETED</span>
-            </Badge>
-          )}
+            {/* Floating Top Badges inside Banner */}
+            <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
+              {isPublished ? (
+                <Badge
+                  variant="outline"
+                  className="gap-1.5 border-[#00FF87]/50 bg-black/50 backdrop-blur-md text-[#00FF87] font-black uppercase tracking-wider text-[10px] px-2.5 py-0.5 rounded-full shadow-xs"
+                >
+                  <span className="h-2 w-2 rounded-full bg-[#00FF87] animate-fpl-pulse-dot" />
+                  <span>ACTIVE</span>
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="gap-1.5 border-white/20 bg-black/50 backdrop-blur-md text-white/90 font-bold uppercase tracking-wider text-[10px] px-2.5 py-0.5 rounded-full shadow-xs"
+                >
+                  <span>COMPLETED</span>
+                </Badge>
+              )}
 
-          {seasonFormatted && (
-            <span className="rounded-full bg-[#F7F7F7] border border-[#EBEBEB] px-2.5 py-0.5 text-xs font-bold text-[#555555]">
-              {seasonFormatted}
-            </span>
-          )}
-        </div>
+              {seasonFormatted && (
+                <span className="rounded-full bg-black/50 backdrop-blur-md border border-white/20 px-2.5 py-0.5 text-[11px] font-bold text-white/90 shadow-xs">
+                  {seasonFormatted}
+                </span>
+              )}
+            </div>
+
+            {/* Bottom Trophy watermark */}
+            <div className="absolute bottom-2.5 right-3 opacity-20 pointer-events-none">
+              <Trophy className="h-10 w-10 text-white" />
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Subtle top accent gradient line for non-banner cards */}
+            <div
+              aria-hidden="true"
+              className={cn(
+                "absolute inset-x-0 top-0 h-[3px] transition-opacity",
+                isPublished
+                  ? "bg-gradient-to-r from-[#00D9FF] via-[#00FF87] to-[#E7FF00] opacity-85 group-hover:opacity-100"
+                  : "bg-gradient-to-r from-[#5A0A63] to-[#37003C] opacity-40 group-hover:opacity-75"
+              )}
+            />
+
+            {/* Top Header Row: Status Badge on Left, Season on Right */}
+            <div className="flex items-center justify-between gap-2 pt-1">
+              {isPublished ? (
+                <Badge
+                  variant="outline"
+                  className="gap-1.5 border-[#00FF87]/40 bg-[#00FF87]/15 text-[#008744] font-black uppercase tracking-wider text-[11px] px-2.5 py-0.5 rounded-full"
+                >
+                  <span className="h-2 w-2 rounded-full bg-[#00FF87] animate-fpl-pulse-dot" />
+                  <span>ACTIVE</span>
+                </Badge>
+              ) : (
+                <Badge
+                  variant="outline"
+                  className="gap-1.5 border-[#D0D0D0] bg-[#F4F4F5] text-[#555555] font-bold uppercase tracking-wider text-[11px] px-2.5 py-0.5 rounded-full"
+                >
+                  <span>COMPLETED</span>
+                </Badge>
+              )}
+
+              {seasonFormatted && (
+                <span className="rounded-full bg-[#F7F7F7] border border-[#EBEBEB] px-2.5 py-0.5 text-xs font-bold text-[#555555]">
+                  {seasonFormatted}
+                </span>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Tournament Title & Subtitle */}
-        <div className="mt-3.5">
+        <div className={cn(!hasBanner && "mt-3.5")}>
           <h3 className="text-xl sm:text-2xl font-black tracking-tight text-[#37003C] transition-colors duration-150 group-hover:text-[#5A0A63] line-clamp-1">
             {tournament.name}
           </h3>

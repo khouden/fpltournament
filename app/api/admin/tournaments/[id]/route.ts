@@ -108,6 +108,12 @@ export async function PATCH(
         data: {
           name: body.name !== undefined ? body.name : undefined,
           season: body.season !== undefined ? body.season : undefined,
+          banner:
+            body.banner !== undefined
+              ? body.banner
+                ? String(body.banner).trim()
+                : null
+              : undefined,
           adminFplId: primaryAdminFplId,
           allowBenchBoost:
             body.allowBenchBoost !== undefined
