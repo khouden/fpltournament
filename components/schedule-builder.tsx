@@ -16,6 +16,7 @@ import {
   recalculateAllScoresAction,
   recalculateRoundScoresAction,
 } from "@/lib/scoring-actions";
+import { ManualMatchScoreModal } from "./manual-match-score-modal";
 import {
   Zap,
   CheckCircle2,
@@ -34,6 +35,7 @@ import {
   Layers,
   Check,
   Clock,
+  Pencil,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -56,10 +58,28 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 
+export interface GroupMember {
+  id: string;
+  fplName: string;
+  fplTeamName: string | null;
+  fplId: number;
+  isAdmin: boolean;
+  isManual?: boolean;
+}
+
 export interface Group {
   id: string;
   name: string;
   logo?: string | null;
+  isManual?: boolean;
+  members?: GroupMember[];
+}
+
+export interface MatchScore {
+  memberId: string;
+  gameweekPoints: number;
+  activeChip: string | null;
+  isExcluded: boolean;
 }
 
 export interface Match {
@@ -72,6 +92,7 @@ export interface Match {
   awayScore: number | null;
   result: string | null;
   winnerId: string | null;
+  scores?: MatchScore[];
 }
 
 export interface Round {
@@ -142,6 +163,12 @@ export function ScheduleBuilder({
     rounds.length > 0 ? Math.max(...rounds.map((r) => r.gameweek)) + 1 : 1
   );
   const [showAddRound, setShowAddRound] = useState(false);
+
+  // Manual Score Entry Modal state
+  const [activeScoreModalMatch, setActiveScoreModalMatch] = useState<{
+    match: Match;
+    round: Round;
+  } | null>(null);
 
   // Collapsed rounds tracking
   const [collapsedRounds, setCollapsedRounds] = useState<Record<string, boolean>>(
@@ -1434,6 +1461,31 @@ export function ScheduleBuilder({
                                 {/* Match Actions Footer */}
                                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-[#EEEEEE]">
                                   <div className="flex flex-wrap items-center gap-2">
+                                    {/* Manual Score Entry Button */}
+                                    {match.homeGroupId &&
+                                      match.awayGroupId &&
+                                      !isFinalized && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() =>
+                                            setActiveScoreModalMatch({
+                                              match,
+                                              round,
+                                            })
+                                          }
+                                          className="h-8 px-3 text-xs font-bold text-[#37003C] border-[#37003C]/30 bg-[#37003C]/5 hover:bg-[#37003C]/10 rounded-[6px] gap-1.5 shadow-2xs cursor-pointer"
+                                          title="Insert or adjust player points for this fixture"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5 text-[#37003C]" />
+                                          <span>
+                                            {hasScores
+                                              ? "Edit Scores"
+                                              : "Enter Scores"}
+                                          </span>
+                                        </Button>
+                                      )}
+
                                     {/* Primary Operational: Recalculate Score */}
                                     {match.homeGroupId &&
                                       match.awayGroupId &&
@@ -1664,6 +1716,35 @@ export function ScheduleBuilder({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Manual Match Score Entry Modal */}
+      {activeScoreModalMatch && (
+        <ManualMatchScoreModal
+          isOpen={true}
+          onClose={() => setActiveScoreModalMatch(null)}
+          tournamentId={tournamentId}
+          matchId={activeScoreModalMatch.match.id}
+          matchNumber={activeScoreModalMatch.match.matchNumber}
+          gameweek={activeScoreModalMatch.round.gameweek}
+          homeGroup={
+            (groups.find(
+              (g) => g.id === activeScoreModalMatch.match.homeGroupId
+            ) as any) || null
+          }
+          awayGroup={
+            (groups.find(
+              (g) => g.id === activeScoreModalMatch.match.awayGroupId
+            ) as any) || null
+          }
+          existingScores={
+            (activeScoreModalMatch.match.scores as any) || []
+          }
+          onScoresSaved={() => {
+            showMsg("Scores saved successfully!");
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 }

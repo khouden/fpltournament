@@ -18,11 +18,15 @@ export default async function SchedulePage(
         orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
       },
       groups: {
+        include: { members: true },
         orderBy: { name: "asc" },
       },
       rounds: {
         include: {
           matches: {
+            include: {
+              scores: true,
+            },
             orderBy: { matchNumber: "asc" },
           },
         },
@@ -251,6 +255,8 @@ export default async function SchedulePage(
           id: g.id,
           name: g.name,
           logo: g.logo,
+          isManual: g.isManual,
+          members: g.members,
         }))}
       />
 

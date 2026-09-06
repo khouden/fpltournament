@@ -7,12 +7,15 @@ import {
   updateGroupAction,
   updateGroupLogoAction,
   deleteGroupAction,
+  deleteGroupMemberAction,
   type TournamentAdminView,
   type LeagueView,
 } from "@/lib/group-actions";
 import { TeamLogoPicker } from "./team-logo-picker";
 import { suggestLogoForTeamName } from "@/lib/team-logos";
 import { FantasyTeamModal } from "./fantasy-team-modal";
+import { AddManualTeamModal } from "./add-manual-team-modal";
+import { ManualPlayerModal } from "./manual-player-modal";
 import {
   Users,
   Plus,
@@ -35,6 +38,7 @@ import {
   AlertTriangle,
   Clock,
   Calendar,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +70,7 @@ export interface GroupMember {
   fplTeamName: string | null;
   fplId: number;
   isAdmin: boolean;
+  isManual?: boolean;
 }
 
 export interface Group {
@@ -73,6 +78,7 @@ export interface Group {
   name: string;
   logo: string | null;
   fplLeagueId: number | null;
+  isManual?: boolean;
   members: GroupMember[];
   matchesCount?: number;
 }
@@ -133,6 +139,17 @@ export function GroupManager({
 
   // Fantasy Team Squad Modal state
   const [activeSquadPlayer, setActiveSquadPlayer] = useState<{ member: GroupMember; group: Group } | null>(null);
+
+  // Manual Team and Player Modal states
+  const [showAddManualModal, setShowAddManualModal] = useState(false);
+  const [activePlayerModalGroup, setActivePlayerModalGroup] = useState<Group | null>(null);
+  const [activePlayerToEdit, setActivePlayerToEdit] = useState<GroupMember | null>(null);
+  const [playerToDelete, setPlayerToDelete] = useState<{
+    memberId: string;
+    name: string;
+    groupId: string;
+  } | null>(null);
+  const [deletingPlayer, setDeletingPlayer] = useState(false);
 
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -360,6 +377,47 @@ export function GroupManager({
     showToast(`Auto-assigned authentic crests to ${count} leagues based on names!`);
   };
 
+  const handleTeamCreated = (newGroup: Group) => {
+    setGroups((prev) => [...prev, newGroup]);
+    setExpandedMembers((prev) => ({ ...prev, [newGroup.id]: true }));
+    showToast(`Team "${newGroup.name}" created successfully!`);
+  };
+
+  const handlePlayerSaved = (savedMember: GroupMember, targetGroupId: string) => {
+    setGroups((prev) =>
+      prev.map((g) => {
+        if (g.id !== targetGroupId) return g;
+        const exists = g.members.some((m) => m.id === savedMember.id);
+        const members = exists
+          ? g.members.map((m) => (m.id === savedMember.id ? savedMember : m))
+          : [...g.members, savedMember];
+        return { ...g, members };
+      })
+    );
+    showToast(`Player "${savedMember.fplName}" saved successfully.`);
+  };
+
+  const handleDeletePlayer = async () => {
+    if (!playerToDelete) return;
+    setDeletingPlayer(true);
+    const { memberId, name, groupId } = playerToDelete;
+    const res = await deleteGroupMemberAction(memberId, tournamentId);
+    if (res.success) {
+      setGroups((prev) =>
+        prev.map((g) =>
+          g.id === groupId
+            ? { ...g, members: g.members.filter((m) => m.id !== memberId) }
+            : g
+        )
+      );
+      showToast(`Player "${name}" removed.`);
+      setPlayerToDelete(null);
+    } else {
+      setError(res.error || "Failed to delete player.");
+    }
+    setDeletingPlayer(false);
+  };
+
   // Filter leagues
   const filteredLeagues = useMemo(() => {
     return leagues.filter((league) => {
@@ -445,23 +503,35 @@ export function GroupManager({
           </p>
         </div>
 
-        <Button
-          onClick={handleToggleImport}
-          variant="default"
-          className="h-10 px-4 text-xs sm:text-sm font-bold bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] transition-all gap-2 shadow-sm shrink-0 self-start sm:self-center"
-        >
-          {showImport ? (
-            <>
-              <X className="h-4 w-4" />
-              <span>Close Import</span>
-            </>
-          ) : (
-            <>
-              <Plus className="h-4 w-4 text-[#00FF87]" />
-              <span>Import Group from FPL League</span>
-            </>
-          )}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-center">
+          <Button
+            type="button"
+            onClick={() => setShowAddManualModal(true)}
+            variant="outline"
+            className="h-10 px-3.5 text-xs sm:text-sm font-bold border-[#37003C]/30 text-[#37003C] hover:bg-[#37003C]/5 rounded-[8px] transition-all gap-1.5 shadow-2xs cursor-pointer"
+          >
+            <Plus className="h-4 w-4 text-[#37003C]" />
+            <span>Add Manual Team</span>
+          </Button>
+
+          <Button
+            onClick={handleToggleImport}
+            variant="default"
+            className="h-10 px-4 text-xs sm:text-sm font-bold bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] transition-all gap-2 shadow-sm cursor-pointer"
+          >
+            {showImport ? (
+              <>
+                <X className="h-4 w-4" />
+                <span>Close Import</span>
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 text-[#00FF87]" />
+                <span>Import from FPL League</span>
+              </>
+            )}
+          </Button>
+        </div>
       </section>
 
       {/* 5. FPL League Import Experience (Expandable) */}
@@ -884,18 +954,33 @@ export function GroupManager({
                         </div>
                       ) : (
                         <div className="space-y-1 min-w-0">
-                          <h4 className="text-base sm:text-lg font-extrabold text-[#1F1F1F] tracking-tight truncate">
-                            {group.name}
-                          </h4>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-base sm:text-lg font-extrabold text-[#1F1F1F] tracking-tight truncate">
+                              {group.name}
+                            </h4>
+                            {group.isManual && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#37003C]/10 text-[#37003C] border border-[#37003C]/20 shrink-0">
+                                <Shield className="h-2.5 w-2.5 text-[#00FF87]" />
+                                <span>Manual Team</span>
+                              </span>
+                            )}
+                          </div>
                           <div className="flex flex-wrap items-center gap-2 text-xs text-[#666666]">
                             <span className="font-bold text-[#1F1F1F]">
                               {activePlayers.length} Active {activePlayers.length === 1 ? "Player" : "Players"}
                             </span>
-                            {group.fplLeagueId && (
+                            {group.fplLeagueId ? (
                               <>
                                 <span className="text-[#CCCCCC]">·</span>
                                 <span className="font-mono text-[#777777]">
                                   FPL League #{group.fplLeagueId}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[#CCCCCC]">·</span>
+                                <span className="font-semibold text-purple-700">
+                                  Custom Scoring (Admin Inserted)
                                 </span>
                               </>
                             )}
@@ -974,103 +1059,192 @@ export function GroupManager({
                       </span>
                     </div>
 
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleMembersExpand(group.id)}
-                      className="h-7 px-2.5 text-xs font-semibold text-[#37003C] hover:bg-[#37003C]/10 gap-1"
-                    >
-                      <span>{isExpanded ? "Hide Members" : "View Members"}</span>
-                      {isExpanded ? (
-                        <ChevronUp className="h-3.5 w-3.5" />
-                      ) : (
-                        <ChevronDown className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-2">
+                      {group.isManual && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setActivePlayerModalGroup(group);
+                            setActivePlayerToEdit(null);
+                          }}
+                          className="h-7 px-2.5 text-xs font-semibold border-[#37003C]/30 text-[#37003C] hover:bg-[#37003C]/10 gap-1 cursor-pointer"
+                        >
+                          <Plus className="h-3.5 w-3.5 text-[#37003C]" />
+                          <span>Add Player</span>
+                        </Button>
                       )}
-                    </Button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleMembersExpand(group.id)}
+                        className="h-7 px-2.5 text-xs font-semibold text-[#37003C] hover:bg-[#37003C]/10 gap-1 cursor-pointer"
+                      >
+                        <span>{isExpanded ? "Hide Members" : "View Members"}</span>
+                        {isExpanded ? (
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Expandable Members Table */}
                   {isExpanded && (
                     <div className="p-0 animate-fpl-fade-in">
                       <div className="px-4 sm:px-5 py-2 bg-[#FFFBEB]/50 border-b border-[#FDE68A]/40 text-[11px] text-[#92400E] flex items-center justify-between gap-2">
-                        <span>Member lists are captured when the FPL league is imported. Tournament administrators are automatically excluded from team scoring.</span>
+                        <span>
+                          {group.isManual
+                            ? "Manual roster: player scores default to 0 and can be inserted by tournament administrators for each match."
+                            : "Member lists are captured when the FPL league is imported. Tournament administrators are automatically excluded from team scoring."}
+                        </span>
                       </div>
 
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="border-b border-[#E5E5E5] bg-[#F7F7F7]/70 hover:bg-[#F7F7F7]">
-                              <TableHead className="py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-[#777777]">Manager Name</TableHead>
-                              <TableHead className="py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-[#777777]">FPL Team</TableHead>
-                              <TableHead className="py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-[#777777]">FPL ID</TableHead>
-                              <TableHead className="py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-[#777777]">Status / Role</TableHead>
-                              <TableHead className="py-2.5 px-4 text-right text-xs font-extrabold uppercase tracking-wider text-[#777777]">Actions</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody className="divide-y divide-[#E5E5E5]">
-                            {group.members.map((member) => (
-                              <TableRow
-                                key={member.id}
-                                className={`transition-colors ${
-                                  member.isAdmin
-                                    ? "bg-amber-50/40 hover:bg-amber-50/70 text-[#777777]"
-                                    : "hover:bg-[#37003C]/[0.02] text-[#1F1F1F]"
-                                }`}
-                              >
-                                <TableCell className="py-2.5 px-4 font-semibold text-xs sm:text-sm">
-                                  <div className="flex items-center gap-1.5">
-                                    <span>{member.fplName}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-2.5 px-4 text-xs text-[#666666]">
-                                  {member.fplTeamName || "—"}
-                                </TableCell>
-                                <TableCell className="py-2.5 px-4">
-                                  <a
-                                    href={`https://fantasy.premierleague.com/entry/${member.fplId}/history`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 font-mono text-xs text-[#777777] hover:text-[#37003C] hover:underline transition-colors"
-                                    title="View manager history on official FPL"
-                                  >
-                                    <span>#{member.fplId}</span>
-                                    <ExternalLink className="h-2.5 w-2.5 opacity-60" />
-                                  </a>
-                                </TableCell>
-                                <TableCell className="py-2.5 px-4">
-                                  {member.isAdmin ? (
-                                    <span
-                                      className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-[6px] bg-amber-500/15 text-amber-800 border border-amber-500/30"
-                                      title="Tournament administrators are automatically excluded from team scoring"
-                                    >
-                                      <Shield className="h-3 w-3 text-amber-600" />
-                                      <span>Admin (Excluded)</span>
-                                    </span>
-                                  ) : (
-                                    <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-[6px] bg-[#F4F4F5] text-[#555555]">
-                                      Player
-                                    </span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="py-2.5 px-4 text-right">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setActiveSquadPlayer({ member, group })}
-                                    className="h-7 px-2.5 text-xs font-semibold text-[#37003C] hover:bg-[#37003C]/10 gap-1"
-                                    title={`View ${member.fplName}'s tactical pitch squad`}
-                                  >
-                                    <Eye className="h-3.5 w-3.5 text-[#37003C]" />
-                                    <span>View Squad</span>
-                                  </Button>
-                                </TableCell>
+                      {group.members.length === 0 ? (
+                        <div className="p-8 text-center bg-white space-y-2.5">
+                          <p className="text-xs sm:text-sm text-[#777777] italic">
+                            No players added to this roster yet.
+                          </p>
+                          {group.isManual && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setActivePlayerModalGroup(group);
+                                setActivePlayerToEdit(null);
+                              }}
+                              className="h-8 px-3 text-xs font-semibold text-[#37003C] border-[#37003C]/30 hover:bg-[#37003C]/5 gap-1.5 cursor-pointer"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              <span>Add First Player</span>
+                            </Button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="border-b border-[#E5E5E5] bg-[#F7F7F7]/70 hover:bg-[#F7F7F7]">
+                                <TableHead className="py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-[#777777]">Manager Name</TableHead>
+                                <TableHead className="py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-[#777777]">Squad / Team</TableHead>
+                                <TableHead className="py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-[#777777]">ID / Source</TableHead>
+                                <TableHead className="py-2.5 px-4 text-xs font-extrabold uppercase tracking-wider text-[#777777]">Status / Role</TableHead>
+                                <TableHead className="py-2.5 px-4 text-right text-xs font-extrabold uppercase tracking-wider text-[#777777]">Actions</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                            </TableHeader>
+                            <TableBody className="divide-y divide-[#E5E5E5]">
+                              {group.members.map((member) => (
+                                <TableRow
+                                  key={member.id}
+                                  className={`transition-colors ${
+                                    member.isAdmin
+                                      ? "bg-amber-50/40 hover:bg-amber-50/70 text-[#777777]"
+                                      : "hover:bg-[#37003C]/[0.02] text-[#1F1F1F]"
+                                  }`}
+                                >
+                                  <TableCell className="py-2.5 px-4 font-semibold text-xs sm:text-sm">
+                                    <div className="flex items-center gap-1.5">
+                                      <span>{member.fplName}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-2.5 px-4 text-xs text-[#666666]">
+                                    {member.fplTeamName || "—"}
+                                  </TableCell>
+                                  <TableCell className="py-2.5 px-4">
+                                    {group.isManual || member.isManual || member.fplId <= 0 ? (
+                                      <span className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-purple-800 bg-purple-100/70 px-2 py-0.5 rounded-[4px] border border-purple-200">
+                                        <span>Manual #{member.fplId < 0 ? Math.abs(member.fplId) : member.fplId}</span>
+                                      </span>
+                                    ) : (
+                                      <a
+                                        href={`https://fantasy.premierleague.com/entry/${member.fplId}/history`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 font-mono text-xs text-[#777777] hover:text-[#37003C] hover:underline transition-colors"
+                                        title="View manager history on official FPL"
+                                      >
+                                        <span>#{member.fplId}</span>
+                                        <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                                      </a>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-2.5 px-4">
+                                    {member.isAdmin ? (
+                                      <span
+                                        className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-[6px] bg-amber-500/15 text-amber-800 border border-amber-500/30"
+                                        title="Tournament administrators are automatically excluded from team scoring"
+                                      >
+                                        <Shield className="h-3 w-3 text-amber-600" />
+                                        <span>Admin (Excluded)</span>
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-[6px] bg-[#F4F4F5] text-[#555555]">
+                                        Player
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="py-2.5 px-4 text-right">
+                                    <div className="flex items-center justify-end gap-1">
+                                      {group.isManual || member.isManual ? (
+                                        <>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                              setActivePlayerModalGroup(group);
+                                              setActivePlayerToEdit(member);
+                                            }}
+                                            className="h-7 px-2 text-xs font-semibold text-[#555555] hover:text-[#37003C] hover:bg-[#37003C]/10 gap-1 cursor-pointer"
+                                            title="Edit player"
+                                          >
+                                            <Pencil className="h-3 w-3" />
+                                            <span>Edit</span>
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                              setPlayerToDelete({
+                                                memberId: member.id,
+                                                name: member.fplName,
+                                                groupId: group.id,
+                                              });
+                                            }}
+                                            className="h-7 px-2 text-xs font-semibold text-[#E9007F] hover:bg-[#E9007F]/10 gap-1 cursor-pointer"
+                                            title="Delete player"
+                                          >
+                                            <Trash2 className="h-3 w-3" />
+                                            <span>Delete</span>
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => setActiveSquadPlayer({ member, group })}
+                                          className="h-7 px-2.5 text-xs font-semibold text-[#37003C] hover:bg-[#37003C]/10 gap-1 cursor-pointer"
+                                          title={`View ${member.fplName}'s tactical pitch squad`}
+                                        >
+                                          <Eye className="h-3.5 w-3.5 text-[#37003C]" />
+                                          <span>View Squad</span>
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1252,6 +1426,78 @@ export function GroupManager({
           allowTripleCaptain={allowTripleCaptain}
         />
       )}
+
+      {/* Add Manual Team Modal */}
+      <AddManualTeamModal
+        isOpen={showAddManualModal}
+        onClose={() => setShowAddManualModal(false)}
+        tournamentId={tournamentId}
+        onTeamCreated={(group) => handleTeamCreated(group as unknown as Group)}
+      />
+
+      {/* Add/Edit Manual Player Modal */}
+      {activePlayerModalGroup && (
+        <ManualPlayerModal
+          isOpen={true}
+          onClose={() => {
+            setActivePlayerModalGroup(null);
+            setActivePlayerToEdit(null);
+          }}
+          tournamentId={tournamentId}
+          groupId={activePlayerModalGroup.id}
+          groupName={activePlayerModalGroup.name}
+          playerToEdit={activePlayerToEdit}
+          onPlayerSaved={(member) =>
+            handlePlayerSaved(member as unknown as GroupMember, activePlayerModalGroup.id)
+          }
+        />
+      )}
+
+      {/* Delete Player Confirmation Dialog */}
+      <AlertDialog
+        open={!!playerToDelete}
+        onOpenChange={(open) => !open && setPlayerToDelete(null)}
+      >
+        <AlertDialogContent className="max-w-md rounded-2xl border-[#E5E5E5] bg-white p-6 shadow-2xl">
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2.5 text-[#E9007F]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#E9007F]/10">
+                <Trash2 className="h-5 w-5 text-[#E9007F]" />
+              </div>
+              <AlertDialogTitle className="text-lg font-bold text-[#1F1F1F]">
+                Remove {playerToDelete?.name}?
+              </AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-xs sm:text-sm text-[#777777] mt-2">
+              Are you sure you want to remove this player from the team roster? Their match score records for this tournament will also be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter className="mt-4 gap-2">
+            <AlertDialogCancel
+              disabled={deletingPlayer}
+              className="border-[#E5E5E5] text-[#555555] text-xs font-semibold"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeletePlayer();
+              }}
+              disabled={deletingPlayer}
+              className="bg-[#E9007F] hover:bg-[#d00072] text-white font-bold text-xs gap-1.5"
+            >
+              {deletingPlayer ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              <span>{deletingPlayer ? "Removing..." : "Remove Player"}</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

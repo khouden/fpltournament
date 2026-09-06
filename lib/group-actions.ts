@@ -18,6 +18,7 @@ export interface GroupMemberView {
   fplTeamName: string | null;
   fplId: number;
   isAdmin: boolean;
+  isManual?: boolean;
 }
 
 export interface GroupView {
@@ -25,6 +26,7 @@ export interface GroupView {
   name: string;
   logo: string | null;
   fplLeagueId: number | null;
+  isManual?: boolean;
   tournamentId: string;
   members: GroupMemberView[];
 }
@@ -456,4 +458,322 @@ export async function deleteGroupAction(
     };
   }
 }
+
+export interface CreateManualGroupInput {
+  tournamentId: string;
+  name: string;
+  logo?: string | null;
+  initialPlayers?: Array<{
+    name: string;
+    teamName?: string;
+    isAdmin?: boolean;
+    fplId?: number;
+  }>;
+}
+
+/**
+ * Create a custom/manual team without connecting to FPL API
+ */
+export async function createManualGroupAction(input: CreateManualGroupInput) {
+  try {
+    await requireAdminSession();
+    const tournamentId = input.tournamentId;
+    const name = input.name.trim();
+
+    if (!name) {
+      return { success: false, error: "Team name cannot be empty" };
+    }
+
+    const tournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: { groups: true, admins: true },
+    });
+
+    if (!tournament) {
+      return { success: false, error: "Tournament not found" };
+    }
+
+    if (tournament.status === "FINISHED") {
+      return {
+        success: false,
+        error: "Cannot add teams to a finished tournament",
+      };
+    }
+
+    // Check duplicate name
+    const existing = tournament.groups.find(
+      (g) => g.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existing) {
+      return {
+        success: false,
+        error: `A team named "${name}" already exists in this tournament`,
+      };
+    }
+
+    const tournamentAdminIds = Array.from(
+      new Set([
+        tournament.adminFplId,
+        ...tournament.admins.map((a) => a.fplId),
+      ])
+    );
+
+    const logo =
+      input.logo !== undefined
+        ? input.logo
+        : suggestLogoForTeamName(name)?.path || null;
+
+    const initialPlayers = input.initialPlayers || [];
+
+    const group = await prisma.group.create({
+      data: {
+        tournamentId,
+        name,
+        logo,
+        fplLeagueId: null,
+        isManual: true,
+        members: {
+          create: initialPlayers.map((p, idx) => {
+            const manualId = p.fplId && p.fplId > 0 ? p.fplId : -(idx + 1);
+            return {
+              fplName: p.name.trim(),
+              fplTeamName: p.teamName?.trim() || null,
+              fplId: manualId,
+              isAdmin: Boolean(p.isAdmin || tournamentAdminIds.includes(manualId)),
+              isManual: true,
+            };
+          }),
+        },
+      },
+      include: {
+        members: true,
+      },
+    });
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
+
+    return { success: true, group };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create manual team",
+    };
+  }
+}
+
+export interface AddMemberInput {
+  groupId: string;
+  tournamentId: string;
+  name: string;
+  teamName?: string;
+  isAdmin?: boolean;
+  fplId?: number;
+}
+
+/**
+ * Add a player to a group manually
+ */
+export async function addMemberToGroupAction(input: AddMemberInput) {
+  try {
+    await requireAdminSession();
+    const { groupId, tournamentId, name, teamName, isAdmin } = input;
+    const cleanName = name.trim();
+
+    if (!cleanName) {
+      return { success: false, error: "Player name cannot be empty" };
+    }
+
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        members: true,
+        tournament: {
+          include: { admins: true },
+        },
+      },
+    });
+
+    if (!group) {
+      return { success: false, error: "Team not found" };
+    }
+
+    const tournamentAdminIds = Array.from(
+      new Set([
+        group.tournament.adminFplId,
+        ...group.tournament.admins.map((a) => a.fplId),
+      ])
+    );
+
+    // Compute a unique manual fplId if not provided or <= 0
+    let finalFplId = input.fplId;
+    if (!finalFplId || finalFplId <= 0) {
+      const existingNegativeIds = group.members
+        .map((m) => m.fplId)
+        .filter((id) => id < 0);
+      const minId = existingNegativeIds.length > 0 ? Math.min(...existingNegativeIds) : 0;
+      finalFplId = minId - 1;
+    } else {
+      if (group.members.some((m) => m.fplId === finalFplId)) {
+        return {
+          success: false,
+          error: `A member with ID ${finalFplId} already exists in this team`,
+        };
+      }
+    }
+
+    const isMemberAdmin = Boolean(isAdmin || tournamentAdminIds.includes(finalFplId));
+
+    const member = await prisma.$transaction(async (tx) => {
+      const created = await tx.groupMember.create({
+        data: {
+          groupId,
+          fplName: cleanName,
+          fplTeamName: teamName?.trim() || null,
+          fplId: finalFplId,
+          isAdmin: isMemberAdmin,
+          isManual: true,
+        },
+      });
+
+      // Find any matches where this group is home or away and populate default 0 scores
+      const groupMatches = await tx.match.findMany({
+        where: {
+          OR: [{ homeGroupId: groupId }, { awayGroupId: groupId }],
+        },
+        select: { id: true, status: true },
+      });
+
+      if (groupMatches.length > 0) {
+        for (const m of groupMatches) {
+          await tx.matchMemberScore.create({
+            data: {
+              matchId: m.id,
+              memberId: created.id,
+              gameweekPoints: 0,
+              isExcluded: isMemberAdmin,
+              activeChip: null,
+              chipDeduction: 0,
+              isFinal: m.status === "FINALIZED",
+            },
+          });
+        }
+      }
+
+      return created;
+    });
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return { success: true, member };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to add player",
+    };
+  }
+}
+
+export interface UpdateMemberInput {
+  memberId: string;
+  tournamentId: string;
+  name?: string;
+  teamName?: string | null;
+  isAdmin?: boolean;
+}
+
+/**
+ * Update a group member's details
+ */
+export async function updateGroupMemberAction(input: UpdateMemberInput) {
+  try {
+    await requireAdminSession();
+    const { memberId, tournamentId, name, teamName, isAdmin } = input;
+
+    const member = await prisma.groupMember.findUnique({
+      where: { id: memberId },
+    });
+    if (!member) {
+      return { success: false, error: "Player not found" };
+    }
+
+    const data: { fplName?: string; fplTeamName?: string | null; isAdmin?: boolean } = {};
+    if (name !== undefined) {
+      const clean = name.trim();
+      if (!clean) return { success: false, error: "Player name cannot be empty" };
+      data.fplName = clean;
+    }
+    if (teamName !== undefined) {
+      data.fplTeamName = teamName ? teamName.trim() : null;
+    }
+    if (isAdmin !== undefined) {
+      data.isAdmin = isAdmin;
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const res = await tx.groupMember.update({
+        where: { id: memberId },
+        data,
+      });
+
+      if (isAdmin !== undefined) {
+        await tx.matchMemberScore.updateMany({
+          where: { memberId },
+          data: { isExcluded: isAdmin },
+        });
+      }
+
+      return res;
+    });
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return { success: true, member: updated };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update player",
+    };
+  }
+}
+
+/**
+ * Remove a player from a team
+ */
+export async function deleteGroupMemberAction(
+  memberId: string,
+  tournamentId: string
+) {
+  try {
+    await requireAdminSession();
+
+    await prisma.$transaction(async (tx) => {
+      await tx.matchMemberScore.deleteMany({
+        where: { memberId },
+      });
+      await tx.groupMember.delete({
+        where: { id: memberId },
+      });
+    });
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete player",
+    };
+  }
+}
+
 

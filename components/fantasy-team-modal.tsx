@@ -83,8 +83,17 @@ export function FantasyTeamModal({
     setRetryTrigger((prev) => prev + 1);
   }, []);
 
+  const isManualPlayer = !fplId || fplId <= 0;
+
   useEffect(() => {
     if (!isOpen || !fplId) return;
+
+    if (fplId <= 0) {
+      setSquad(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
     let isMounted = true;
     const controller = new AbortController();
@@ -199,16 +208,22 @@ export function FantasyTeamModal({
                   <h2 className="text-lg sm:text-xl font-black tracking-tight text-[#37003C] truncate">
                     {displayTeamName}
                   </h2>
-                  <a
-                    href={fplProfileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#555555] hover:text-[#37003C] transition-colors shrink-0 bg-[#F7F7F7] hover:bg-[#EEEEEE] px-2 py-0.5 rounded-full border border-[#E5E5E5]"
-                    title="Open on official Fantasy Premier League website"
-                  >
-                    <span>View on FPL</span>
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+                  {isManualPlayer ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#555555] bg-[#F7F7F7] px-2 py-0.5 rounded-full border border-[#E5E5E5]">
+                      Manual Player
+                    </span>
+                  ) : (
+                    <a
+                      href={fplProfileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#555555] hover:text-[#37003C] transition-colors shrink-0 bg-[#F7F7F7] hover:bg-[#EEEEEE] px-2 py-0.5 rounded-full border border-[#E5E5E5]"
+                      title="Open on official Fantasy Premier League website"
+                    >
+                      <span>View on FPL</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
                 </div>
 
                 <div className="text-xs text-[#666666] flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 font-medium">
@@ -433,8 +448,26 @@ export function FantasyTeamModal({
             </div>
           )}
 
+          {/* Manual Tournament Player State */}
+          {isManualPlayer && !loading && (
+            <div className="my-8 max-w-md mx-auto text-center p-6 bg-white rounded-2xl border border-[#E5E5E5] shadow-md animate-fpl-fade-in">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#37003C]/10 border border-[#37003C]/20 text-[#37003C] mb-4 shadow-xs">
+                <Shield className="h-7 w-7 text-[#37003C]" />
+              </div>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#37003C] text-[#00FF87] mb-2">
+                Manual Tournament Player
+              </span>
+              <h3 className="text-base font-extrabold text-[#37003C]">
+                Direct Roster Entry
+              </h3>
+              <p className="text-xs sm:text-sm text-[#666666] mt-2 leading-relaxed">
+                This player is participating in the tournament via manual roster entry without an external Fantasy Premier League account. Their scores and statistics are entered directly by the tournament administrator for each fixture.
+              </p>
+            </div>
+          )}
+
           {/* Empty State */}
-          {!loading && !error && !squad && (
+          {!loading && !error && !squad && !isManualPlayer && (
             <div className="flex flex-col items-center justify-center py-16 text-center text-[#777777]">
               <Shield className="h-10 w-10 text-[#CCCCCC] mb-2" />
               <p className="text-sm font-bold text-[#1F1F1F]">Squad Unavailable</p>
@@ -839,9 +872,13 @@ export function FantasyTeamModal({
         {/* Modal Footer */}
         <div className="border-t border-[#E5E5E5] bg-white px-4 sm:px-6 py-3 flex items-center justify-between text-xs text-[#777777]">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-[#37003C]">FPL Sync</span>
+            <span className="font-semibold text-[#37003C]">
+              {isManualPlayer ? "Manual Scoring" : "FPL Sync"}
+            </span>
             <span className="text-[#CCCCCC]">•</span>
-            <span>Official Premier League Data</span>
+            <span>
+              {isManualPlayer ? "Admin Managed Roster" : "Official Premier League Data"}
+            </span>
           </div>
           <Button
             variant="outline"

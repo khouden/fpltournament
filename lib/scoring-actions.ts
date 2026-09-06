@@ -5,6 +5,7 @@ import {
   calculateMatchScore,
   recalculateTournamentScores,
   recalculateRoundScores,
+  determineMatchResult,
 } from "@/lib/scoring";
 import { isFPLDeadlineActive, FPLDeadlineError, getGameweekStatus } from "@/lib/fpl";
 import { validateScheduleAction } from "@/lib/schedule-actions";
@@ -256,3 +257,155 @@ export async function finishTournamentAction(tournamentId: string) {
     };
   }
 }
+
+export interface ManualMemberScoreInput {
+  memberId: string;
+  gameweekPoints: number;
+  activeChip?: string | null;
+}
+
+export interface SaveManualMatchScoresInput {
+  matchId: string;
+  tournamentId: string;
+  scores: ManualMemberScoreInput[];
+  status?: "COMPLETED" | "IN_PROGRESS" | "SCHEDULED";
+}
+
+/**
+ * Server action to save / update manual player scores for a fixture
+ */
+export async function saveManualMatchScoresAction(
+  input: SaveManualMatchScoresInput
+) {
+  try {
+    await requireAdminSession();
+    const { matchId, tournamentId, scores, status = "COMPLETED" } = input;
+
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        round: { include: { tournament: { include: { admins: true } } } },
+        homeGroup: { include: { members: true } },
+        awayGroup: { include: { members: true } },
+        scores: true,
+      },
+    });
+
+    if (!match) {
+      return { success: false, error: "Match not found" };
+    }
+
+    if (match.status === "FINALIZED") {
+      return {
+        success: false,
+        error: "Cannot edit scores for a finalized match. It is permanently locked.",
+      };
+    }
+
+    const adminFplIds = Array.from(
+      new Set([
+        match.round.tournament.adminFplId,
+        ...(match.round.tournament.admins?.map((a) => a.fplId) || []),
+      ])
+    );
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Upsert or update each submitted member score
+      for (const s of scores) {
+        const member =
+          match.homeGroup?.members.find((m) => m.id === s.memberId) ||
+          match.awayGroup?.members.find((m) => m.id === s.memberId);
+
+        const isExcluded = Boolean(
+          member?.isAdmin || (member && adminFplIds.includes(member.fplId))
+        );
+
+        const points = Math.max(
+          -100,
+          Math.min(1000, Number(s.gameweekPoints) || 0)
+        );
+
+        await tx.matchMemberScore.upsert({
+          where: {
+            matchId_memberId: {
+              matchId: match.id,
+              memberId: s.memberId,
+            },
+          },
+          update: {
+            gameweekPoints: points,
+            activeChip: s.activeChip || null,
+            isExcluded,
+          },
+          create: {
+            matchId: match.id,
+            memberId: s.memberId,
+            gameweekPoints: points,
+            activeChip: s.activeChip || null,
+            isExcluded,
+          },
+        });
+      }
+
+      // 2. Fetch all current scores for this match to compute group totals
+      const allScores = await tx.matchMemberScore.findMany({
+        where: { matchId: match.id },
+        include: { member: true },
+      });
+
+      let homeScore = 0;
+      let awayScore = 0;
+
+      for (const s of allScores) {
+        if (!s.isExcluded) {
+          if (match.homeGroupId && s.member.groupId === match.homeGroupId) {
+            homeScore += s.gameweekPoints;
+          } else if (match.awayGroupId && s.member.groupId === match.awayGroupId) {
+            awayScore += s.gameweekPoints;
+          }
+        }
+      }
+
+      const result = determineMatchResult(homeScore, awayScore);
+      const winnerId =
+        result === "HOME_WIN"
+          ? match.homeGroupId
+          : result === "AWAY_WIN"
+            ? match.awayGroupId
+            : null;
+
+      await tx.match.update({
+        where: { id: match.id },
+        data: {
+          homeScore,
+          awayScore,
+          result,
+          winnerId,
+          status,
+        },
+      });
+    });
+
+    // 3. Recalculate downstream bracket / standings
+    try {
+      await recalculateTournamentScores(tournamentId);
+    } catch (e) {
+      console.warn("Recalculate tournament non-fatal error:", e);
+    }
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/matches`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+    safeRevalidate(`/matches/${matchId}`);
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to save manual scores",
+    };
+  }
+}
+

@@ -52,14 +52,9 @@ export async function calculateGroupScore(
   groupId: string,
   gameweek: number,
   adminFplIds: number | number[],
-  options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true
+  options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true,
+  matchId?: string
 ): Promise<GroupScoreResult> {
-  if (isFPLDeadlineActive()) {
-    throw new FPLDeadlineError(
-      "Cannot calculate group score during an active FPL deadline. Fantasy Premier League points are updating."
-    );
-  }
-
   const group = await prisma.group.findUnique({
     where: { id: groupId },
     include: { members: true },
@@ -72,6 +67,71 @@ export async function calculateGroupScore(
   const excludedAdminIds = Array.isArray(adminFplIds)
     ? adminFplIds
     : [adminFplIds];
+
+  // If group is MANUAL, bypass FPL API requests and deadline check completely
+  if (group.isManual) {
+    let totalScore = 0;
+    const members: MemberScoreBreakdown[] = [];
+
+    // Query existing scores for this match if matchId is provided
+    let existingScores: Array<{
+      memberId: string;
+      gameweekPoints: number;
+      activeChip: string | null;
+      chipDeduction: number;
+    }> = [];
+
+    if (matchId) {
+      existingScores = await prisma.matchMemberScore.findMany({
+        where: {
+          matchId,
+          memberId: { in: group.members.map((m) => m.id) },
+        },
+        select: {
+          memberId: true,
+          gameweekPoints: true,
+          activeChip: true,
+          chipDeduction: true,
+        },
+      });
+    }
+
+    for (const member of group.members) {
+      const isExcluded = member.isAdmin || excludedAdminIds.includes(member.fplId);
+      const existing = existingScores.find((s) => s.memberId === member.id);
+      // By default the scores will be zero
+      const points = existing ? existing.gameweekPoints : 0;
+
+      if (!isExcluded) {
+        totalScore += points;
+      }
+
+      members.push({
+        memberId: member.id,
+        fplName: member.fplName,
+        fplTeamName: member.fplTeamName,
+        fplId: member.fplId,
+        gameweekPoints: points,
+        rawPoints: points + (existing?.chipDeduction || 0),
+        isExcluded,
+        activeChip: existing?.activeChip || null,
+        chipDeduction: existing?.chipDeduction || 0,
+      });
+    }
+
+    return {
+      groupId: group.id,
+      groupName: group.name,
+      totalScore,
+      members,
+    };
+  }
+
+  if (isFPLDeadlineActive()) {
+    throw new FPLDeadlineError(
+      "Cannot calculate group score during an active FPL deadline. Fantasy Premier League points are updating."
+    );
+  }
 
   let totalScore = 0;
   const members: MemberScoreBreakdown[] = [];
@@ -130,12 +190,6 @@ export async function calculateMatchScore(
   matchId: string,
   forceRecalculate = false
 ): Promise<MatchScoreResult> {
-  if (isFPLDeadlineActive()) {
-    throw new FPLDeadlineError(
-      "Cannot calculate match score during an active FPL deadline. Points are updating."
-    );
-  }
-
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {
@@ -160,6 +214,16 @@ export async function calculateMatchScore(
 
   if (!match) {
     throw new Error(`Match ${matchId} not found`);
+  }
+
+  const isAllManualMatch = Boolean(
+    match.homeGroup?.isManual && match.awayGroup?.isManual
+  );
+
+  if (isFPLDeadlineActive() && !isAllManualMatch) {
+    throw new FPLDeadlineError(
+      "Cannot calculate match score during an active FPL deadline. Points are updating."
+    );
   }
 
   // Preserve finalized matches unless forced
@@ -256,8 +320,11 @@ export async function calculateMatchScore(
     allMembers.length > 0 &&
     allMembers.every((m) => m.isAdmin || hasMockPoints(m.fplId, gameweek));
 
-  // If the Gameweek has NOT started yet (incoming matches / future rounds) and not an in-memory mock demo match:
-  if (gwInfo.status === "UPCOMING" && !isMockMatch) {
+  const hasExistingScores = match.homeScore !== null && match.awayScore !== null;
+  const hasManualGroup = Boolean(match.homeGroup?.isManual || match.awayGroup?.isManual);
+
+  // If the Gameweek has NOT started yet (incoming matches / future rounds) and not mock and not manual with entered scores:
+  if (gwInfo.status === "UPCOMING" && !isMockMatch && !isAllManualMatch && !hasExistingScores) {
     if (match.status !== "FINALIZED") {
       await prisma.match.update({
         where: { id: match.id },
@@ -301,14 +368,16 @@ export async function calculateMatchScore(
     resolvedHomeGroupId,
     gameweek,
     adminFplIds,
-    chipOptions
+    chipOptions,
+    match.id
   );
 
   const awayResult = await calculateGroupScore(
     resolvedAwayGroupId,
     gameweek,
     adminFplIds,
-    chipOptions
+    chipOptions,
+    match.id
   );
 
   // Determine Match Result
@@ -443,9 +512,25 @@ export async function recalculateTournamentScores(
       });
 
     // If this round's Gameweek has not started yet, keep matches scheduled / incoming
-    // and skip making premature external API calls
+    // and skip making premature external API calls, but preserve matches with manual scores or all-manual
     if (gwInfo.status === "UPCOMING" && !allRoundMatchesMock) {
       for (const match of round.matches) {
+        const isMatchAllManual = Boolean(match.homeGroup?.isManual && match.awayGroup?.isManual);
+        const hasManualScores =
+          (match.homeGroup?.isManual || match.awayGroup?.isManual) &&
+          match.homeScore !== null &&
+          match.awayScore !== null;
+
+        if (isMatchAllManual || hasManualScores) {
+          try {
+            const matchResult = await calculateMatchScore(match.id, forceRecalculate);
+            results.push(matchResult);
+            continue;
+          } catch (e) {
+            console.warn(`Could not calculate manual match ${match.id}:`, e);
+          }
+        }
+
         if (match.status !== "FINALIZED") {
           await prisma.match.update({
             where: { id: match.id },
@@ -544,6 +629,22 @@ export async function recalculateRoundScores(
 
   if (gwInfo.status === "UPCOMING" && !allRoundMatchesMock) {
     for (const match of round.matches) {
+      const isMatchAllManual = Boolean(match.homeGroup?.isManual && match.awayGroup?.isManual);
+      const hasManualScores =
+        (match.homeGroup?.isManual || match.awayGroup?.isManual) &&
+        match.homeScore !== null &&
+        match.awayScore !== null;
+
+      if (isMatchAllManual || hasManualScores) {
+        try {
+          const matchResult = await calculateMatchScore(match.id, forceRecalculate);
+          results.push(matchResult);
+          continue;
+        } catch (e) {
+          console.warn(`Could not calculate manual match ${match.id}:`, e);
+        }
+      }
+
       if (match.status !== "FINALIZED") {
         await prisma.match.update({
           where: { id: match.id },
