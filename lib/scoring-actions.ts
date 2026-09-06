@@ -1,8 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { calculateMatchScore, recalculateTournamentScores } from "@/lib/scoring";
-import { isFPLDeadlineActive, FPLDeadlineError } from "@/lib/fpl";
+import {
+  calculateMatchScore,
+  recalculateTournamentScores,
+  recalculateRoundScores,
+} from "@/lib/scoring";
+import { isFPLDeadlineActive, FPLDeadlineError, getGameweekStatus } from "@/lib/fpl";
 import { validateScheduleAction } from "@/lib/schedule-actions";
 import { safeRevalidate } from "@/lib/safe-revalidate";
 import { requireAdminSession } from "@/lib/auth-server";
@@ -77,6 +81,46 @@ export async function recalculateAllScoresAction(tournamentId: string) {
 }
 
 /**
+ * Server action to recalculate all match scores in a single round
+ */
+export async function recalculateRoundScoresAction(
+  roundId: string,
+  tournamentId: string
+) {
+  try {
+    await requireAdminSession();
+
+    if (isFPLDeadlineActive()) {
+      return {
+        success: false,
+        error:
+          "Score calculation is disabled during the official FPL Gameweek deadline. Fantasy Premier League points are not finalized while the game is updating. Please try again after the deadline window.",
+        isDeadline: true,
+      };
+    }
+
+    const results = await recalculateRoundScores(roundId, true);
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/matches`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+    return { success: true, count: results.length };
+  } catch (error) {
+    const isDeadline =
+      error instanceof FPLDeadlineError ||
+      (error as { isDeadline?: boolean })?.isDeadline;
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to recalculate round scores",
+      isDeadline: !!isDeadline,
+    };
+  }
+}
+
+/**
  * Server action to finalize a match result
  */
 export async function finalizeMatchAction(matchId: string, tournamentId: string) {
@@ -92,10 +136,27 @@ export async function finalizeMatchAction(matchId: string, tournamentId: string)
       };
     }
 
-    // 1. Calculate score to ensure latest values are saved
+    // 1. Check if match's gameweek has started
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+      include: { round: true },
+    });
+    if (!match) {
+      return { success: false, error: "Match not found" };
+    }
+
+    const gwInfo = await getGameweekStatus(match.round.gameweek);
+    if (gwInfo.status === "UPCOMING") {
+      return {
+        success: false,
+        error: `Cannot finalize match: Gameweek ${match.round.gameweek} has not started yet.`,
+      };
+    }
+
+    // 2. Calculate score to ensure latest values are saved
     await calculateMatchScore(matchId, true);
 
-    // 2. Mark match and scores as finalized
+    // 3. Mark match and scores as finalized
     await prisma.$transaction([
       prisma.match.update({
         where: { id: matchId },
@@ -144,8 +205,12 @@ export async function publishTournamentWithValidationAction(tournamentId: string
       };
     }
 
-    // Recalculate all scores
-    await recalculateTournamentScores(tournamentId);
+    // Attempt to calculate initial scores for past/live rounds, but do not block publishing if external API fails
+    try {
+      await recalculateTournamentScores(tournamentId);
+    } catch (scoreErr) {
+      console.warn("Non-fatal error recalculating scores on publish:", scoreErr);
+    }
 
     const tournament = await prisma.tournament.update({
       where: { id: tournamentId },

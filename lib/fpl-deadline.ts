@@ -49,12 +49,12 @@ let liveHealthCache: HealthCache | null = null;
 // Approximate Gameweek deadlines schedule (UTC).
 // In production, these are dynamically refreshed from /bootstrap-static/.
 // Each entry marks when the FPL servers lock down. The lock lasts ~90 to 120 minutes.
-interface ScheduledDeadline {
+export interface ScheduledDeadline {
   gameweek: number;
   deadlineTime: string; // ISO UTC
 }
 
-const DEFAULT_SCHEDULED_DEADLINES: ScheduledDeadline[] = [
+export const DEFAULT_SCHEDULED_DEADLINES: ScheduledDeadline[] = [
   // Fallback anchor dates for 2024/25 & 2025/26 season fixtures
   { gameweek: 1, deadlineTime: "2024-08-16T17:30:00Z" },
   { gameweek: 2, deadlineTime: "2024-08-24T10:00:00Z" },

@@ -134,28 +134,49 @@ export default async function MatchPage(
 
               {/* Status Badge */}
               <div>
-                <span
-                  className={`inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border ${
-                    match.status === "FINALIZED"
-                      ? "bg-[#00FF87]/20 text-[#008744] border-[#00FF87]/40"
-                      : match.status === "COMPLETED"
-                        ? "bg-[#37003C]/10 text-[#37003C] border-[#37003C]/20"
-                        : "bg-[#F3F4F6] text-[#666666] border-[#E5E5E5]"
-                  }`}
-                >
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      match.status === "FINALIZED"
-                        ? "bg-[#008744]"
-                        : match.status === "COMPLETED"
-                          ? "bg-[#37003C]"
-                          : "bg-[#8A8A8A]"
-                    }`}
-                  />
-                  <span>{match.status}</span>
-                </span>
+                {match.status === "FINALIZED" ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border bg-[#00FF87]/20 text-[#008744] border-[#00FF87]/40">
+                    <span className="h-2 w-2 rounded-full bg-[#008744]" />
+                    <span>FINALIZED</span>
+                  </span>
+                ) : match.status === "IN_PROGRESS" ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border bg-rose-500/15 text-rose-600 border-rose-500/40 shadow-xs">
+                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                    <span>LIVE · IN PROGRESS</span>
+                  </span>
+                ) : match.status === "COMPLETED" ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border bg-[#37003C]/10 text-[#37003C] border-[#37003C]/20">
+                    <span className="h-2 w-2 rounded-full bg-[#37003C]" />
+                    <span>COMPLETED</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border bg-sky-50 text-sky-700 border-sky-200">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>INCOMING MATCH</span>
+                  </span>
+                )}
               </div>
             </div>
+
+            {/* Gameweek Context Notice */}
+            {match.status === "IN_PROGRESS" ? (
+              <div className="relative z-10 mt-4 rounded-xl bg-rose-500/10 border border-rose-500/30 p-3.5 flex items-center gap-3 text-rose-700 text-xs sm:text-sm font-semibold">
+                <span className="flex h-3 w-3 relative shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600" />
+                </span>
+                <span>
+                  <strong>Live Match in Progress:</strong> Gameweek {match.round.gameweek} matches are currently underway. Match scores and member points are provisional and will update live until the Gameweek finishes.
+                </span>
+              </div>
+            ) : match.status === "SCHEDULED" ? (
+              <div className="relative z-10 mt-4 rounded-xl bg-sky-50 border border-sky-200 p-3.5 flex items-center gap-3 text-sky-800 text-xs sm:text-sm font-semibold">
+                <Clock className="h-4 w-4 shrink-0 text-sky-600" />
+                <span>
+                  <strong>Incoming Fixture:</strong> Gameweek {match.round.gameweek} has not started yet. Team lineups and player points will track live once the Gameweek kicks off.
+                </span>
+              </div>
+            ) : null}
 
             {/* Matchup Centerpiece */}
             <div className="relative z-10 py-6 sm:py-8">
@@ -240,11 +261,26 @@ export default async function MatchPage(
                           {match.awayScore}
                         </span>
                       </div>
+                      {match.status === "IN_PROGRESS" ? (
+                        <span className="inline-flex items-center gap-1.5 mt-2 text-xs font-black text-rose-600 uppercase tracking-wider">
+                          <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
+                          Live Match · Results Not Completed Yet
+                        </span>
+                      ) : (
+                        <span className="mt-2 text-xs font-bold text-[#777777] uppercase tracking-wider">
+                          Official Match Result
+                        </span>
+                      )}
                     </div>
                   ) : (
-                    <div className="inline-flex items-center justify-center h-12 w-16 rounded-xl bg-[#F3F4F6] border border-[#E5E5E5]">
-                      <span className="text-xl sm:text-2xl font-black text-[#8A8A8A] tracking-wider">
-                        VS
+                    <div className="flex flex-col items-center justify-center gap-1.5">
+                      <div className="inline-flex items-center justify-center h-12 w-16 rounded-xl bg-sky-50 border border-sky-200">
+                        <span className="text-xl sm:text-2xl font-black text-sky-700 tracking-wider">
+                          VS
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-bold text-[#888888] uppercase tracking-wider">
+                        Not Started Yet
                       </span>
                     </div>
                   )}

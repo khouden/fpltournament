@@ -402,14 +402,19 @@ export default async function TournamentPage(
                             <CheckCircle2 className="h-3.5 w-3.5" />
                             FINALIZED
                           </span>
-                        ) : round.matches.some((m) => m.status === "COMPLETED" || m.status === "FINALIZED") ? (
+                        ) : round.matches.some((m) => m.status === "IN_PROGRESS") ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-rose-500/15 text-rose-600 border border-rose-500/40 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider shadow-2xs">
+                            <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                            LIVE ROUND
+                          </span>
+                        ) : round.matches.length > 0 && round.matches.every((m) => m.status === "COMPLETED" || m.status === "FINALIZED") ? (
                           <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[#37003C]/10 text-[#37003C] border border-[#37003C]/20 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider">
                             COMPLETED
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-[#F5F5F5] text-[#777777] border border-[#E5E5E5] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider">
+                          <span className="inline-flex items-center gap-1.5 rounded-[6px] bg-sky-50 text-sky-700 border border-sky-200 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider">
                             <Clock className="h-3.5 w-3.5" />
-                            SCHEDULED
+                            INCOMING
                           </span>
                         )}
                       </div>
@@ -454,17 +459,26 @@ export default async function TournamentPage(
                                   Gameweek {round.gameweek}
                                 </span>
                               </div>
-                              <span
-                                className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-[6px] ${
-                                  match.status === "FINALIZED"
-                                    ? "bg-[#00FF87]/20 text-[#008744] border border-[#00FF87]/40"
-                                    : match.status === "COMPLETED"
-                                      ? "bg-[#37003C]/10 text-[#37003C] border border-[#37003C]/20"
-                                      : "bg-[#F5F5F5] text-[#777777] border border-[#E5E5E5]"
-                                }`}
-                              >
-                                {match.status}
-                              </span>
+                              {match.status === "FINALIZED" ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-[6px] bg-[#00FF87]/20 text-[#008744] border border-[#00FF87]/40">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  FINALIZED
+                                </span>
+                              ) : match.status === "IN_PROGRESS" ? (
+                                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-[6px] bg-rose-500/15 text-rose-600 border border-rose-500/40 shadow-2xs">
+                                  <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                                  LIVE MATCH
+                                </span>
+                              ) : match.status === "COMPLETED" ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-[6px] bg-[#37003C]/10 text-[#37003C] border border-[#37003C]/20">
+                                  COMPLETED
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-[6px] bg-sky-50 text-sky-700 border border-sky-200">
+                                  <Clock className="h-3 w-3" />
+                                  INCOMING
+                                </span>
+                              )}
                             </div>
 
                             {/* Scoreboard Display */}
@@ -520,11 +534,18 @@ export default async function TournamentPage(
                                         {match.homeScore} — {match.awayScore}
                                       </div>
                                       <div className="mt-1.5 text-[10px] uppercase font-black tracking-widest text-[#777777]">
-                                        {isDraw
-                                          ? "MATCH DRAW"
-                                          : isHomeWin
-                                            ? `${home.name} WIN`
-                                            : `${away.name} WIN`}
+                                        {match.status === "IN_PROGRESS" ? (
+                                          <span className="inline-flex items-center gap-1 text-rose-600 font-black">
+                                            <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
+                                            LIVE SCORE · IN PROGRESS
+                                          </span>
+                                        ) : isDraw ? (
+                                          "MATCH DRAW"
+                                        ) : isHomeWin ? (
+                                          `${home.name} WIN`
+                                        ) : (
+                                          `${away.name} WIN`
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -602,11 +623,18 @@ export default async function TournamentPage(
                                       {match.homeScore} — {match.awayScore}
                                     </div>
                                     <div className="text-[9px] uppercase font-black tracking-wider text-[#777777] mt-0.5">
-                                      {isDraw
-                                        ? "MATCH DRAW"
-                                        : isHomeWin
-                                          ? `${home.name} WIN`
-                                          : `${away.name} WIN`}
+                                      {match.status === "IN_PROGRESS" ? (
+                                        <span className="inline-flex items-center gap-1 text-rose-600 font-black">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
+                                          LIVE · IN PROGRESS
+                                        </span>
+                                      ) : isDraw ? (
+                                        "MATCH DRAW"
+                                      ) : isHomeWin ? (
+                                        `${home.name} WIN`
+                                      ) : (
+                                        `${away.name} WIN`
+                                      )}
                                     </div>
                                   </div>
 
@@ -662,44 +690,50 @@ export default async function TournamentPage(
                               </div>
                             ) : (
                               /* Uncalculated Future Match: Show VS (NOT 0 - 0) */
-                              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 py-4 text-center">
-                                <div className="flex items-center gap-2.5">
-                                  {home.logo ? (
-                                    <img
-                                      src={home.logo}
-                                      alt={home.name}
-                                      className="h-8 w-8 object-contain"
-                                    />
-                                  ) : (
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#37003C] text-white font-bold text-xs">
-                                      {home.name.slice(0, 2).toUpperCase()}
-                                    </div>
-                                  )}
-                                  <span className="text-base font-bold text-[#37003C]">
-                                    {home.name}
-                                  </span>
-                                </div>
+                              <div className="flex flex-col items-center justify-center gap-2.5 py-4 text-center">
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
+                                  <div className="flex items-center gap-2.5">
+                                    {home.logo ? (
+                                      <img
+                                        src={home.logo}
+                                        alt={home.name}
+                                        className="h-8 w-8 object-contain"
+                                      />
+                                    ) : (
+                                      <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#37003C] text-white font-bold text-xs">
+                                        {home.name.slice(0, 2).toUpperCase()}
+                                      </div>
+                                    )}
+                                    <span className="text-base font-bold text-[#37003C]">
+                                      {home.name}
+                                    </span>
+                                  </div>
 
-                                <span className="text-xs font-extrabold text-[#37003C] bg-[#37003C]/5 border border-[#37003C]/10 px-3 py-1 rounded-full uppercase tracking-wider">
-                                  VS
+                                  <span className="text-xs font-extrabold text-sky-700 bg-sky-50 border border-sky-200 px-3.5 py-1 rounded-full uppercase tracking-wider">
+                                    VS
+                                  </span>
+
+                                  <div className="flex items-center gap-2.5">
+                                    {away.logo ? (
+                                      <img
+                                        src={away.logo}
+                                        alt={away.name}
+                                        className="h-8 w-8 object-contain"
+                                      />
+                                    ) : (
+                                      <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#37003C] text-white font-bold text-xs">
+                                        {away.name.slice(0, 2).toUpperCase()}
+                                      </div>
+                                    )}
+                                    <span className="text-base font-bold text-[#37003C]">
+                                      {away.name}
+                                    </span>
+                                  </div>
+                                </div>
+                                <span className="text-[11px] font-semibold text-[#888888] flex items-center justify-center gap-1.5">
+                                  <Clock className="h-3 w-3 text-[#999999]" />
+                                  Incoming Match · Gameweek {round.gameweek} Not Started Yet
                                 </span>
-
-                                <div className="flex items-center gap-2.5">
-                                  {away.logo ? (
-                                    <img
-                                      src={away.logo}
-                                      alt={away.name}
-                                      className="h-8 w-8 object-contain"
-                                    />
-                                  ) : (
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-[8px] bg-[#37003C] text-white font-bold text-xs">
-                                      {away.name.slice(0, 2).toUpperCase()}
-                                    </div>
-                                  )}
-                                  <span className="text-base font-bold text-[#37003C]">
-                                    {away.name}
-                                  </span>
-                                </div>
                               </div>
                             )}
 

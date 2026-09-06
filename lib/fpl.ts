@@ -5,6 +5,7 @@ import {
   assertNotInFPLDeadline,
   recordFPLDeadlineSignal,
   recordFPLSuccessSignal,
+  DEFAULT_SCHEDULED_DEADLINES,
   type FPLDeadlineStatus,
 } from "./fpl-deadline";
 
@@ -257,6 +258,14 @@ const MOCK_LEAGUES: Record<number, { league: FPLLeague; members: FPLLeagueEntry[
 };
 
 // Mock points per GW (e.g. GW5 matches the spec draw scenario)
+export function isMockEntry(entryId: number): boolean {
+  return entryId === 1234567 || !!MOCK_MANAGERS[entryId];
+}
+
+export function hasMockPoints(entryId: number, gameweek: number): boolean {
+  return MOCK_GW_POINTS[`${entryId}_${gameweek}`] !== undefined;
+}
+
 const MOCK_GW_POINTS: Record<string, number> = {
   // GW5: Real Madrid vs Napoli Draw Scenario from spec:
   // RM: Ali (50) + Mohamed (50) + Admin (40 - excluded) + Zaid (30) + Baha (30) = 160
@@ -305,7 +314,7 @@ const MOCK_GW_CHIPS: Record<
   "888888_6": { activeChip: "wildcard" },
 };
 
-async function fetchFPL<T>(endpoint: string): Promise<T> {
+async function fetchFPL<T>(endpoint: string, retries = 2): Promise<T> {
   // If FPL is known to be in deadline mode, fail fast immediately
   if (isFPLDeadlineActive()) {
     throw new FPLDeadlineError();
@@ -319,65 +328,80 @@ async function fetchFPL<T>(endpoint: string): Promise<T> {
     return cached;
   }
 
-  try {
-    const url = `${FPL_API_BASE}${endpoint}`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const url = `${FPL_API_BASE}${endpoint}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        Accept: "application/json",
-      },
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
+      const response = await fetch(url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+          Accept: "application/json",
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    if (
-      response.status === 503 ||
-      response.status === 403 ||
-      response.status === 502 ||
-      response.status === 504
-    ) {
-      recordFPLDeadlineSignal(
-        `FPL server returned HTTP ${response.status} (${response.statusText || "Service Updating"})`
-      );
-      throw new FPLDeadlineError(
-        `Fantasy Premier League API is temporarily unavailable (HTTP ${response.status}). The game is currently updating for the deadline.`
-      );
-    }
-
-    if (!response.ok) {
-      throw new Error(`FPL API error: ${response.status} ${response.statusText}`);
-    }
-
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("text/html")) {
-      const text = await response.text();
       if (
-        text.toLowerCase().includes("game is being updated") ||
-        text.toLowerCase().includes("updating") ||
-        text.toLowerCase().includes("service unavailable")
+        response.status === 503 ||
+        response.status === 403 ||
+        response.status === 502 ||
+        response.status === 504
       ) {
-        recordFPLDeadlineSignal("FPL HTML maintenance page: Game is being updated");
-        throw new FPLDeadlineError();
+        recordFPLDeadlineSignal(
+          `FPL server returned HTTP ${response.status} (${response.statusText || "Service Updating"})`
+        );
+        throw new FPLDeadlineError(
+          `Fantasy Premier League API is temporarily unavailable (HTTP ${response.status}). The game is currently updating for the deadline.`
+        );
       }
-      throw new Error("Received unexpected HTML response from FPL API");
-    }
 
-    const data = (await response.json()) as T;
-    recordFPLSuccessSignal();
-    setInCache(cacheKey, data);
-    return data;
-  } catch (error) {
-    if (error instanceof FPLDeadlineError) {
-      throw error;
+      // Handle Rate Limiting (HTTP 429) with exponential backoff
+      if (response.status === 429 && attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
+
+      if (!response.ok) {
+        throw new Error(`FPL API error: ${response.status} ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("text/html")) {
+        const text = await response.text();
+        if (
+          text.toLowerCase().includes("game is being updated") ||
+          text.toLowerCase().includes("updating") ||
+          text.toLowerCase().includes("service unavailable")
+        ) {
+          recordFPLDeadlineSignal("FPL HTML maintenance page: Game is being updated");
+          throw new FPLDeadlineError();
+        }
+        throw new Error("Received unexpected HTML response from FPL API");
+      }
+
+      const data = (await response.json()) as T;
+      recordFPLSuccessSignal();
+      setInCache(cacheKey, data);
+      return data;
+    } catch (error) {
+      if (error instanceof FPLDeadlineError) {
+        throw error;
+      }
+      // If network timeout or transient error (and not a definitive 404), retry
+      if (attempt < retries && !(error instanceof Error && error.message.includes("404"))) {
+        await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(
+        `Failed to fetch from FPL API (${endpoint}): ${error instanceof Error ? error.message : String(error)}`
+      );
     }
-    throw new Error(
-      `Failed to fetch from FPL API (${endpoint}): ${error instanceof Error ? error.message : String(error)}`
-    );
   }
+
+  throw new Error(`Failed to fetch from FPL API (${endpoint}): Max retries exceeded`);
 }
 
 /**
@@ -634,6 +658,167 @@ export async function getBootstrapStaticLookup(): Promise<Map<number, ElementMet
   }
 }
 
+export type GameweekStatusType = "FINISHED" | "LIVE" | "UPCOMING";
+
+export interface GameweekStatusInfo {
+  gameweek: number;
+  status: GameweekStatusType;
+  isCurrent: boolean;
+  isFinished: boolean;
+  deadlineTime?: string;
+}
+
+export interface FPLEvent {
+  id: number;
+  name: string;
+  deadline_time: string;
+  finished: boolean;
+  data_checked: boolean;
+  is_previous: boolean;
+  is_current: boolean;
+  is_next: boolean;
+}
+
+// In-memory simulation override (useful for testing and admin control)
+const simulatedGameweekStatuses = new Map<number, GameweekStatusType>();
+
+export function setSimulatedGameweekStatus(
+  gameweek: number,
+  status: GameweekStatusType | null
+): void {
+  if (status === null) {
+    simulatedGameweekStatuses.delete(gameweek);
+  } else {
+    simulatedGameweekStatuses.set(gameweek, status);
+  }
+}
+
+export function clearSimulatedGameweekStatuses(): void {
+  simulatedGameweekStatuses.clear();
+}
+
+/**
+ * Fetch cached bootstrap-static events (all 38 Gameweeks)
+ */
+export async function getBootstrapStaticEvents(): Promise<FPLEvent[]> {
+  const cacheKey = "fpl::bootstrap_static_events";
+  const cached = getFromCache<FPLEvent[]>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const data = await fetchFPL<{
+      events: FPLEvent[];
+    }>("/bootstrap-static/");
+
+    if (data && Array.isArray(data.events)) {
+      setInCache(cacheKey, data.events);
+      return data.events;
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Determine the status of a specific Gameweek:
+ * - "FINISHED": Official matches & bonus finished and locked
+ * - "LIVE": Gameweek is in progress (kickoff passed / is_current, not finished)
+ * - "UPCOMING": Gameweek has not kicked off yet
+ */
+export async function getGameweekStatus(gameweek: number): Promise<GameweekStatusInfo> {
+  // 1. In-memory simulated override
+  if (simulatedGameweekStatuses.has(gameweek)) {
+    const simStatus = simulatedGameweekStatuses.get(gameweek)!;
+    return {
+      gameweek,
+      status: simStatus,
+      isCurrent: simStatus === "LIVE",
+      isFinished: simStatus === "FINISHED",
+    };
+  }
+
+  // 2. Official FPL bootstrap-static check
+  try {
+    const events = await getBootstrapStaticEvents();
+    const event = events.find((e) => e.id === gameweek);
+    if (event) {
+      if (event.finished) {
+        return {
+          gameweek,
+          status: "FINISHED",
+          isCurrent: false,
+          isFinished: true,
+          deadlineTime: event.deadline_time,
+        };
+      }
+
+      const now = Date.now();
+      const deadlineMs = event.deadline_time ? new Date(event.deadline_time).getTime() : 0;
+      const hasPassedDeadline = deadlineMs > 0 && now >= deadlineMs;
+
+      if (event.is_current || hasPassedDeadline) {
+        return {
+          gameweek,
+          status: "LIVE",
+          isCurrent: true,
+          isFinished: false,
+          deadlineTime: event.deadline_time,
+        };
+      }
+
+      return {
+        gameweek,
+        status: "UPCOMING",
+        isCurrent: false,
+        isFinished: false,
+        deadlineTime: event.deadline_time,
+      };
+    }
+  } catch {
+    // Continue to fallback
+  }
+
+  // 4. Date comparison fallback using scheduled deadlines
+  const scheduled = DEFAULT_SCHEDULED_DEADLINES.find((d) => d.gameweek === gameweek);
+  if (scheduled) {
+    const deadlineMs = new Date(scheduled.deadlineTime).getTime();
+    const now = Date.now();
+    if (now < deadlineMs) {
+      return {
+        gameweek,
+        status: "UPCOMING",
+        isCurrent: false,
+        isFinished: false,
+        deadlineTime: scheduled.deadlineTime,
+      };
+    }
+    if (now - deadlineMs < 48 * 60 * 60 * 1000) {
+      return {
+        gameweek,
+        status: "LIVE",
+        isCurrent: true,
+        isFinished: false,
+        deadlineTime: scheduled.deadlineTime,
+      };
+    }
+    return {
+      gameweek,
+      status: "FINISHED",
+      isCurrent: false,
+      isFinished: true,
+      deadlineTime: scheduled.deadlineTime,
+    };
+  }
+
+  return {
+    gameweek,
+    status: gameweek <= 2 ? "FINISHED" : gameweek === 3 ? "LIVE" : "UPCOMING",
+    isCurrent: gameweek === 3,
+    isFinished: gameweek <= 2,
+  };
+}
+
 /**
  * Get map of all player gameweek live points and performance stats
  */
@@ -762,6 +947,22 @@ export async function getManagerGameweekPoints(
       activeChip: mockChip?.activeChip || null,
       chipDeduction,
       adjustedNetPoints,
+    };
+  }
+
+  // For entries without mock points on an unplayed gameweek, do not call external picks endpoint (which returns 404)
+  const gwStatus = await getGameweekStatus(gameweek);
+  if (gwStatus.status === "UPCOMING") {
+    return {
+      entryId,
+      gameweek,
+      points: 0,
+      eventTransfersCost: 0,
+      netPoints: 0,
+      benchPoints: 0,
+      activeChip: null,
+      chipDeduction: 0,
+      adjustedNetPoints: 0,
     };
   }
 
@@ -1044,13 +1245,23 @@ export async function getManagerGameweekSquad(
   const allowTripleCaptain =
     typeof options === "boolean" ? options : options.allowTripleCaptain ?? true;
 
-  // 1. Get gameweek score calculation
+  // 1. Check if Gameweek has kicked off for entries without mock data
+  if (!hasMockPoints(entryId, gameweek)) {
+    const gwStatus = await getGameweekStatus(gameweek);
+    if (gwStatus.status === "UPCOMING") {
+      throw new Error(
+        `Gameweek ${gameweek} has not started yet. Fantasy squad lineups will be unlocked once matches kick off.`
+      );
+    }
+  }
+
+  // 2. Get gameweek score calculation
   const score = await getManagerGameweekPoints(entryId, gameweek, {
     allowBenchBoost,
     allowTripleCaptain,
   });
 
-  // 2. Get manager profile
+  // 3. Get manager profile
   let managerName = `Manager #${entryId}`;
   let teamName = `Team #${entryId}`;
   try {
@@ -1061,8 +1272,8 @@ export async function getManagerGameweekSquad(
     // Fallback names
   }
 
-  // 3. Try to fetch real picks from FPL API if not a mock manager
-  const isMock = !!MOCK_MANAGERS[entryId];
+  // 4. Try to fetch real picks from FPL API if not a mock manager
+  const isMock = isMockEntry(entryId);
 
   if (!isMock) {
     try {

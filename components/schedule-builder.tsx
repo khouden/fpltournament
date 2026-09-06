@@ -14,6 +14,7 @@ import {
   recalculateMatchAction,
   finalizeMatchAction,
   recalculateAllScoresAction,
+  recalculateRoundScoresAction,
 } from "@/lib/scoring-actions";
 import {
   Zap,
@@ -363,6 +364,34 @@ export function ScheduleBuilder({
       window.location.reload();
     } else {
       setError(result.error || "Failed to finalize match");
+    }
+    setLoading(null);
+  };
+
+  const handleRecalculateRound = async (
+    roundId: string,
+    roundName: string
+  ) => {
+    if (isDeadlineActive) {
+      setError(
+        "Score calculation is disabled during the official FPL Gameweek deadline. Fantasy Premier League points are not finalized while the game is updating. Please try again after the deadline window."
+      );
+      return;
+    }
+    setLoading(`recalc-round-${roundId}`);
+    setError("");
+    const result = await recalculateRoundScoresAction(roundId, tournamentId);
+    if (result.success) {
+      showMsg(`${roundName} scores recalculated from official FPL data!`);
+      window.location.reload();
+    } else {
+      if (result.isDeadline) {
+        setIsDeadlineActive(true);
+      }
+      setError(
+        result.error ||
+          `Failed to recalculate ${roundName} scores. Please verify FPL connection.`
+      );
     }
     setLoading(null);
   };
@@ -927,6 +956,26 @@ export function ScheduleBuilder({
                           <span className="inline-flex items-center text-[10px] font-extrabold px-2 py-0.5 rounded-[4px] bg-[#37003C]/10 text-[#37003C]">
                             Gameweek {round.gameweek}
                           </span>
+                          {round.matches.every((m) => m.status === "FINALIZED") && round.matches.length > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <Lock className="h-2.5 w-2.5" />
+                              FINALIZED
+                            </span>
+                          ) : round.matches.some((m) => m.status === "IN_PROGRESS") ? (
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
+                              LIVE ROUND
+                            </span>
+                          ) : round.matches.every((m) => m.status === "COMPLETED" || m.status === "FINALIZED") && round.matches.length > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                              COMPLETED
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">
+                              <Clock className="h-2.5 w-2.5" />
+                              INCOMING
+                            </span>
+                          )}
                           <span className="text-xs text-[#777777] font-medium">
                             · {round.matches.length}{" "}
                             {round.matches.length === 1 ? "Match" : "Matches"}
@@ -937,6 +986,33 @@ export function ScheduleBuilder({
 
                     {/* Round Actions */}
                     <div className="flex items-center gap-2">
+                      {round.matches.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            handleRecalculateRound(
+                              round.id,
+                              round.name || `Round ${round.roundNumber}`
+                            )
+                          }
+                          disabled={
+                            loading === `recalc-round-${round.id}` ||
+                            isDeadlineActive
+                          }
+                          className="h-8 px-2.5 sm:px-3 text-xs font-semibold text-emerald-800 border-emerald-300/80 bg-emerald-50/50 hover:bg-emerald-100/70 rounded-[6px] gap-1.5 shadow-2xs"
+                          title={`Recalculate all match scores in ${round.name || `Round ${round.roundNumber}`}`}
+                        >
+                          {loading === `recalc-round-${round.id}` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-700" />
+                          ) : (
+                            <RefreshCw className="h-3.5 w-3.5 text-emerald-700" />
+                          )}
+                          <span className="hidden sm:inline">Recalculate Round</span>
+                          <span className="sm:hidden">Recalc</span>
+                        </Button>
+                      )}
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -995,6 +1071,7 @@ export function ScheduleBuilder({
                           .map((match) => {
                             const isFinalized = match.status === "FINALIZED";
                             const isCompleted = match.status === "COMPLETED";
+                            const isInProgress = match.status === "IN_PROGRESS";
                             const hasScores =
                               match.homeScore !== null &&
                               match.awayScore !== null;
@@ -1008,7 +1085,9 @@ export function ScheduleBuilder({
                                 className={`rounded-[12px] border transition-all p-4 sm:p-5 space-y-3.5 ${
                                   isFinalized
                                     ? "border-emerald-300/80 bg-emerald-500/5 shadow-2xs"
-                                    : "border-[#E5E5E5] bg-white hover:border-[#37003C]/30 shadow-2xs"
+                                    : isInProgress
+                                      ? "border-rose-300/80 bg-rose-500/5 shadow-2xs"
+                                      : "border-[#E5E5E5] bg-white hover:border-[#37003C]/30 shadow-2xs"
                                 }`}
                               >
                                 {/* Match Top Bar */}
@@ -1034,14 +1113,20 @@ export function ScheduleBuilder({
                                         <Lock className="h-3 w-3 text-emerald-600" />
                                         <span>FINALIZED</span>
                                       </span>
+                                    ) : isInProgress ? (
+                                      <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-0.5 text-xs font-bold text-rose-700 shadow-2xs">
+                                        <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                                        <span>LIVE MATCH</span>
+                                      </span>
                                     ) : isCompleted ? (
                                       <span className="inline-flex items-center gap-1.5 rounded-full border border-[#5A0A63]/30 bg-[#5A0A63]/10 px-2.5 py-0.5 text-xs font-bold text-[#5A0A63] shadow-2xs">
                                         <CheckCircle2 className="h-3 w-3 text-[#5A0A63]" />
                                         <span>COMPLETED</span>
                                       </span>
                                     ) : (
-                                      <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-gray-100 px-2.5 py-0.5 text-xs font-bold text-gray-700 shadow-2xs">
-                                        <span>SCHEDULED</span>
+                                      <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-50 px-2.5 py-0.5 text-xs font-bold text-sky-700 shadow-2xs">
+                                        <Clock className="h-3 w-3 text-sky-600" />
+                                        <span>INCOMING</span>
                                       </span>
                                     )}
 

@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   ImageIcon,
   Rocket,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TournamentWizardStepper } from "@/components/tournament-wizard-stepper";
@@ -669,8 +670,12 @@ export default async function TournamentManagementPage({
                     const roundCompleted = round.matches.filter(
                       (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
                     ).length;
+                    const roundLive = round.matches.filter(
+                      (m) => m.status === "IN_PROGRESS"
+                    ).length;
                     const roundTotal = round.matches.length;
                     const isRoundComplete = roundTotal > 0 && roundCompleted === roundTotal;
+                    const isRoundLive = roundLive > 0;
 
                     return (
                       <div
@@ -684,22 +689,33 @@ export default async function TournamentManagementPage({
                           <span className="rounded-full bg-white px-2 py-0.5 font-semibold text-[#555555] border border-[#E5E5E5] text-[10px]">
                             GW {round.gameweek}
                           </span>
+                          {isRoundLive && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.2 text-[9px] font-black uppercase tracking-wider">
+                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+                              LIVE
+                            </span>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span
-                            className={`font-semibold ${
-                              isRoundComplete
-                                ? "text-[#008744]"
-                                : roundCompleted > 0
-                                  ? "text-[#37003C]"
-                                  : "text-[#777777]"
-                            }`}
-                          >
-                            {roundCompleted} / {roundTotal} {isRoundComplete ? "completed" : "matches"}
-                          </span>
-                          {isRoundComplete && (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-[#008744]" />
+                          {isRoundLive ? (
+                            <span className="font-bold text-rose-600 inline-flex items-center gap-1">
+                              {roundLive} live {roundLive === 1 ? "fixture" : "fixtures"}
+                            </span>
+                          ) : isRoundComplete ? (
+                            <span className="font-semibold text-[#008744] inline-flex items-center gap-1">
+                              {roundCompleted} / {roundTotal} completed
+                              <CheckCircle2 className="h-3.5 w-3.5 text-[#008744]" />
+                            </span>
+                          ) : roundCompleted > 0 ? (
+                            <span className="font-semibold text-[#37003C]">
+                              {roundCompleted} / {roundTotal} completed
+                            </span>
+                          ) : (
+                            <span className="font-semibold text-[#888888] inline-flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-[#999999]" />
+                              Incoming ({roundTotal} fixtures)
+                            </span>
                           )}
                         </div>
                       </div>
