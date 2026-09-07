@@ -2,18 +2,18 @@
 
 > **Project:** FPL Tournament (Fantasy Leagues)  
 > **Framework:** Next.js (App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM, Shadcn UI  
-> **Documentation Version:** 2.0 (Complete Page Specification)  
+> **Documentation Version:** 2.1 (Complete Platform Specification with 4-Step Wizard & Manual Scoring)  
 > **Last Updated:** September 2026  
 
 ---
 
 ## 1. Executive Summary
 
-This documentation suite provides an exhaustive, page-by-page breakdown of the **FPL Tournament** platform. Each document details the page's visual layout, design system tokens, UX architecture, component breakdown, interactive states, business logic, data models, and edge cases.
+This documentation suite provides an exhaustive, page-by-page specification of the **FPL Tournament** platform. Each document details the page's visual layout, design system tokens, UX architecture, component breakdown, interactive states, business logic, data models, edge cases, and server actions.
 
 The application serves two primary audiences:
-1. **Public Visitors & Fantasy Managers:** A public, spectator-ready dark-themed interface (`/`, `/tournaments`, `/tournaments/[id]`, `/matches/[id]`) with live league standings, head-to-head match cards, and interactive fantasy squad pitch views.
-2. **Platform & Tournament Administrators:** A clean, high-productivity light-themed administrative dashboard (`/admin/*`) featuring multi-admin collaboration, FPL league import, team logo customization, automatic round-robin schedule generation, and on-demand FPL API score recalculation.
+1. **Public Visitors & Fantasy Managers:** A public, spectator-ready experience (`/`, `/tournaments`, `/tournaments/[id]`, `/matches/[id]`) featuring panoramic tournament banners, live league standings (+3W/+1D/0L), head-to-head match cards with live in-progress and incoming fixture states, and interactive fantasy squad tactical pitch views.
+2. **Platform & Tournament Administrators:** A high-productivity administrative portal (`/admin/*`) featuring a guided 4-step tournament wizard, multi-admin collaboration, FPL Classic League imports, manual team and player creation, custom team crest assignment, automated Berger round-robin schedule generation, manual fixture score editing, round-level recalculation, and pre-flight validation before public launch.
 
 ---
 
@@ -23,21 +23,25 @@ The application serves two primary audiences:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                     FPL TOURNAMENT SITE MAP                                      │
 ├────────────────────────────────┬─────────────────────────────────────────────────────────────────┤
-│ PUBLIC INTERFACE (Dark Theme)  │ • /                               (Home / Landing Page)         │
-│                                │ • /tournaments                    (Tournaments Directory)       │
-│                                │ • /tournaments/[id]               (Tournament Detail & Table)   │
-│                                │ • /matches/[id]                   (Head-to-Head Match View)     │
+│ PUBLIC SPECTATOR INTERFACE     │ • /                               (Home / Landing Page)         │
+│ (Cosmic Dark & FPL Light)      │ • /tournaments                    (Tournaments Directory)       │
+│                                │ • /tournaments/[id]               (Tournament Detail & Standings)│
+│                                │ • /matches/[id]                   (Head-to-Head Match Center)   │
 ├────────────────────────────────┼─────────────────────────────────────────────────────────────────┤
-│ ADMIN PORTAL (Light Theme)     │ • /admin/login                    (Admin Authentication)        │
-│                                │ • /admin                          (Admin Dashboard & Overview)  │
-│                                │ • /admin/tournaments/new          (Create Tournament Wizard)    │
+│ ADMIN OPERATIONS PORTAL        │ • /admin/login                    (Admin Authentication Portal) │
+│ (Global FPL Design System)     │ • /admin                          (Admin Dashboard & Overview)  │
+│                                │ • /admin/tournaments/new          (Wizard Step 1: Create)       │
 │                                │ • /admin/tournaments/[id]         (Tournament Management Hub)   │
-│                                │ • /admin/tournaments/[id]/edit    (Settings & Multi-Admin Edit) │
-│                                │ • /admin/tournaments/[id]/groups  (Group Manager & FPL Import)  │
-│                                │ • /admin/tournaments/[id]/schedule(Schedule & Fixture Builder)  │
+│                                │ • /admin/tournaments/[id]/edit    (Wizard Step 1: Edit Details) │
+│                                │ • /admin/tournaments/[id]/groups  (Wizard Step 2: Groups/Teams) │
+│                                │ • /admin/tournaments/[id]/schedule(Wizard Step 3: Schedule)     │
+│                                │ • /admin/tournaments/[id]/publish (Wizard Step 4: Review/Launch)│
 ├────────────────────────────────┼─────────────────────────────────────────────────────────────────┤
-│ INTERACTIVE MODALS & OVERLAYS  │ • FantasyTeamModal                (Pitch Squad Lineup Viewer)   │
-│                                │ • TeamLogoPicker                  (Club Logo Selection Modal)   │
+│ INTERACTIVE MODALS & OVERLAYS  │ • FantasyTeamModal                (Tactical Pitch Squad Viewer) │
+│                                │ • TeamLogoPicker                  (Club Crest Selection Modal)  │
+│                                │ • AddManualTeamModal              (Manual Offline Team Creator) │
+│                                │ • ManualPlayerModal               (Manual Team Player Creator)  │
+│                                │ • ManualMatchScoreModal           (Manual Score & Points Editor)│
 └────────────────────────────────┴─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -49,52 +53,53 @@ Click any page below to inspect its comprehensive UI/UX and functional specifica
 
 | # | Page Document | Route | Access | Key Responsibilities |
 | :-: | :--- | :--- | :--- | :--- |
-| **01** | [Home / Landing Page](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/01-home-landing-page.md) | `/` | Public | Platform hero, feature showcase, live tournaments tracker, and core scoring rules overview. |
-| **02** | [Tournaments Directory](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/02-tournaments-directory-page.md) | `/tournaments` | Public | Complete directory of active and completed tournaments with status badges and quick metrics. |
-| **03** | [Tournament Detail & Standings](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/03-tournament-detail-page.md) | `/tournaments/[id]` | Public | Live league table (+3W/+1D/0L), gameweek fixture cards with player points, and team list. |
-| **04** | [Match Detail & Squad Breakdown](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/04-match-detail-page.md) | `/matches/[id]` | Public | Head-to-head match scoreboard, side-by-side squad points, chip adjustments, and admin exclusion. |
-| **05** | [Admin Login Page](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/05-admin-login-page.md) | `/admin/login` | Public / Guest | Secure authentication portal for application owners with password hashing and session cookies. |
-| **06** | [Admin Dashboard](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/06-admin-dashboard-page.md) | `/admin` | Admin Session | High-level metrics, tournament management table, publication toggles, and deletion safety dialogs. |
-| **07** | [Create Tournament Page](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/07-admin-create-tournament-page.md) | `/admin/tournaments/new` | Admin Session | Tournament creation form, Bench Boost & Triple Captain chip rules, and Primary FPL Admin verification. |
-| **08** | [Admin Tournament Management Hub](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/08-admin-tournament-manage-page.md) | `/admin/tournaments/[id]` | Admin Session | Central tournament cockpit: key statistics, live standings, multi-admin management, and navigation hub. |
-| **09** | [Edit Tournament Settings](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/09-admin-tournament-edit-page.md) | `/admin/tournaments/[id]/edit` | Admin Session | Edit tournament metadata, update chip scoring configurations, and add/remove co-administrators. |
-| **10** | [Admin Group & League Manager](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/10-admin-group-manager-page.md) | `/admin/tournaments/[id]/groups` | Admin Session | Import FPL Classic Leagues across all co-admins, assign custom team logos, rename teams, and inspect squads. |
-| **11** | [Admin Schedule Builder](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/11-admin-schedule-builder-page.md) | `/admin/tournaments/[id]/schedule` | Admin Session | Automated round-robin generator, custom round/fixture CRUD, live FPL score recalculation, and finalization. |
-| **12** | [Fantasy Squad Pitch & Logo Overlays](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/12-fantasy-squad-modal-view.md) | Overlay Modals | Universal | Interactive 15-player tactical pitch view, captaincy badges, chip impacts, and club logo search picker. |
+| **01** | [Home / Landing Page](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/01-home-landing-page.md) | `/` | Public | Platform hero, feature showcase, live tournaments tracker, stadium banners, and scoring rules. |
+| **02** | [Tournaments Directory](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/02-tournaments-directory-page.md) | `/tournaments` | Public | Directory of active and completed competitions with stadium banners, match progress, and chip rules. |
+| **03** | [Tournament Detail & Standings](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/03-tournament-detail-page.md) | `/tournaments/[id]` | Public | Panoramic banner hero, live table (+3W/+1D/0L), live/incoming gameweek cards, and team rosters. |
+| **04** | [Match Detail & Squad Breakdown](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/04-match-detail-page.md) | `/matches/[id]` | Public | Head-to-head match scoreboard, live/incoming alerts, side-by-side squad points, and admin exclusion. |
+| **05** | [Admin Login Page](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/05-admin-login-page.md) | `/admin/login` | Public / Guest | Minimal authentication portal for organizers with password hashing and session cookies. |
+| **06** | [Admin Dashboard](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/06-admin-dashboard-page.md) | `/admin` | Admin Session | Platform KPIs, tournament list with banner thumbnails, quick actions, and deletion safety dialogs. |
+| **07** | [Create Tournament Page (Wizard Step 1)](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/07-admin-create-tournament-page.md) | `/admin/tournaments/new` | Admin Session | Guided wizard Step 1: Competition details, stadium banner selector (presets/upload), chip rules, and admin verification. |
+| **08** | [Admin Tournament Management Hub](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/08-admin-tournament-manage-page.md) | `/admin/tournaments/[id]` | Admin Session | Central tournament cockpit: banner showcase, operational KPIs, embedded live table, and wizard navigation. |
+| **09** | [Edit Tournament Settings](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/09-admin-tournament-edit-page.md) | `/admin/tournaments/[id]/edit` | Admin Session | Revisit Step 1: Update metadata, change stadium banner, adjust chip rules, and manage co-organizers. |
+| **10** | [Admin Group & League Manager (Wizard Step 2)](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/10-admin-group-manager-page.md) | `/admin/tournaments/[id]/groups` | Admin Session | Guided wizard Step 2: Multi-admin FPL league import, manual team/player creator, crest assignment, and deadline protection. |
+| **11** | [Admin Schedule Builder (Wizard Step 3)](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/11-admin-schedule-builder-page.md) | `/admin/tournaments/[id]/schedule` | Admin Session | Guided wizard Step 3: Round-robin generator, custom rounds, round-level recalculation, and manual score entry. |
+| **12** | [Fantasy Squad Pitch & Crest Overlays](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/12-fantasy-squad-modal-view.md) | Overlay Modals | Universal | Interactive 15-player tactical pitch view, captaincy multipliers, manual player support, and European club crest search. |
+| **13** | [Review & Publish Tournament (Wizard Step 4)](file:///c:/Users/akhou/OneDrive/Desktop/IT/my%20FULL-STACK%20projects/fpltournament/docs/pages/13-admin-tournament-publish-page.md) | `/admin/tournaments/[id]/publish` | Admin Session | Guided wizard Step 4: Pre-flight readiness checks, consolidated tournament preview, launch confirmation, and unpublish controls. |
 
 ---
 
 ## 4. Visual Design System & Aesthetics
 
-### 4.1 Dual-Theme Strategy
-
-The application employs a deliberate, highly tailored **Dual-Theme Design System**:
-
-1. **Public Spectator Experience (Dark Glassmorphism):**
-   - **Background:** Deep cosmic midnight mesh: `bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900`
-   - **Surfaces:** Translucent glass cards: `bg-white/5 border border-white/10 backdrop-blur-md`
-   - **Text:** Crisp white headers (`text-white`), muted lilac labels (`text-indigo-200/80`), and slate body text (`text-gray-400`)
-   - **Accents:** Neon Indigo (`text-indigo-400`, `bg-indigo-600`), Emerald Green for wins/active states (`text-emerald-400`), Amber Gold for crowns/points (`text-amber-400`)
-
-2. **Admin Operations Portal (Clean Light Productivity):**
-   - **Background:** Soft administrative gray: `bg-gray-100` / `bg-gradient-to-br from-blue-50 to-indigo-100`
-   - **Surfaces:** Pure white cards with subtle drop shadows: `bg-white border border-gray-200 shadow-xs`
-   - **Text:** High-contrast slate typography (`text-gray-900`, `text-gray-600`)
-   - **Accents:** Indigo primary buttons (`bg-indigo-600 hover:bg-indigo-700`), Emerald publication pills, Rose destructive badges
+### 4.1 Design Philosophy & Color Palette
+The platform utilizes a consistent, modern **Global Premier League FPL Design System**:
+- **Deep Premier Purple:** `#37003C` (Primary brand color, headers, key buttons, and active tabs)
+- **Secondary Purple:** `#5A0A63` (Interactive hover states and secondary accents)
+- **Fantasy Green:** `#00FF87` (Live indicators, status dots, verification badges, and success highlights)
+- **Fantasy Emerald:** `#008744` / `#008f4c` (High-contrast accessible text labels and points pills)
+- **FPL Pink Accent:** `#E9007F` (Highlighted micro-badges, notifications, and active accents)
+- **Canvas Background:** Clean operational canvas `#F7F7F7`
+- **Surface Cards:** Pure white `#FFFFFF` cards with fine 1px borders (`#E5E5E5`) and subtle elevation (`shadow-fpl-sm` / `shadow-2xs`)
 
 ### 4.2 Typography & Iconography
-- **Typography:** Powered by Google's `Geist Sans` (UI readability) and `Geist Mono` (scores, gameweek numbers, and tabular data).
-- **Icons:** `lucide-react` icons standard throughout (Trophy, Calendar, Users, Crown, Armchair, Shield, Zap, Sparkles, Eye, Trash2, Pencil, ExternalLink).
+- **Typography:** `Geist Sans` and `Poppins` for UI readability and bold tournament headings; `Geist Mono` for points, gameweek tags, and tabular calculations.
+- **Iconography:** `lucide-react` icons standard throughout (Trophy, Calendar, Users, Rocket, Crown, Armchair, Shield, Zap, Sparkles, Check, Clock, Eye, Trash2, Pencil, ExternalLink).
 
 ---
 
-## 5. Architectural Principles
+## 5. Core Architectural Principles
 
-1. **Strict Admin Points Exclusion:**
-   Organizers join private FPL leagues strictly to enable data synchronization. Their scores are programmatically excluded (`isExcluded: true`, displayed with a strikethrough and shield icon).
-2. **Multi-Admin League Aggregation:**
-   Organizers can attach multiple FPL Co-Admins to a single tournament, allowing the platform to pool private leagues from multiple manager accounts without hitting FPL's 30-league limit.
-3. **Head-to-Head Group Scoring:**
-   Matches pit two FPL Classic Leagues against each other. Each group's score is the exact sum of all non-admin members' Gameweek points minus transfer costs, with configurable chip adjustments.
-4. **Resilient Data Caching:**
-   Gameweek rosters and scores are stored in Prisma (`MatchScore`, `GroupMember`) so historical fixtures remain immutable even when managers make subsequent transfers in the live FPL game.
+1. **Guided 4-Step Tournament Setup Wizard:**
+   Organizers are guided smoothly through four dedicated steps: (1) Details & Rules, (2) Groups & Teams, (3) Schedule & Fixtures, and (4) Review & Publish (`TournamentWizardStepper`).
+2. **Strict Admin Points Exclusion:**
+   Organizers join private FPL leagues strictly to synchronize roster data. Their scores are programmatically excluded (`isExcluded: true`, displayed with strikethrough styling and a shield icon).
+3. **Multi-Admin League Aggregation:**
+   Organizers can attach multiple FPL Co-Admins to a single tournament, pooling private leagues across multiple manager accounts without hitting FPL's 30-league limit.
+4. **Dual Team Architecture (FPL Classic Leagues & Manual Teams):**
+   Competitions can combine or exclusively feature official FPL Classic Leagues or completely offline manual squads with manual player rosters and score entry (`ManualMatchScoreModal`).
+5. **Gameweek Deadline & Downtime Protection:**
+   The application monitors the FPL API state (`lib/fpl-deadline.ts`, `/api/fpl/status`). During gameweek deadlines when FPL servers undergo maintenance, admins are warned and protected against data corruption.
+6. **Graceful Upcoming & Live Match States:**
+   Fixtures support `INCOMING` (scheduled future gameweeks with kickoff notice), `IN_PROGRESS` (live provisional points tracking), `COMPLETED` (finished gameweek), and `FINALIZED` (immutable official result).
+7. **Round-Level Recalculation:**
+   Admins can recalculate scores at the round level (`recalculateRoundAction`), refreshing live points for an entire Gameweek round without mutating historical or future rounds.

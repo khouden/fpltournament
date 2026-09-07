@@ -90,12 +90,14 @@ The **Home / Landing Page** serves as the public front door to the FPL Tournamen
 - **Header with Live Pulsing Dot:** Displays an animated green dot (`h-3 w-3 rounded-full bg-emerald-500 animate-pulse`), section heading `Active Tournaments`, and an active count badge (`X Live`).
 - **Tournament Cards Grid:** 2-column responsive grid (`grid gap-4 sm:grid-cols-2`).
 - **Individual `TournamentCard` Structure:**
-  - **Tournament Title:** High-contrast white text, transitions to `indigo-300` on card hover.
-  - **Season Indicator:** Subtitle displaying `Season {tournament.season}`.
-  - **Status Badge:** Green `ACTIVE` badge (`variant="success"`).
-  - **Chip Configuration Pill:** Monospace indicators showing active rules:
-    - `BB:` Green checkmark `Check` if Bench Boost allowed, Red `X` if disabled.
-    - `TC:` Green checkmark `Check` if Triple Captain 3x allowed, Red `X` if reduced to 2x.
+  - **Banner Header (Optional):** When `tournament.banner` is configured, renders a full-bleed top stadium artwork graphic (`h-32 sm:h-36 bg-[#1F0022]`) with overlay gradient.
+  - **Tournament Title:** High-contrast text, transitions to brand purple/indigo on card hover.
+  - **Season Indicator:** Subtitle displaying formatted season (e.g. `2024/25`).
+  - **Status Badge:** Green `ACTIVE` badge (`variant="active"`) or subdued `COMPLETED` badge.
+  - **Chip Configuration Pill:** Visual indicators showing active tournament rules:
+    - `BB:` Green checkmark `Check` if Bench Boost allowed, neutral `Minus` if disabled.
+    - `TC:` Green checkmark `Check` if Triple Captain 3x allowed, neutral `Minus` if reduced to 2x.
+  - **Progress Bar (`ProgressBar`):** Visual progress bar tracking completed vs total fixtures.
   - **Metric Counters:** Footer row with metadata counts:
     - `{groups.length} Groups`
     - `{completedMatches}/{totalMatches} Matches`

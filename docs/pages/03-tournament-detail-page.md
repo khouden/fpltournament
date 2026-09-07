@@ -73,10 +73,12 @@ The **Tournament Detail & Standings Page** is the premier public dashboard for a
 
 ## 3. Deep Component Specifications
 
-### 3.1 Tournament Meta Header
-- **Title (H1):** `text-3xl sm:text-4xl lg:text-[44px] font-extrabold text-[#37003C] tracking-tight leading-[1.08]`
+### 3.1 Tournament Meta Header & Panoramic Banner
+- **Panoramic Stadium Hero (Optional):** When `tournament.banner` is set, renders a full-width panoramic header banner (`relative overflow-hidden bg-[#1F0022]`) with stadium graphic artwork and an ambient gradient overlay.
+- **Dynamic Text Contrast:** Header title automatically switches to `text-white drop-shadow-md` when a banner is active, and metadata pills render with translucent frosted glass (`border-white/20 bg-white/10 text-white/90 backdrop-blur-xs`).
+- **Title (H1):** `text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight leading-[1.08]`.
 - **Metadata Badges:**
-  - **Season:** `Season {tournament.season}` text badge.
+  - **Season:** `Season {tournament.season}` formatted notation.
   - **Status Badge:** Green `● ACTIVE` with pulsing emerald dot or Subdued neutral `● FINISHED`.
   - **Bench Boost Badge:** Contains `Armchair` icon, reads `Bench Boost: On` or `Bench Boost: Off` with green indicator dot.
   - **Triple Captain Badge:** Contains `Crown` icon, reads `Triple Captain: On (3×)` or `Triple Captain: Reduced (2×)`.
@@ -98,25 +100,31 @@ The **Tournament Detail & Standings Page** is the premier public dashboard for a
 
 ### 3.3 Fixtures & Gameweek Rounds
 - **Round Grouping:** Every round corresponds to a specific FPL Gameweek and is wrapped in an individual white card with a `Gameweek {round.gameweek}` badge.
+- **Round Status Badges:**
+  - `FINALIZED`: Emerald pill (`bg-[#00FF87]/20 text-[#008744] border-[#00FF87]/40`) with `CheckCircle2`.
+  - `LIVE ROUND` (`IN_PROGRESS`): Pulsing rose indicator (`bg-rose-500/15 text-rose-600 border-rose-500/40`) with animated ping dot for active gameweeks.
+  - `COMPLETED`: Purple indicator (`bg-[#37003C]/10 text-[#37003C] border-[#37003C]/20`).
+  - `INCOMING`: Sky-blue indicator (`bg-sky-50 text-sky-700 border-sky-200`) with `Clock` icon for upcoming rounds prior to kickoff.
 - **Match Card Structure:**
-  - **Meta Header:** Match number, Gameweek number, and status badge (`FINALIZED`, `COMPLETED`, `SCHEDULED`).
+  - **Meta Header:** Match number, Gameweek number, and status badge (`FINALIZED`, `LIVE · IN PROGRESS`, `COMPLETED`, `INCOMING MATCH`).
+  - **Live / Upcoming Notice:** In-progress matches display a live notice indicating points are updating; upcoming matches show a countdown notice that lineups track once the Gameweek kicks off.
   - **Scoreboard Display:**
     - Home team on the left, Away team on the right.
     - Winner gets a green `+3 PTS` badge; in case of a draw, both teams receive an amber `+1 PT` badge.
     - Large center scoreboard: `{homeScore} — {awayScore}` in Poppins 800 `32–40px` `#37003C`.
     - Outcome banner: Displays `{Team Name} WIN` or `MATCH DRAW`.
-    - Uncalculated matches show `VS` (never `0 - 0`) with `SCHEDULED` status.
+    - Uncalculated/upcoming matches show `VS` (never `0 - 0`) with `INCOMING` status.
   - **Compact Squad Player Breakdown (`MatchSquadList`):**
     - Directly visible inside the match card without needing to navigate away!
-    - Lists all members of both competing leagues side-by-side.
-    - Displays member name, FPL team name, active chip badges (`BB`, `3XC`), and chip deduction notes (`-X`).
+    - Lists all members of both competing leagues or manual teams side-by-side.
+    - Displays member name, FPL team alias, active chip badges (`BB`, `3XC`), and chip deduction notes (`-X`).
     - Top scorer in each team gets a gold sparkle icon (`Sparkles`).
     - **Admin Exclusion Display:** The tournament organizer is listed with a `Shield` icon, warning text, strikethrough points (`line-through`), and an `EXCLUDED` badge, visually confirming their score was not counted toward the team total.
     - **Squad Modal Trigger:** Clicking any player row opens the full `<FantasyTeamModal />` overlay for that player!
 
-### 3.4 Participating Teams Grid
-- Displays all participating FPL Classic Leagues in a 4-column desktop / 2-column mobile grid.
-- Shows team logo or generated monogram.
+### 3.4 Participating Teams Directory
+- Displays all competing FPL Classic Leagues and manual squads in a 4-column desktop / 2-column mobile grid.
+- Shows team crest or generated monogram.
 - Shows clean count of active non-admin fantasy players (`{count} active players`).
 
 ---
