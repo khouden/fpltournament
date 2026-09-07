@@ -81,10 +81,13 @@ The **Match Detail & Head-to-Head Squad View Page** provides an exhaustive, fore
 
 ### 3.2 Match Center Hero Card
 - **Round & Gameweek Indicator:** Uppercase tracking-wider label (e.g., `Round 1 · Gameweek 5`).
-- **Match Status Badge:**
-  - `FINALIZED`: Emerald badge (`bg-[#00FF87]/20 text-[#008744] border-[#00FF87]/40`).
+- **Match Status Badges & Context Alerts:**
+  - `FINALIZED`: Emerald badge (`bg-[#00FF87]/20 text-[#008744] border-[#00FF87]/40`) with solid emerald indicator dot.
+  - `IN_PROGRESS` (Live Match): Rose pulsing indicator (`bg-rose-500/15 text-rose-600 border-rose-500/40`) with pulsing dot. Renders a live warning banner:
+    > *"Live Match in Progress: Gameweek {gw} matches are currently underway. Match scores and member points are provisional and will update live until the Gameweek finishes."*
   - `COMPLETED`: Deep purple badge (`bg-[#37003C]/10 text-[#37003C] border-[#37003C]/20`).
-  - `SCHEDULED`: Neutral gray badge (`bg-[#F3F4F6] text-[#666666] border-[#E5E5E5]`).
+  - `SCHEDULED` (Incoming Fixture): Sky-blue badge (`bg-sky-50 text-sky-700 border-sky-200`) with `Clock` icon. Renders an incoming notice banner:
+    > *"Incoming Fixture: Gameweek {gw} has not started yet. Team lineups and player points will track live once the Gameweek kicks off."*
 - **Matchup Columns:**
   - **Home Team (Left):** Custom crest (64–88px on clean white rounded badge) or initial fallback, bold Poppins team name, outcome badge.
   - **Score Center:** High-contrast Poppins font (`text-4xl sm:text-5xl font-black text-[#37003C]`) displaying `{homeScore} – {awayScore}`. If unscored, displays `VS`.
@@ -102,8 +105,9 @@ Two side-by-side white cards comparing member point contributions:
 - **Card Header:** Club crest, team name (highlighted with subtle green top border for winner), contributing manager count, and team total score in strong Poppins.
 - **Included Managers Section:**
   - Section label: `INCLUDED MANAGERS`.
+  - Supports both official FPL Classic League rosters and manual team players.
   - Manager sub-cards with `#F9F9F9` background, `#EEEEEE` border, and hover elevation.
-  - Manager name & official FPL team name.
+  - Manager name & official FPL team name (or role description for manual players).
   - **Chip Badges:** Compact semantic badges (`Bench Boost`, `Triple Captain`, `Free Hit`, `Wildcard`).
   - **Chip Deductions:** Explicit reason callouts explaining point adjustments (e.g. `−16 pts (Bench players excluded)` or `−12 pts (Triple Captain adjustment)`).
   - **Points Pill:** High-contrast numeric pill (`bg-[#37003C]/5 text-[#37003C] font-bold text-sm px-2.5 py-1`).

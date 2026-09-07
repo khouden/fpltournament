@@ -2,22 +2,24 @@
 
 > **Route:** `/admin/tournaments/[id]/schedule`  
 > **Source File:** `app/admin/tournaments/[id]/schedule/page.tsx`  
-> **Component File:** `components/schedule-builder.tsx`  
+> **Component Files:** `components/schedule-builder.tsx`, `components/tournament-wizard-stepper.tsx`, `components/manual-match-score-modal.tsx`  
 > **Access Level:** Admin Session Required  
-> **Design Theme:** Clean Light Administrative Theme (`bg-gray-100`, cards `bg-white`)  
+> **Design Theme:** Global FPL Operational Design System (`bg-[#F7F7F7]`, primary `#37003C`, accents `#00FF87` and `#E9007F`, cards `bg-white border-[#E5E5E5]`)  
 
 ---
 
 ## 1. Page Overview
 
-The **Admin Schedule & Fixtures Builder Page** is the competition engine room. It provides tournament organizers with both automated and granular manual controls to generate tournament rounds, schedule head-to-head fixtures, assign official FPL Gameweeks, recalculate live match scores from the official Premier League API, and finalize results.
+The **Admin Schedule & Fixtures Builder Page** is Step 3 of the tournament setup wizard and the competition's tactical scheduling hub. It provides tournament organizers with both automated algorithmic generation and fine-grained manual controls to structure rounds, pair competing groups, assign official Premier League Gameweeks, synchronize live scores via the official FPL API, manage manual offline scoring, and finalize competition results.
 
 ### Primary Responsibilities
-- **Automated Round-Robin Generation:** Generate a mathematically balanced round-robin tournament schedule with a single click using the Berger pairing algorithm.
-- **Manual Fixture Creation & Editing:** Create custom rounds, associate them with specific FPL Gameweeks (1–38), add matchups, and swap home/away pairings.
-- **On-Demand FPL Score Recalculation:** Pull live points, transfer costs, and chip data from the FPL API for any individual match or bulk-recalculate the entire tournament.
-- **Result Finalization & Locking:** Transition matches from `SCHEDULED` to `COMPLETED` and ultimately to `FINALIZED` to lock scores and protect historical records.
-- **Schedule Validation Engine:** Verify the schedule for structural defects (e.g. teams playing twice in the same round, bye games, unassigned groups).
+- **Automated Round-Robin Generation:** Generate a mathematically balanced tournament schedule with a single click using the canonical Berger rotation algorithm.
+- **Manual Fixture Creation & Editing:** Create custom rounds, associate them with specific FPL Gameweeks (1–38), add individual matchups, and swap home/away pairings.
+- **Round-Level & Match-Level FPL Recalculation:** Pull live points, transfer deductions, and chip data for individual matches, complete Gameweek rounds (`recalculateRoundAction`), or bulk-recalculate the entire tournament.
+- **Manual Score Entry Suite (`ManualMatchScoreModal`):** Manually input match scores and individual fantasy points for manual teams or offline fixtures without requiring the FPL API.
+- **Upcoming Gameweek & Live Match Handling:** Gracefully handle future gameweeks prior to kickoff and track in-progress fixtures live as points update.
+- **Result Finalization & Integrity Protection:** Lock completed matches into `FINALIZED` status to prevent accidental score drift.
+- **Schedule Validation Engine:** Verify structural integrity before advancing to Step 4 (Review & Publish).
 
 ---
 
@@ -25,37 +27,43 @@ The **Admin Schedule & Fixtures Builder Page** is the competition engine room. I
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ ADMIN NAVBAR: [Trophy] Fantasy Leagues Admin     admin@test.com  [Logout]   │
+│ ADMIN NAVBAR: [🏆] Fantasy Leagues [ADMIN]      admin@test.com    [Logout]  │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ BREADCRUMB: Dashboard / Champions Cup / Schedule               [<- Groups]  │
-│ H1: Tournament Schedule                                                     │
+│ BREADCRUMB: Dashboard / Champions Fantasy Cup / Schedule                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ TOURNAMENT CONTEXT:                                                         │
-│   Season 2024 · 4 groups · 6 matches · [PUBLISHED]                          │
+│ PAGE TITLE:                                                                 │
+│   [Badge: STEP 3 OF 4: SCHEDULE & FIXTURES]                                 │
+│   Tournament Schedule [Calendar 📅]                                         │
+│   Build rounds, pair competing teams, and calculate live FPL scores...      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 4-STEP WIZARD STEPPER:                                                      │
+│   [1. Details (Done)] ─── [2. Groups (Done)] ─── [3. Schedule (Active)] ─── [4. Publish]│
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ SCHEDULE ACTIONS TOOLBAR:                                                   │
 │   [⚡ Auto-Generate Round-Robin]  [+ Add Round]  [🔄 Recalculate All] [✓ Valid]│
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ ROUND-ROBIN GENERATOR DRAWER (Collapsible):                                 │
-│   Start Gameweek: [ 1 ]  (Will schedule GW1, GW2, GW3...)                   │
+│   Start Gameweek: [ 1 ]  (Will schedule consecutive rounds GW1, GW2...)     │
 │   [ Generate Complete Schedule Button ]                                     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ ROUNDS & FIXTURES CONTAINER:                                                │
 │                                                                             │
 │ ┌─────────────────────────────────────────────────────────────────────────┐ │
-│ │ ROUND 1: Gameweek 1                                  [🗑️ Delete Round]  │ │
-│ │ Matches: (2)                                             [+ Add Match]  │ │
+│ │ ROUND 1: Gameweek 1 (2 Matches)   [🔄 Recalc Round]  [🗑️ Delete Round] │ │
 │ │ ─────────────────────────────────────────────────────────────────────── │ │
 │ │ MATCH 1:                                                                │ │
-│ │ [ London Gunners (Home) ]  vs  [ Merseyside Reds (Away) ]               │ │
-│ │ Score: 72 - 58                          Status: [FINALIZED]             │ │
-│ │ [🔄 Recalculate Score]  [🔒 Finalize Match]  [👁️ View Match] [🗑️ Delete] │ │
+│ │ [ London Gunners (Home) ]    vs    [ Merseyside Reds (Away) ]           │ │
+│ │ Score: 72 — 58                              Status: [✓ FINALIZED]       │ │
+│ │ [🔄 Recalc Score] [✏️ Manual Score] [🔒 Finalize] [👁️ View] [🗑️ Delete] │ │
 │ ├─────────────────────────────────────────────────────────────────────────┤ │
 │ │ MATCH 2:                                                                │ │
-│ │ [ Red Devils FC (Home) ]   vs  [ Cityzen Blues (Away) ]                 │ │
-│ │ Score: 65 - 65                          Status: [FINALIZED]             │ │
-│ │ [🔄 Recalculate Score]  [🔒 Finalize Match]  [👁️ View Match] [🗑️ Delete] │ │
+│ │ [ Red Devils FC (Home) ]     vs    [ Cityzen Blues (Away) ]             │ │
+│ │ Score: 65 — 65                              Status: [● LIVE IN PROG.]   │ │
+│ │ [🔄 Recalc Score] [✏️ Manual Score] [🔒 Finalize] [👁️ View] [🗑️ Delete] │ │
 │ └─────────────────────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ WIZARD BOTTOM BAR:                                                          │
+│   [ ← Back to Groups ]                    [ Continue to Review & Publish → ]│
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -63,85 +71,102 @@ The **Admin Schedule & Fixtures Builder Page** is the competition engine room. I
 
 ## 3. Component Inventory & Interactive Workflows
 
-### 3.1 Quick Tools Action Bar
-- **Auto-Generate Round-Robin Button (`Zap` icon):** Expands the automated generator drawer.
-- **Add Round Button (`Plus` icon):** Opens inline round creation inputs (Round Name and Gameweek number).
-- **Recalculate All Scores (`RefreshCw` icon):** Bulk-triggers live FPL API recalculations for every match in the tournament.
-- **Validate Schedule (`CheckCircle2` icon):** Runs the automated validation engine and displays a pass badge or an itemized defect checklist.
+### 3.1 Stepper & Wizard Progression
+- **Stepper Display:** Displays Step 3 as active with live statistics pills (e.g. `4 Groups`, `3 Rounds`, `6 Matches`).
+- **Bottom Navigation Bar:**
+  - `← Back to Groups`: Returns to Step 2 `/admin/tournaments/${id}/groups?wizard=true`.
+  - `Continue to Review & Publish →`: Advances to Step 4 `/admin/tournaments/${id}/publish` (active when schedule is valid).
 
-### 3.2 Automated Round-Robin Generator
-- Prompts the organizer for the **Start Gameweek** (number input, 1–38).
-- If existing rounds exist, displays a safety confirmation prompt: `"Auto-generating will replace all existing rounds and matches with a fresh round-robin schedule. Continue?"`.
-- Applies the canonical Berger / circle rotation algorithm:
-  - Even group count ($N$): produces $N - 1$ rounds, with $N / 2$ matches per round.
-  - Odd group count ($N$): introduces a bye mechanism to ensure balanced scheduling.
-- Reloads the page with the newly generated rounds and fixtures.
+### 3.2 Quick Actions Toolbar
+- **Auto-Generate Round-Robin (`Zap`):** Expands the algorithmic generator drawer.
+- **Add Round (`Plus`):** Opens inline inputs to configure a custom round name and Gameweek number.
+- **Recalculate All (`RefreshCw`):** Dispatches bulk FPL scoring across every fixture in the tournament.
+- **Validate Schedule (`CheckCircle2`):** Runs structural checks and displays an itemized pass/fail checklist.
 
-### 3.3 Manual Round & Match Management
-- **Round Card Header:**
-  - Round title (e.g. `Round 1 - Opening Fixtures`).
-  - Gameweek indicator badge (`Gameweek {round.gameweek}`).
-  - `Add Match` button (`Plus` icon) to append a new match to this round.
-  - `Delete Round` button (`Trash2` icon) with cascading deletion of child matches.
-- **Match Card Controls:**
-  - **Home & Away Team Selectors:** Two dropdown menus populated with all imported tournament groups.
-  - **Live Score Display:** Shows current calculated scores (`{homeScore} - {awayScore}`) or `Not Calculated`.
-  - **Status Badge:** `SCHEDULED` (gray), `COMPLETED` (indigo), or `FINALIZED` (emerald).
-  - **Recalculate Button (`RefreshCw`):** Fetches the latest live Gameweek points for members of both groups from the official FPL API, executes chip adjustments and admin exclusions, and updates the database.
-  - **Finalize Button (`CheckCircle2`):** Locks the match. Finalized matches cannot be accidentally overwritten by bulk recalculation runs.
-  - **Delete Match Button (`Trash2`):** Deletes the fixture pairing.
-  - **Public Link (`ExternalLink`):** Direct shortcut to preview the public match scoreboard at `/matches/[id]`.
+### 3.3 Automated Round-Robin Generator
+- Prompts organizer for **Start Gameweek** (1–38).
+- Implements the canonical Berger rotation algorithm:
+  - Even group count ($N$): produces $N - 1$ rounds with $N / 2$ matches per round.
+  - Odd group count ($N$): introduces bye weeks to ensure parity.
+- Prompts safety confirmation if existing fixtures are present to avoid accidental data loss.
+
+### 3.4 Round Management & Round Recalculation
+- **Round Header Strip:**
+  - Displays round title (e.g. `Round 1 - Opening Matches`) and Gameweek pill (`Gameweek {round.gameweek}`).
+  - **Recalculate Round Button (`RefreshCw`):** Triggers `recalculateRoundAction`, executing live FPL scoring exclusively for fixtures within this specific Gameweek without mutating other rounds.
+  - **Add Match (`Plus`):** Appends a new matchup to the round.
+  - **Delete Round (`Trash2`):** Deletes the round and its child fixtures with confirmation.
+
+### 3.5 Match Fixture Card Controls
+Each fixture renders a complete operational cockpit:
+- **Team Selectors:** Home and Away dropdown menus listing all imported and manual groups.
+- **Live Score Display:** Formatted points (`{homeScore} — {awayScore}`) or `Provisional / Scheduled`.
+- **Match Status Indicators:**
+  - `FINALIZED`: Emerald pill indicating locked official results.
+  - `IN_PROGRESS`: Rose pulsing indicator for ongoing live Gameweek matches.
+  - `COMPLETED`: Purple pill for finished matches awaiting finalization.
+  - `SCHEDULED`: Sky-blue indicator with `Clock` icon for upcoming future Gameweeks.
+- **Recalculate Match (`RefreshCw`):** Fetches live member picks, deducts transfer costs, applies chip rules, and strictly excludes tournament admins.
+- **Manual Match Score Modal (`ManualMatchScoreModal`):**
+  - Clicked via `Manual Score` button.
+  - Essential for manual teams or offline competitions.
+  - Allows direct numeric entry of home/away match points, team goals, and granular member points breakdown.
+- **Finalize Match (`CheckCircle2`):** Locks the match. Finalized matches cannot be accidentally overridden by bulk recalculations.
 
 ---
 
 ## 4. Technical Logic & Server Actions
 
-### 4.1 Automated Round-Robin Generator (`generateRoundRobinScheduleAction`)
+### 4.1 Round Recalculation Pipeline (`recalculateRoundAction`)
 ```typescript
-export async function generateRoundRobinScheduleAction(
-  tournamentId: string,
-  startGameweek: number
-) {
-  // 1. Fetches all groups for the tournament.
-  // 2. Deletes existing rounds and matches inside a Prisma transaction.
-  // 3. Executes round-robin circle algorithm.
-  // 4. Creates Round records assigned to consecutive Gameweeks (startGameweek, startGameweek + 1, ...).
-  // 5. Generates Match records pairing Home and Away groups.
+export async function recalculateRoundAction(roundId: string) {
+  const round = await prisma.round.findUnique({
+    where: { id: roundId },
+    include: {
+      matches: true,
+      tournament: true,
+    },
+  });
+
+  // Iterates over all non-finalized matches in the round
+  for (const match of round.matches) {
+    if (match.status === "FINALIZED") continue;
+    await recalculateMatchScores(match.id, round.gameweek, round.tournament);
+  }
 }
 ```
 
-### 4.2 Score Recalculation Engine (`recalculateMatchAction`)
-Executes the full scoring pipeline:
-1. Identifies the match's Gameweek and tournament chip rules (`allowBenchBoost`, `allowTripleCaptain`).
-2. Fetches the live squad picks and gross points for all members of both groups via `getManagerPicks(fplId, gameweek)`.
-3. Deducts transfer penalty costs (`event_transfers_cost`).
-4. Calculates active chip impact:
+### 4.2 Scoring Pipeline & Admin Exclusion (`recalculateMatchAction`)
+Executes the comprehensive scoring rules:
+1. Validates Gameweek state: if the Gameweek has not kicked off or picks are unpublished, marks match as `SCHEDULED` without throwing.
+2. Queries live squad picks and gross points for all team members via `getManagerPicks(fplId, gameweek)`.
+3. Deducts transfer costs (`event_transfers_cost`).
+4. Evaluates active chips:
    - If `bboost` played and `allowBenchBoost === false`: excludes bench points.
-   - If `3xc` played and `allowTripleCaptain === false`: reduces captain multiplier to 2x.
-5. Strictly excludes any member flagged as a tournament admin (`isExcluded: true`).
-6. Sums the remaining player scores to produce `homeScore` and `awayScore`.
-7. Updates match status to `COMPLETED` and assigns `result: "HOME_WIN" | "AWAY_WIN" | "DRAW"`.
+   - If `3xc` played and `allowTripleCaptain === false`: caps captain multiplier at 2x.
+5. Strictly excludes any tournament admin (`isExcluded: true`).
+6. Sums remaining player points into `homeScore` and `awayScore`.
+7. Updates status to `COMPLETED` or `IN_PROGRESS` based on official FPL fixture completion.
 
-### 4.3 Schedule Validation Engine (`validateScheduleAction`)
-Verifies:
-- Minimum of 2 participating groups.
-- No round contains duplicate teams playing twice in the same Gameweek.
-- Every group has an equal number of home and away fixtures.
+### 4.3 Manual Score Management (`saveManualMatchScoreAction`)
+```typescript
+export async function saveManualMatchScoreAction(
+  matchId: string,
+  homeScore: number,
+  awayScore: number,
+  memberScores: Array<{ memberId: string; points: number }>
+) {
+  // Directly updates Match and MatchScore records in Prisma
+}
+```
 
 ---
 
-## 5. Responsive Behavior
+## 5. Responsive Behavior & Validation
 
-- **Mobile (< 768px):** Action bar buttons wrap onto multiple rows. Match card pairings stack vertically (Home dropdown above Away dropdown). In-card action buttons collapse into icon-first buttons.
-- **Desktop (>= 768px):** Clean side-by-side dropdown selectors with central `vs` badge, spacious action toolbars, and flush status indicators.
-
----
-
-## 6. Edge Cases & Resilience
-
-1. **Groups Count < 2:**
-   - Displays a prominent amber warning alert: `"You need at least 2 groups to create matches. Import groups first."` and disables the generator.
-2. **FPL API Delay / Mid-Gameweek Recalculation:**
-   - Can be triggered repeatedly during a live Gameweek; scores update dynamically as bonus points and substitutions are processed on the Premier League servers.
-3. **Locking Results:**
-   - Once marked `FINALIZED`, the match is immune to inadvertent score drift.
+- **Mobile Viewports (< 768px):** Toolbar buttons wrap onto separate rows. Fixture pairings stack home team over away team. Individual action buttons collapse to icon buttons.
+- **Desktop (>= 768px):** Full horizontal layout with team crests, score pill, and flush action buttons.
+- **Validation Engine (`validateScheduleAction`):**
+  - Requires minimum 2 participating groups.
+  - Flags teams playing multiple times within the same Gameweek.
+  - Detects unassigned fixture slots before publication.

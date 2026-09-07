@@ -1,50 +1,51 @@
-# Page 12: Fantasy Squad Pitch & Team Logo Overlays
+# Page 12: Fantasy Squad Pitch & Team Crest Overlays
 
 > **Components:** `components/fantasy-team-modal.tsx` & `components/team-logo-picker.tsx`  
-> **Type:** Interactive Full-Screen Modal Dialogs  
+> **Type:** Universal Interactive Modal Overlays  
 > **Access Level:** Universal (Public Spectators, Participants, and Admins)  
-> **Design Theme:** Immersive Pitch Emerald & Glassmorphic Stadium Dark  
+> **Design Theme:** Global FPL Light System (`bg-white` dialog, `#37003C` headers, `#00FF87` accents) enclosing Emerald Tactical Stadium Pitch  
 
 ---
 
 ## 1. Component Overview
 
-While rendered as accessible modal dialogs rather than standalone URL routes, the **Fantasy Team Squad Modal** and **Team Logo Picker** are two of the most technically sophisticated and visually arresting views in the entire application.
+While rendered as interactive modal dialogs rather than standalone page routes, the **Fantasy Squad Pitch Modal** and **Team Logo Picker** are two of the most technically sophisticated and visually engaging interfaces in the entire application:
 
-- **`<FantasyTeamModal />`:** A full-featured tactical football pitch experience displaying a manager's 15-player FPL squad for any specific Gameweek. It illustrates starting formations (e.g. 3-4-3, 4-3-3, 5-3-2), live player points, captaincy multipliers, auto-substitutions, bench status, and chip penalties.
-- **`<TeamLogoPicker />`:** An interactive club crest selector allowing organizers to search, filter by league (Premier League, La Liga, Serie A, Bundesliga, Ligue 1), and auto-match team names to official football badges.
+- **`<FantasyTeamModal />`:** A full-featured tactical football pitch experience displaying an FPL manager's 15-player squad for any specific Gameweek. It renders starting formations (e.g. 3-4-3, 4-3-3, 5-3-2), live player points, captaincy multipliers, automatic substitutions, bench status, and chip penalties, with full support for manual teams and FPL deadline status detection.
+- **`<TeamLogoPicker />`:** A searchable club crest selector allowing organizers to assign authentic football club crests (Premier League, La Liga, Serie A, Bundesliga, Ligue 1) or smart auto-suggested badges.
 
 ---
 
 ## 2. UI & Visual Architecture
 
-### 2.1 The Pitch Surface (`FantasyTeamModal`)
-- **Pitch Container:** Deep stadium gradient: `bg-gradient-to-b from-emerald-800 via-emerald-900 to-emerald-950`.
-- **Field Markings:** Authentic white pitch lines:
-  - Center half-way line and center circle (`border-white/20`).
-  - Penalty area boxes (`border-white/15`).
-  - Goal area arcs.
-- **Player Cards:** Translucent badges (`bg-black/60 border border-white/15 backdrop-blur-sm rounded-lg`) featuring player club shirts, player names, position pills, captaincy crowns, and point badges.
+### 2.1 The Modal Shell & Surface Styling
+- **Modal Container:** Pure white dialog surface (`bg-white border-[#E5E5E5] rounded-2xl shadow-xl max-w-4xl max-h-[92vh] overflow-y-auto`).
+- **Header Strip:** Deep Premier Purple typography (`text-[#37003C] font-black text-lg sm:text-xl`) with club crest, manager name, gameweek indicator, and an external link to the official FPL profile (or `Manual Player` pill for manual teams).
+- **Gameweek Points Callout:** Bold points total (`text-2xl sm:text-3xl font-black text-[#37003C]`) with green PTS badge (`bg-[#00FF87]/20 text-[#008744] border-[#00FF87]/40`).
+- **Active Chip Badge:** High-visibility chip callout (`bg-[#E7FF00]/30 border-[#E7FF00] text-[#37003C]`) explaining rule enforcement (e.g. `Triple Captain (3x)` or `Triple Captain (2x limited)`).
 
 ### 2.2 Wireframe Layout
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ MODAL HEADER:                                                               │
-│   [Club Crest] Highbury Heroes (Alex Morgan)            [↗ View on FPL] [X]│
-│   Gameweek 28 · London Gunners · Total Squad Points: 78                     │
-│   [⚡ Triple Captain: Active (+12 pts)]                                      │
-│   TABS: [ ⚽ Pitch View ]   [ 📋 List View ]                                │
+│   [Crest] Highbury Heroes                                   [↗ View on FPL] │
+│   Alex Morgan · Gameweek 28 · London Gunners                     [ 78 PTS ] │
+│   ⚡ Triple Captain (3x) Active                                              │
+│   Formation: [ 3-4-3 ]                 TABS: [ ⚽ Pitch View ] [ 📋 List ]   │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ PITCH VIEW CANVAS:                                                          │
+│ DEADLINE WARNING (if FPL API updating):                                     │
+│   ⚠️ FPL Deadline Processing: Gameweek 28 points are currently updating...   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PITCH VIEW CANVAS (Emerald Stadium):                                        │
 │                                                                             │
-│                            [ 🧤 Raya (ARS) 6pts ]                           │
+│                           [ 🧤 Raya (ARS) 6pts ]                            │
 │                                                                             │
 │      [ Saliba 6 ]     [ Gabriel 8 ]     [ White 5 ]     [ Gvardiol 7 ]      │
 │                                                                             │
-│        [ Saka (C) 24pts 👑 ]     [ Palmer 12 ]     [ Foden 8 ]              │
+│       [ Saka (C) 24pts 👑 ]     [ Palmer 12 ]     [ Foden 8 ]               │
 │                                                                             │
-│                 [ Haaland 14 ]         [ Watkins 8 ]                        │
+│                [ Haaland 14 ]         [ Watkins 8 ]                         │
 │                                                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ BENCH RESERVE BAR:                                                          │
@@ -57,87 +58,79 @@ While rendered as accessible modal dialogs rather than standalone URL routes, th
 
 ## 3. Deep Component Specifications
 
-### 3.1 Modal Header & Meta Controls
-- **Club Crest:** Displays the participating group's logo or fallback shield (`Shield` icon).
-- **Manager & Team Identifier:** Prominent display of the fantasy team name and manager's real name.
-- **External FPL Link:** Clickable `ExternalLink` icon pointing directly to the official Premier League website: `https://fantasy.premierleague.com/entry/{fplId}/event/{gameweek}`.
-- **Active Chip Callout:**
-  - Displays chip badge: `Triple Captain`, `Bench Boost`, `Free Hit`, or `Wildcard`.
-  - Explains chip point adjustments (e.g. whether Triple Captain was reduced to 2x or Bench Boost was excluded).
-- **View Switcher Tabs:**
-  - `Pitch View`: Visual tactical pitch (`LayoutGrid` icon).
-  - `List View`: Data-rich statistical table (`List` icon).
-
-### 3.2 The Tactical Pitch View
+### 3.1 Formation Engine & Pitch Rows
 Starters are partitioned dynamically into 4 tactical horizontal rows based on player position:
-1. **Goalkeeper Row (GKP):** Exactly 1 starting goalkeeper centered at the top.
-2. **Defenders Row (DEF):** 3, 4, or 5 starting defenders evenly spaced across the row.
-3. **Midfielders Row (MID):** 3, 4, or 5 starting midfielders evenly spaced.
-4. **Forwards Row (FWD):** 1, 2, or 3 starting strikers evenly spaced at the attacking end.
+1. **Goalkeepers (GKP):** Exactly 1 starting goalkeeper centered at the top.
+2. **Defenders (DEF):** 3, 4, or 5 starting defenders evenly distributed.
+3. **Midfielders (MID):** 3, 4, or 5 starting midfielders evenly distributed.
+4. **Forwards (FWD):** 1, 2, or 3 starting strikers at the attacking front.
 
-### 3.3 Individual Player Pitch Badge
-Each player on the pitch renders:
-- **Jersey Icon / Kit Badge:** Color-coded club shirt asset.
-- **Player Web Name:** High-contrast text (e.g. `Saka`, `Haaland`, `Saliba`).
-- **Club Short Code:** 3-letter abbreviation (`ARS`, `MCI`, `LIV`, etc.).
-- **Captaincy Indicator:**
+### 3.2 Individual Pitch Player Card
+Each player badge renders:
+- **Player Kit / Shirt:** Color-coded club shirt asset.
+- **Player Web Name:** High-contrast text label (e.g. `Saka`, `Haaland`).
+- **Club Short Code:** 3-letter abbreviation (`ARS`, `MCI`, `LIV`).
+- **Captaincy Multipliers:**
   - Standard Captain: Yellow `C` badge with double points (2x).
   - Triple Captain: Gold crown icon (`👑`) with `TC` badge and triple points (3x).
-  - Vice-Captain: `V` badge.
-- **Gameweek Points Pill:** Prominent badge displaying the player's official points scored in that Gameweek.
+  - Vice Captain: Neutral `V` badge.
+- **Gameweek Points Pill:** Prominent badge displaying the player's official score.
+- **Substituted Status:** Visual indicator if the player was automatically substituted onto the pitch.
 
-### 3.4 Bench Reserve Bar
-- Positioned below the pitch surface with a distinct translucent divider.
-- Displays the 4 reserve players: 1 substitute goalkeeper and 3 outfield bench players in priority order.
-- Features clear rule annotations explaining whether bench points contributed to the tournament score (Bench Boost) or were excluded.
+### 3.3 Bench Reserve Bar
+- Positioned below the pitch canvas with a distinct divider.
+- Displays 4 bench players (1 goalkeeper + 3 outfield reserves in priority order).
+- Annotates whether bench points contributed to the tournament score (Bench Boost) or were excluded.
 
-### 3.5 Detailed List View (`activeTab === "list"`)
-Presents an exhaustive statistical breakdown in an interactive table:
-- **Columns:** Player, Club, Position, Captaincy, Minutes Played, Goals, Assists, Clean Sheets, Bonus Points, and Total Gameweek Points.
+### 3.4 Manual Player Support
+- When viewing a squad with manual players (`isManualPlayer`):
+  - Hides the external FPL link and displays a neutral `Manual Player` pill.
+  - Presents player stats, goals, and points entered manually by tournament organizers without crashing the tactical canvas.
+
+### 3.5 FPL Deadline & Downtime Protection
+- Integrated with `lib/fpl-deadline.ts`.
+- If the official FPL API is currently down or updating during a Gameweek deadline:
+  - Displays a high-visibility amber notice banner informing the viewer that live picks are locked until Premier League servers complete updates.
+  - Provides a `Retry` button to reload squad data when service resumes.
 
 ---
 
-## 4. Team Logo Picker Overlay (`TeamLogoPicker`)
+## 4. Team Crest Picker Overlay (`TeamLogoPicker`)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ MODAL HEADER: Choose Team Logo                                          [X] │
+│ MODAL HEADER: Choose Team Crest                                         [X] │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ SEARCH & LEAGUE FILTER BAR:                                                 │
 │   [ 🔍 Search team or club name...                                       ] │
-│   LEAGUES: [ALL] [Premier League] [La Liga] [Serie A] [Bundesliga]          │
+│   LEAGUES: [ALL] [Premier League] [La Liga] [Serie A] [Bundesliga] [Ligue 1]│
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ AUTO-SUGGESTION BANNER (if teamName matches):                               │
+│ SMART AUTO-SUGGESTION BANNER:                                               │
 │   ✨ Suggested Match: Arsenal FC                                            │
-│   [ Arsenal Crest ] [ Use Suggested Logo ]                                  │
+│   [ Arsenal Crest ]  [ Use Suggested Logo ]                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ LOGO GRID:                                                                  │
+│ CREST GRID:                                                                 │
 │   ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐   │
 │   │ [ARS]│ │ [AVL]│ │ [BOU]│ │ [BRE]│ │ [BHA]│ │ [CHE]│ │ [CRY]│ │ [EVE]│   │
 │   │ Arsen│ │ Aston│ │ Bourn│ │ Brent│ │ Brigh│ │ Chels│ │ Cryst│ │ Evert│   │
-│   ├──────┤ ├──────┤ ├──────┤ ├──────┤ ├──────┤ ├──────┤ ├──────┤ ├──────┤   │
-│   │ [FUL]│ │ [IPS]│ │ [LEI]│ │ [LIV]│ │ [MCI]│ │ [MUN]│ │ [NEW]│ │ [NFO]│   │
-│   │ Fulha│ │ Ipswi│ │ Leice│ │ Liver│ │ Man C│ │ Man U│ │ Newca│ │ Nottm│   │
 │   └──────┘ └──────┘ └──────┘ └──────┘ └──────┘ └──────┘ └──────┘ └──────┘   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ MODAL FOOTER:                                                               │
-│   [ Remove Logo ]                               [ Cancel ]  [ Select Logo ] │
+│   [ Remove Crest ]                              [ Cancel ]  [ Select Crest ]│
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Features
-1. **Curated Football Badge Library:** Hundreds of high-resolution transparent PNG crests across top European leagues.
-2. **Instant Search Filter:** Real-time search query matching club names, nicknames, or leagues.
-3. **League Filters:** Quick filter buttons (`ALL`, `Premier League`, `La Liga`, `Serie A`, `Bundesliga`, `Ligue 1`).
-4. **Smart Auto-Suggestion Engine (`suggestLogoForTeamName`):** Analyzes the imported FPL League name (e.g. *"North London Gooners"* -> automatically suggests Arsenal FC crest).
-5. **Selection Ring:** Selected logo glows with an indigo ring (`ring-2 ring-indigo-500 bg-indigo-50/50`).
+1. **Curated Football Crest Library:** High-resolution transparent PNG crests across top European leagues.
+2. **Instant Search:** Instant text search across club names, cities, and nicknames.
+3. **League Filters:** Quick filter badges (`ALL`, `Premier League`, `La Liga`, `Serie A`, `Bundesliga`, `Ligue 1`).
+4. **Smart Auto-Suggestion Engine (`suggestLogoForTeamName`):** Automatically maps team names (e.g. *"North London Reds"* -> Arsenal FC).
+5. **Selection Ring:** Selected crest glows with a purple accent ring (`ring-2 ring-[#37003C] bg-[#37003C]/5`).
 
 ---
 
-## 5. Technical Logic & API Fetching
+## 5. Technical Logic & Data Pipeline
 
-### 5.1 Dynamic Picks Endpoint (`/api/fpl/manager/[id]/picks`)
-When the modal opens, it triggers a client-side fetch:
 ```typescript
 const queryParams = new URLSearchParams({
   gameweek: String(gameweek),
@@ -146,9 +139,10 @@ const queryParams = new URLSearchParams({
 });
 const res = await fetch(`/api/fpl/manager/${fplId}/picks?${queryParams.toString()}`);
 const data = await res.json();
-setSquad(data.squad);
-```
 
-### 5.2 Responsive Modal Constraints
-- Constrained to `max-w-4xl max-h-[94vh]`.
-- Pitch canvas automatically scales down player badge padding on mobile screens (`p-1` vs `p-2`) while keeping all 11 starters legible without horizontal clipping.
+if (data.isDeadline) {
+  setIsDeadline(true);
+} else {
+  setSquad(data.squad);
+}
+```

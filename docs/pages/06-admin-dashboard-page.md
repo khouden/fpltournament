@@ -75,6 +75,7 @@ Cards retain clean white surfaces with 1px `#E5E5E5` borders and subtle shadows.
 ### 3.4 Tournaments Management List
 - **Section Heading:** `Tournaments` and `All competitions` with a subtle total competition count pill.
 - **Tournament Card Items:**
+  - **Banner Thumbnail Preview (Optional):** When `tournament.banner` is configured, displays a compact stadium thumbnail (`h-11 w-18 sm:h-12 sm:w-20 rounded-[8px] overflow-hidden bg-[#1F0022]`) next to the title.
   - **Tournament Title Link:** Links directly to `/admin/tournaments/${tournament.id}` for deep tournament administration.
   - **Explicit Status Badges:**
     - `PUBLISHED`: Emerald pill with `CheckCircle2` icon.
@@ -89,7 +90,7 @@ Cards retain clean white surfaces with 1px `#E5E5E5` borders and subtle shadows.
     - **Primary:** `Edit` (`Pencil` icon, links to `/admin/tournaments/${id}/edit`).
     - **Secondary:** `Groups` (`Users` icon) and `Schedule` (`Calendar` icon).
     - **Contextual:**
-      - `Publish` (Drafts only): Emerald button with `Upload` icon calling `publishTournamentWithValidationAction(tournamentId)`. Disabled if tournament has fewer than 2 groups.
+      - `Review & Publish` / `Publish` (Drafts): Emerald button with `Rocket` or `Upload` icon, opening Step 4 `/admin/tournaments/${id}/publish` or triggering `publishTournamentWithValidationAction(tournamentId)`.
       - `Unpublish` (Published only): Secondary outline button with `EyeOff` icon calling `unpublishTournamentAction(tournamentId)`.
     - **Destructive:** `Delete` (`Trash2` icon) opening the deletion modal dialog, separated to prevent accidental clicks.
 

@@ -115,7 +115,8 @@ The **Tournaments Directory Page** is the central catalog of all competitions ru
 
 ### 3.5 `TournamentCard` Component Specification
 - **Card Container:** Clickable Next.js `<Link href="/tournaments/[id]">` wrapper styled with `group` utilities and visible focus rings.
-- **Top Accent Line:** Subtle gradient line on top border (active: neon gradient, completed: subtle brand purple).
+- **Cinematic Banner Header (Optional):** When `tournament.banner` is configured, renders a full-bleed top stadium artwork header (`h-32 sm:h-36 bg-[#1F0022]`) with an overlay gradient, displaying the status badge and season pill over the artwork.
+- **Top Accent Line:** Subtle gradient line on top border when banner is not present (active: neon gradient, completed: subtle brand purple).
 - **Header:** Status badge on left (`ACTIVE` / `COMPLETED`) and season notation on right (`2024/25`).
 - **Title & Subtitle:** Bold title with line-clamping and category descriptor.
 - **Metric Row:** 3 distinct metric boxes:
