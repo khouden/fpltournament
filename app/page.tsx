@@ -95,10 +95,10 @@ export default async function Home() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative overflow-hidden bg-[#0B081E] text-white pt-10 sm:pt-14 pb-20 sm:pb-28 lg:pt-18 lg:pb-36 border-b border-white/[0.06]">
-          {/* Hero Background Image: hero.jpg */}
+          {/* Hero Background Image: hero.png */}
           <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
             <Image
-              src="/images/heroes/hero.jpg"
+              src="/images/heroes/hero.png"
               alt="FPL Tournaments Hero Background"
               fill
               priority
@@ -160,11 +160,6 @@ export default async function Home() {
                     </Link>
                   </Button>
                 </div>
-              </div>
-
-              {/* Right Column: Hero Visual (Trophy, Floating VS Card, Top Managers Leaderboard) */}
-              <div className="lg:col-span-6 flex justify-center lg:justify-end">
-                <HeroVisual />
               </div>
             </div>
           </Container>
