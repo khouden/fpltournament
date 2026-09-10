@@ -35,6 +35,23 @@
   --color-fpl-purple-secondary: #5a0a63;
   --color-fpl-magenta: #e9007f;
 
+  /* Cosmic Midnight & Neon Mint Design System Tokens */
+  --color-midnight-950: #0B081E;
+  --color-midnight-900: #12092B;
+  --color-midnight-850: #160B33;
+  --color-midnight-800: #1C0F3F;
+  --color-midnight-700: #291658;
+  --color-midnight-600: #3D227D;
+  --color-neon-mint: #00FFA3;
+  --color-neon-mint-hover: #00E592;
+  --color-neon-mint-dark: #008756;
+  --color-neon-mint-dim: rgba(0, 255, 163, 0.12);
+  --color-violet-accent: #8B5CF6;
+  --color-violet-dim: rgba(139, 92, 246, 0.18);
+  --color-lavender-muted: #A69DC6;
+  --color-page-light: #F8F9FD;
+  --color-card-border: #E8ECF2;
+
   /* FPL Fantasy Neon Accents */
   --color-fpl-lime: #e7ff00;
   --color-fpl-green: #00ff87;
@@ -59,7 +76,7 @@
   --radius-pill: 999px;
 
   /* Typography */
-  --font-sans: "Poppins", system-ui, -apple-system, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Poppins", system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
@@ -247,3 +264,51 @@ body {
     transform: none !important;
   }
 }
+
+/* -------------------------------------------------------------
+ * Cosmic Midnight & Neon Mint Design System Utilities
+ * ------------------------------------------------------------- */
+.bg-cosmic-midnight {
+  background: linear-gradient(135deg, #0B081E 0%, #12092B 45%, #180B38 100%);
+}
+
+.bg-cosmic-hero {
+  background: radial-gradient(circle at 75% 35%, rgba(139, 92, 246, 0.18) 0%, transparent 60%),
+              radial-gradient(circle at 25% 20%, rgba(0, 255, 163, 0.08) 0%, transparent 50%),
+              linear-gradient(145deg, #0B081E 0%, #12092B 40%, #190B38 75%, #0D0622 100%);
+}
+
+.glass-midnight {
+  background: rgba(18, 11, 41, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.shadow-mint-glow {
+  box-shadow: 0 0 24px rgba(0, 255, 163, 0.45);
+}
+
+.shadow-mint-glow-sm {
+  box-shadow: 0 0 12px rgba(0, 255, 163, 0.35);
+}
+
+.shadow-floating-bar {
+  box-shadow: 0 20px 45px -12px rgba(11, 8, 30, 0.09), 0 4px 16px -2px rgba(11, 8, 30, 0.04);
+}
+
+.shadow-tournament-card {
+  box-shadow: 0 4px 20px rgba(11, 8, 30, 0.04), 0 1px 3px rgba(11, 8, 30, 0.02);
+}
+
+.shadow-tournament-card-hover {
+  box-shadow: 0 20px 40px -4px rgba(11, 8, 30, 0.10), 0 6px 16px -2px rgba(11, 8, 30, 0.05);
+}
+
