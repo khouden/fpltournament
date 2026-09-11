@@ -1,0 +1,44 @@
+import * as React from "react";
+import Image from "next/image";
+import { Container } from "@/components/layout/container";
+
+export function TournamentsHero() {
+  return (
+    <section className="relative overflow-hidden bg-[#0A021A] min-h-[340px] sm:min-h-[380px] lg:min-h-[430px] flex items-center border-b border-white/[0.08]">
+      {/* Hero Background Image */}
+      <div className="absolute inset-0 z-0">
+        <Image
+          src="/images/backgrounds/tournaments page hero background.png"
+          alt="FPL Tournaments Hero Banner"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[75%_center] sm:object-right select-none pointer-events-none"
+        />
+        {/* Soft dark vignette on the left so typography is crystal crisp */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#0A021A] via-[#0A021A]/85 to-transparent w-full sm:w-2/3 pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0A021A] to-transparent pointer-events-none" />
+      </div>
+
+      <Container className="relative z-10 py-12 sm:py-16 lg:py-20">
+        <div className="max-w-xl">
+          {/* Eyebrow / Category Tag */}
+          <div className="text-[#00FF87] font-black text-xs sm:text-[13px] uppercase tracking-[0.2em] mb-2.5 sm:mb-3">
+            FPL TOURNAMENTS
+          </div>
+
+          {/* Headline */}
+          <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-black tracking-tight leading-[1.06] text-white">
+            Tournaments <br />
+            <span className="text-[#00FF87]">for every manager</span>
+          </h1>
+
+          {/* Description */}
+          <p className="mt-4 text-sm sm:text-base text-gray-200/90 font-normal leading-relaxed max-w-md sm:max-w-lg">
+            Join exciting FPL tournaments, compete with other managers and win amazing rewards.
+          </p>
+        </div>
+      </Container>
+    </section>
+  );
+}
