@@ -148,7 +148,7 @@ export default async function Home() {
       prizePool: "Trophy & Glory",
       prizeLabel: "Tournament prize",
       href: `/tournaments/${t.id}`,
-      buttonVariant: idx === 1 ? "outline" : "dark",
+      buttonVariant: "dark",
     };
   });
 
@@ -178,7 +178,7 @@ export default async function Home() {
       gameweeks: "GW 8 - GW 12",
       prizePool: "$250",
       href: "/tournaments",
-      buttonVariant: "outline",
+      buttonVariant: "dark",
     },
     {
       id: "elite-managers-league",
