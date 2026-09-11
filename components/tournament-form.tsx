@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FPLVerifier } from "./fpl-verifier";
 import type { FPLManager } from "@/lib/fpl";
-import { TOURNAMENT_BANNERS } from "@/lib/tournament-banners";
+import { TOURNAMENT_BANNERS, getDefaultBanner } from "@/lib/tournament-banners";
 import {
   Armchair,
   Crown,
@@ -83,7 +83,7 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
   const [season, setSeason] = useState(
     initialData?.season || new Date().getFullYear()
   );
-  const [banner, setBanner] = useState(initialData?.banner || "");
+  const [banner, setBanner] = useState(initialData?.banner || getDefaultBanner().path);
   const [bannerTab, setBannerTab] = useState<"preset" | "upload" | "url">("preset");
   const [customUrlInput, setCustomUrlInput] = useState(initialData?.banner || "");
   const [uploading, setUploading] = useState(false);

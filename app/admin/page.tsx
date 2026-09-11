@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import Image from "next/image";
+import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import { TournamentActions } from "@/components/tournament-actions";
 import {
   Trophy,
@@ -156,17 +157,20 @@ export default async function AdminDashboard() {
                   {/* Top Row: Thumbnail + Title Link & Status Badge */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3.5 border-b border-[#F0F0F0]">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      {tournament.banner && (
-                        <div className="relative h-11 w-18 sm:h-12 sm:w-20 rounded-[8px] overflow-hidden bg-[#1F0022] shrink-0 border border-[#E5E5E5] shadow-2xs">
-                          <Image
-                            src={tournament.banner}
-                            alt=""
-                            fill
-                            unoptimized={tournament.banner.startsWith("http")}
-                            className="object-cover"
-                          />
-                        </div>
-                      )}
+                      {(() => {
+                        const bannerSrc = getTournamentBannerOrDefault(tournament.banner, tournament.id);
+                        return (
+                          <div className="relative h-11 w-18 sm:h-12 sm:w-20 rounded-[8px] overflow-hidden bg-[#1F0022] shrink-0 border border-[#E5E5E5] shadow-2xs">
+                            <Image
+                              src={bannerSrc}
+                              alt=""
+                              fill
+                              unoptimized={bannerSrc.startsWith("http")}
+                              className="object-cover"
+                            />
+                          </div>
+                        );
+                      })()}
                       <div className="min-w-0 flex-1">
                         <Link
                           href={`/admin/tournaments/${tournament.id}`}

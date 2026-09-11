@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { LeagueTable } from "@/components/league-table";
 import { calculateLeagueStandings } from "@/lib/scoring";
 import { MatchSquadList } from "@/components/match-squad-client";
+import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import { Header } from "@/components/navigation/header";
 import { Footer } from "@/components/layout/footer";
 import { Container } from "@/components/layout/container";
@@ -98,6 +99,8 @@ export default async function TournamentPage(
   };
 
   const isActive = tournament.status === "PUBLISHED";
+  const bannerSrc = getTournamentBannerOrDefault(tournament.banner, tournament.id);
+  const hasBanner = !!bannerSrc;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F7F7F7] text-[#1F1F1F]">
@@ -108,20 +111,20 @@ export default async function TournamentPage(
         {/* Tournament Identity Hero Header */}
         <section
           className={`relative overflow-hidden border-b border-[#E5E5E5] py-10 sm:py-14 ${
-            tournament.banner
+            hasBanner
               ? "bg-[#18001D] text-white"
               : "bg-white text-[#1F1F1F]"
           }`}
         >
           {/* If banner is present: cinematic background banner with FPL overlay */}
-          {tournament.banner ? (
+          {hasBanner ? (
             <div className="absolute inset-0 z-0">
               <Image
-                src={tournament.banner}
+                src={bannerSrc}
                 alt={tournament.name}
                 fill
                 priority
-                unoptimized={tournament.banner.startsWith("http")}
+                unoptimized={bannerSrc.startsWith("http")}
                 className="object-cover object-center scale-[1.02] filter blur-[0.5px] brightness-[0.85]"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-[#1E0024]/95 via-[#37003C]/85 to-[#120015]/95" />
@@ -153,7 +156,7 @@ export default async function TournamentPage(
               <Link
                 href="/tournaments"
                 className={`inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold uppercase tracking-wider transition-colors group ${
-                  tournament.banner
+                  hasBanner
                     ? "text-white/80 hover:text-white"
                     : "text-[#37003C] hover:text-[#5A0A63]"
                 }`}
@@ -169,14 +172,14 @@ export default async function TournamentPage(
                 {/* Eyebrow Trophy Pill */}
                 <div
                   className={`inline-flex items-center gap-2 rounded-[8px] border px-3 py-1 text-xs font-black uppercase tracking-wider ${
-                    tournament.banner
+                    hasBanner
                       ? "border-[#00FF87]/50 bg-[#00FF87]/15 text-[#00FF87]"
                       : "border-[#37003C]/15 bg-[#37003C]/5 text-[#37003C]"
                   }`}
                 >
                   <Trophy
                     className={`h-3.5 w-3.5 ${
-                      tournament.banner ? "text-[#00FF87]" : "text-[#37003C]"
+                      hasBanner ? "text-[#00FF87]" : "text-[#37003C]"
                     }`}
                   />
                   <span>COMPETITION DASHBOARD</span>
@@ -185,7 +188,7 @@ export default async function TournamentPage(
                 {/* Tournament Title */}
                 <h1
                   className={`text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight leading-[1.08] break-words ${
-                    tournament.banner
+                    hasBanner
                       ? "text-white drop-shadow-md"
                       : "text-[#37003C]"
                   }`}
@@ -198,7 +201,7 @@ export default async function TournamentPage(
                   {/* Season Badge */}
                   <span
                     className={`inline-flex items-center gap-1 rounded-[8px] border px-3 py-1 text-xs font-bold ${
-                      tournament.banner
+                      hasBanner
                         ? "border-white/20 bg-white/10 text-white/90 backdrop-blur-xs"
                         : "border-[#E5E5E5] bg-[#F9F9F9] text-[#555555]"
                     }`}
@@ -215,7 +218,7 @@ export default async function TournamentPage(
                   ) : (
                     <span
                       className={`inline-flex items-center gap-1.5 rounded-[8px] border px-3 py-1 text-xs font-bold uppercase tracking-wider ${
-                        tournament.banner
+                        hasBanner
                           ? "border-white/20 bg-white/15 text-white/80"
                           : "border-[#D5D5D5] bg-[#EBEBEB] text-[#555555]"
                       }`}
@@ -227,14 +230,14 @@ export default async function TournamentPage(
                   {/* Bench Boost Rule Badge */}
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-[8px] border px-3 py-1 text-xs font-bold ${
-                      tournament.banner
+                      hasBanner
                         ? "border-white/20 bg-white/10 text-white backdrop-blur-xs"
                         : "border-[#E5D5E7] bg-[#F3EDF4] text-[#37003C]"
                     }`}
                   >
                     <Armchair
                       className={`h-3.5 w-3.5 ${
-                        tournament.banner ? "text-[#00FF87]" : "text-[#5A0A63]"
+                        hasBanner ? "text-[#00FF87]" : "text-[#5A0A63]"
                       }`}
                     />
                     <span>
@@ -250,14 +253,14 @@ export default async function TournamentPage(
                   {/* Triple Captain Rule Badge */}
                   <span
                     className={`inline-flex items-center gap-1.5 rounded-[8px] border px-3 py-1 text-xs font-bold ${
-                      tournament.banner
+                      hasBanner
                         ? "border-white/20 bg-white/10 text-white backdrop-blur-xs"
                         : "border-[#E5D5E7] bg-[#F3EDF4] text-[#37003C]"
                     }`}
                   >
                     <Crown
                       className={`h-3.5 w-3.5 ${
-                        tournament.banner ? "text-[#00D9FF]" : "text-[#E9007F]"
+                        hasBanner ? "text-[#00D9FF]" : "text-[#E9007F]"
                       }`}
                     />
                     <span>
@@ -275,14 +278,14 @@ export default async function TournamentPage(
               {/* Decorative Fantasy Accent Widget on Desktop */}
               <div
                 className={`hidden lg:flex flex-col items-center justify-center rounded-[18px] border p-5 text-center min-w-[220px] shadow-2xs ${
-                  tournament.banner
+                  hasBanner
                     ? "border-white/20 bg-black/40 backdrop-blur-md text-white"
                     : "border-[#E5E5E5] bg-gradient-to-br from-[#FAF7FB] to-[#F3EDF4]"
                 }`}
               >
                 <div
                   className={`h-12 w-12 rounded-xl flex items-center justify-center shadow-fpl-sm mb-2.5 ${
-                    tournament.banner
+                    hasBanner
                       ? "bg-[#00FF87] text-[#37003C]"
                       : "bg-[#37003C] text-[#00FF87]"
                   }`}
@@ -291,14 +294,14 @@ export default async function TournamentPage(
                 </div>
                 <span
                   className={`text-[11px] font-black uppercase tracking-wider ${
-                    tournament.banner ? "text-white/75" : "text-[#777777]"
+                    hasBanner ? "text-white/75" : "text-[#777777]"
                   }`}
                 >
                   TOURNAMENT FORMAT
                 </span>
                 <span
                   className={`text-sm font-extrabold mt-0.5 ${
-                    tournament.banner ? "text-white" : "text-[#37003C]"
+                    hasBanner ? "text-white" : "text-[#37003C]"
                   }`}
                 >
                   Head-to-Head League

@@ -5,6 +5,7 @@ import Image from "next/image";
 import { TournamentActions } from "@/components/tournament-actions";
 import { calculateLeagueStandings } from "@/lib/scoring";
 import { LeagueTable } from "@/components/league-table";
+import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import {
   Trophy,
   Users,
@@ -97,41 +98,44 @@ export default async function TournamentManagementPage({
         </span>
       </nav>
 
-      {/* Tournament Banner Card (if configured) */}
-      {tournament.banner && (
-        <div className="relative rounded-[16px] overflow-hidden border border-[#E5E5E5] bg-[#1F0022] shadow-fpl-sm h-36 sm:h-44 group">
-          <Image
-            src={tournament.banner}
-            alt={tournament.name}
-            fill
-            priority
-            unoptimized={tournament.banner.startsWith("http")}
-            className="object-cover object-center transition-transform duration-500 group-hover:scale-102"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20" />
-          <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
-            <div className="text-white">
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#00FF87] bg-black/40 px-2 py-0.5 rounded backdrop-blur-xs">
-                TOURNAMENT BANNER
-              </span>
-              <p className="text-sm sm:text-base font-bold text-white/90 drop-shadow-sm mt-0.5">
-                {tournament.name}
-              </p>
+      {/* Tournament Banner Card */}
+      {(() => {
+        const bannerSrc = getTournamentBannerOrDefault(tournament.banner, tournament.id);
+        return (
+          <div className="relative rounded-[16px] overflow-hidden border border-[#E5E5E5] bg-[#1F0022] shadow-fpl-sm h-36 sm:h-44 group">
+            <Image
+              src={bannerSrc}
+              alt={tournament.name}
+              fill
+              priority
+              unoptimized={bannerSrc.startsWith("http")}
+              className="object-cover object-center transition-transform duration-500 group-hover:scale-102"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20" />
+            <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+              <div className="text-white">
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#00FF87] bg-black/40 px-2 py-0.5 rounded backdrop-blur-xs">
+                  TOURNAMENT BANNER
+                </span>
+                <p className="text-sm sm:text-base font-bold text-white/90 drop-shadow-sm mt-0.5">
+                  {tournament.name}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="h-8 px-3 text-xs font-semibold text-white border-white/30 bg-black/40 hover:bg-white hover:text-[#37003C] backdrop-blur-md rounded-[6px] gap-1.5 transition-colors shadow-2xs"
+              >
+                <Link href={`/admin/tournaments/${tournament.id}/edit`}>
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  <span>Change Banner</span>
+                </Link>
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="h-8 px-3 text-xs font-semibold text-white border-white/30 bg-black/40 hover:bg-white hover:text-[#37003C] backdrop-blur-md rounded-[6px] gap-1.5 transition-colors shadow-2xs"
-            >
-              <Link href={`/admin/tournaments/${tournament.id}/edit`}>
-                <ImageIcon className="h-3.5 w-3.5" />
-                <span>Change Banner</span>
-              </Link>
-            </Button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 2. Tournament Header & Identity */}
       <section aria-label="Tournament Header" className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-1">

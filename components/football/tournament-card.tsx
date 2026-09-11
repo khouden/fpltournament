@@ -5,6 +5,7 @@ import { ArrowRight, Check, Minus, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/stats/progress-bar";
+import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 
 export interface TournamentCardData {
   id: string;
@@ -57,7 +58,8 @@ export function TournamentCard({
   const allowBB = tournament.allowBenchBoost ?? true;
   const allowTC = tournament.allowTripleCaptain ?? true;
 
-  const hasBanner = !!tournament.banner;
+  const bannerSrc = getTournamentBannerOrDefault(tournament.banner, tournament.id);
+  const hasBanner = !!bannerSrc;
 
   return (
     <Link
@@ -78,10 +80,10 @@ export function TournamentCard({
         {hasBanner ? (
           <div className="relative -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 mb-4 h-32 sm:h-36 bg-[#12092B] overflow-hidden">
             <Image
-              src={tournament.banner!}
+              src={bannerSrc}
               alt={tournament.name}
               fill
-              unoptimized={tournament.banner!.startsWith("http")}
+              unoptimized={bannerSrc.startsWith("http")}
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
             {/* Gradient Overlays for contrast */}
