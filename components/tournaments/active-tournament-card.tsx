@@ -155,8 +155,11 @@ export function ActiveTournamentCard({ tournament }: ActiveTournamentCardProps) 
                     </div>
 
                     {/* Points */}
-                    <span className="text-xs font-medium text-gray-600 shrink-0 ml-2">
-                      {team.points.toLocaleString()} pts
+                    <span
+                      suppressHydrationWarning
+                      className="text-xs font-medium text-gray-600 shrink-0 ml-2"
+                    >
+                      {team.points.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} pts
                     </span>
                   </div>
                 ))

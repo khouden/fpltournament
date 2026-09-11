@@ -80,8 +80,11 @@ export function CompletedTournamentCard({ tournament }: CompletedTournamentCardP
                   </div>
 
                   {/* Points */}
-                  <span className="text-[11px] font-medium text-gray-500 shrink-0 ml-1">
-                    {team.points.toLocaleString()} pts
+                  <span
+                    suppressHydrationWarning
+                    className="text-[11px] font-medium text-gray-500 shrink-0 ml-1"
+                  >
+                    {team.points.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")} pts
                   </span>
                 </div>
               ))}
