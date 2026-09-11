@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import { ExtensionCleaner } from "@/components/extension-cleaner";
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Script src="/scripts/clean-extensions.js" strategy="beforeInteractive" />
         <ExtensionCleaner />
         {children}
       </body>
