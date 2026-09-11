@@ -1,19 +1,19 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Shield, Calendar, Gift, ArrowRight, Trophy } from "lucide-react";
+import { Shield, Calendar, ArrowRight, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface FeaturedTournamentItem {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   status: "LIVE" | "UPCOMING" | "COMPLETED" | "FINISHED";
   crestType?: "cup" | "crown" | "shield";
   banner?: string | null;
   participants: string;
   gameweeks: string;
-  prizePool: string;
+  prizePool?: string;
   prizeLabel?: string;
   href: string;
   buttonVariant?: "dark" | "outline";
@@ -141,18 +141,15 @@ export function FeaturedTournamentCard({
       </div>
 
       {/* Card Content Body */}
-      <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between gap-6">
+      <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between gap-5">
         <div>
           <h3 className="text-xl sm:text-[22px] font-black tracking-tight text-[#0B081E] group-hover:text-[#160B33] transition-colors">
             {item.name}
           </h3>
-          <p className="mt-2 text-sm text-[#64748B] leading-relaxed line-clamp-2">
-            {item.description}
-          </p>
         </div>
 
         {/* Metadata Details */}
-        <div className="space-y-3.5 pt-2 border-t border-[#F1F5F9]">
+        <div className="pt-3 border-t border-[#F1F5F9]">
           <div className="grid grid-cols-2 gap-4">
             {/* Teams */}
             <div className="flex items-center gap-2.5">
@@ -178,19 +175,6 @@ export function FeaturedTournamentCard({
                   Gameweeks
                 </span>
               </div>
-            </div>
-          </div>
-
-          {/* Prize Pool */}
-          <div className="flex items-center gap-2.5">
-            <Gift className="h-4 w-4 text-[#64748B] shrink-0" />
-            <div className="flex flex-col">
-              <span className="text-xs sm:text-sm font-black text-[#0B081E] leading-none">
-                {item.prizePool}
-              </span>
-              <span className="text-[11px] font-medium text-[#64748B] mt-0.5">
-                {item.prizeLabel ?? "Prize pool"}
-              </span>
             </div>
           </div>
         </div>

@@ -125,28 +125,16 @@ export default async function Home() {
       status = "UPCOMING";
     }
 
-    const seasonFormatted = t.season
-      ? `${t.season}/${String(t.season + 1).slice(-2)}`
-      : "";
-
-    const description =
-      t.groups.length > 0
-        ? `${t.groups.length} teams competing in custom knockout stages${seasonFormatted ? ` for ${seasonFormatted}` : ""}.`
-        : "Custom fantasy tournament with automated scoring and knockout brackets.";
-
     const banner = getTournamentBannerOrDefault(t.banner, t.id);
 
     return {
       id: t.id,
       name: t.name,
-      description,
       status,
       crestType: crestCycle[idx % crestCycle.length],
       banner,
       participants: `${t.groups.length} Teams`,
       gameweeks: gameweeksText,
-      prizePool: "Trophy & Glory",
-      prizeLabel: "Tournament prize",
       href: `/tournaments/${t.id}`,
       buttonVariant: "dark",
     };
@@ -157,39 +145,33 @@ export default async function Home() {
     {
       id: "fpl-champions-cup",
       name: "FPL Champions Cup",
-      description: "The ultimate tournament for elite managers. Are you ready?",
       status: "LIVE",
       crestType: "cup",
       banner: TOURNAMENT_BANNERS[0].path,
       participants: "16 Teams",
       gameweeks: "GW 5 - GW 38",
-      prizePool: "$500",
       href: "/tournaments",
       buttonVariant: "dark",
     },
     {
       id: "weekend-rivals",
       name: "Weekend Rivals",
-      description: "Short format. High intensity. Only the best survive.",
       status: "UPCOMING",
       crestType: "crown",
       banner: TOURNAMENT_BANNERS[1].path,
       participants: "8 Teams",
       gameweeks: "GW 8 - GW 12",
-      prizePool: "$250",
       href: "/tournaments",
       buttonVariant: "dark",
     },
     {
       id: "elite-managers-league",
       name: "Elite Managers League",
-      description: "For true FPL strategists. Prove your skills against the best.",
       status: "LIVE",
       crestType: "shield",
       banner: TOURNAMENT_BANNERS[3].path,
       participants: "32 Teams",
       gameweeks: "GW 4 - GW 38",
-      prizePool: "$1,000",
       href: "/tournaments",
       buttonVariant: "dark",
     },
