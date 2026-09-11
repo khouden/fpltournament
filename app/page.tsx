@@ -95,20 +95,30 @@ export default async function Home() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative overflow-hidden bg-[#0B081E] text-white pt-10 sm:pt-14 pb-20 sm:pb-28 lg:pt-18 lg:pb-36 border-b border-white/[0.06]">
-          {/* Hero Background Image: hero.png */}
+          {/* Hero Background Images: Desktop vs Mobile/Tablet */}
           <div className="absolute inset-0 pointer-events-none select-none overflow-hidden">
+            {/* Desktop Hero Background: Keep current hero.png on large screens (lg+) */}
             <Image
               src="/images/heroes/hero.png"
               alt="FPL Tournaments Hero Background"
               fill
               priority
-              className="object-cover object-[78%_center] lg:object-center"
+              className="hidden lg:block object-cover object-center"
               quality={95}
             />
+
+            {/* Small and Medium Screens Hero Background (< lg) */}
+            <Image
+              src="/images/heroes/hero-mobile-clean.jpg"
+              alt="FPL Tournaments Hero Background"
+              fill
+              priority
+              className="block lg:hidden object-cover object-center"
+              quality={90}
+            />
+
             {/* Subtle bottom gradient to blend seamlessly into the floating stats strip */}
-            <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#0B081E] via-[#0B081E]/40 to-transparent" />
-            {/* Subtle mobile readability vignette on left */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#0B081E]/90 via-[#0B081E]/40 to-transparent lg:hidden" />
+            <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#0B081E] via-[#0B081E]/60 to-transparent" />
           </div>
 
           <Container className="relative z-10">
