@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const [tournaments, totalMembersCount, completedMatchesCount] = await Promise.all([
+  const [tournaments, totalTeamsCount, completedMatchesCount] = await Promise.all([
     prisma.tournament.findMany({
       where: {
         status: { in: ["PUBLISHED", "FINISHED"] },
@@ -44,7 +44,7 @@ export default async function Home() {
         { createdAt: "desc" },
       ],
     }),
-    prisma.groupMember.count(),
+    prisma.group.count(),
     prisma.match.count({
       where: {
         status: { in: ["COMPLETED", "FINALIZED"] },
@@ -90,7 +90,7 @@ export default async function Home() {
   }
 
   const activeCount = activeTournaments.length;
-  const managersCount = totalMembersCount > 0 ? totalMembersCount.toLocaleString() : "0";
+  const teamsCount = totalTeamsCount > 0 ? totalTeamsCount.toLocaleString() : "0";
   const matchesCount = completedMatchesCount;
 
   // Crest types to cycle through for visual variety
@@ -98,8 +98,6 @@ export default async function Home() {
 
   // Map real database tournaments to FeaturedTournamentItems
   const dynamicFeatured: FeaturedTournamentItem[] = featuredSelection.map((t, idx) => {
-    const totalMembers = t.groups.reduce((acc, g) => acc + g.members.length, 0);
-
     const gws = t.rounds
       .map((r) => r.gameweek)
       .filter((gw): gw is number => typeof gw === "number" && gw > 0);
@@ -133,7 +131,7 @@ export default async function Home() {
 
     const description =
       t.groups.length > 0
-        ? `${t.groups.length} groups competing in custom knockout stages${seasonFormatted ? ` for ${seasonFormatted}` : ""}.`
+        ? `${t.groups.length} teams competing in custom knockout stages${seasonFormatted ? ` for ${seasonFormatted}` : ""}.`
         : "Custom fantasy tournament with automated scoring and knockout brackets.";
 
     const banner = getTournamentBannerOrDefault(t.banner, t.id);
@@ -145,7 +143,7 @@ export default async function Home() {
       status,
       crestType: crestCycle[idx % crestCycle.length],
       banner,
-      participants: totalMembers > 0 ? `${totalMembers} Managers` : `${t.groups.length} Groups`,
+      participants: `${t.groups.length} Teams`,
       gameweeks: gameweeksText,
       prizePool: "Trophy & Glory",
       prizeLabel: "Tournament prize",
@@ -163,7 +161,7 @@ export default async function Home() {
       status: "LIVE",
       crestType: "cup",
       banner: TOURNAMENT_BANNERS[0].path,
-      participants: "256 / 512",
+      participants: "16 Teams",
       gameweeks: "GW 5 - GW 38",
       prizePool: "$500",
       href: "/tournaments",
@@ -176,7 +174,7 @@ export default async function Home() {
       status: "UPCOMING",
       crestType: "crown",
       banner: TOURNAMENT_BANNERS[1].path,
-      participants: "128 / 256",
+      participants: "8 Teams",
       gameweeks: "GW 8 - GW 12",
       prizePool: "$250",
       href: "/tournaments",
@@ -189,7 +187,7 @@ export default async function Home() {
       status: "LIVE",
       crestType: "shield",
       banner: TOURNAMENT_BANNERS[3].path,
-      participants: "320 / 1024",
+      participants: "32 Teams",
       gameweeks: "GW 4 - GW 38",
       prizePool: "$1,000",
       href: "/tournaments",
@@ -291,7 +289,7 @@ export default async function Home() {
         <div className="-mt-9 sm:-mt-11 relative z-30">
           <StatsStrip
             activeTournaments={activeCount}
-            managersCount={managersCount}
+            teamsCount={teamsCount}
             matchesPlayed={matchesCount}
           />
         </div>

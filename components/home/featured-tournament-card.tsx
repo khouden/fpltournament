@@ -1,7 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Users, Calendar, Gift, ArrowRight, Trophy } from "lucide-react";
+import { Shield, Calendar, Gift, ArrowRight, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface FeaturedTournamentItem {
@@ -154,15 +154,15 @@ export function FeaturedTournamentCard({
         {/* Metadata Details */}
         <div className="space-y-3.5 pt-2 border-t border-[#F1F5F9]">
           <div className="grid grid-cols-2 gap-4">
-            {/* Participants */}
+            {/* Teams */}
             <div className="flex items-center gap-2.5">
-              <Users className="h-4 w-4 text-[#64748B] shrink-0" />
+              <Shield className="h-4 w-4 text-[#64748B] shrink-0" />
               <div className="flex flex-col">
                 <span className="text-xs sm:text-sm font-black text-[#0B081E] leading-none">
                   {item.participants}
                 </span>
                 <span className="text-[11px] font-medium text-[#64748B] mt-0.5">
-                  Participants
+                  Teams
                 </span>
               </div>
             </div>

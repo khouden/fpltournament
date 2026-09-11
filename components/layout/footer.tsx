@@ -85,7 +85,7 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#A69DC6]/80 font-medium">
-          <p>© 2025 FPL Tournaments. All rights reserved.</p>
+          <p>© 2026 FPL Tournaments. All rights reserved.</p>
           <p className="flex items-center gap-1 text-sm font-semibold text-white">
             <span>More than a</span>
             <span className="relative">
