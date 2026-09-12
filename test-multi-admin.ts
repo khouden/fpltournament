@@ -5,7 +5,7 @@ import {
 } from "./lib/group-actions";
 import { calculateGroupScore } from "./lib/scoring";
 
-import { createSession } from "./lib/session";
+import { createSession, createSignedSessionCookieValue } from "./lib/session";
 
 const BASE_URL = process.env.TEST_BASE_URL || "http://localhost:3005";
 
@@ -15,7 +15,8 @@ async function runMultiAdminTests() {
   console.log("==================================================\n");
 
   const adminSession = createSession("admin@tournament.local");
-  const adminCookie = `admin_session=${encodeURIComponent(JSON.stringify(adminSession))}`;
+  const signedToken = await createSignedSessionCookieValue(adminSession);
+  const adminCookie = `admin_session=${signedToken}`;
   const adminHeaders = {
     "Content-Type": "application/json",
     Cookie: adminCookie,
