@@ -29,46 +29,43 @@ export default async function EditTournamentPage({
   return (
     <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fpl-fade-in">
       {/* 1. Compact Breadcrumb Navigation */}
-      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs sm:text-sm text-[#777777]">
+      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
         <Link
           href="/admin"
-          className="font-medium text-[#666666] hover:text-[#37003C] transition-colors"
+          className="font-semibold text-gray-600 hover:text-[#37003C] transition-colors"
         >
           Dashboard
         </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-[#AAAAAA] shrink-0" />
+        <ChevronRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
         <Link
           href={`/admin/tournaments/${id}`}
-          className="font-medium text-[#666666] hover:text-[#37003C] transition-colors truncate max-w-[180px] sm:max-w-md"
+          className="font-semibold text-gray-600 hover:text-[#37003C] transition-colors truncate max-w-[180px] sm:max-w-md"
           title={tournament.name}
         >
           {tournament.name}
         </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-[#AAAAAA] shrink-0" />
-        <span className="font-semibold text-[#1F1F1F]">
-          Edit
+        <ChevronRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+        <span className="font-bold text-[#1F1F1F]">
+          Edit Details
         </span>
       </nav>
 
       {/* 2. Page Header Block */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className="text-[#37003C] border-[#37003C]/30 bg-[#37003C]/5 uppercase tracking-wider text-[10px] font-extrabold px-2.5 py-0.5 rounded-[6px]"
-          >
+          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-[#37003C] bg-[#37003C]/10 px-2.5 py-0.5 rounded-full border border-[#37003C]/20">
             EDITING TOURNAMENT
-          </Badge>
-          <span className="text-xs text-[#777777] font-medium truncate max-w-[200px] sm:max-w-none">
+          </span>
+          <span className="text-xs text-gray-400 font-medium truncate max-w-[200px] sm:max-w-none">
             {tournament.name}
           </span>
         </div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#1F1F1F] tracking-tight flex items-center gap-2.5">
-          <span>Edit Tournament</span>
-          <Settings className="h-6 w-6 text-[#555555]" />
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#1F1F1F] tracking-tight flex items-center gap-2.5">
+          <span>Edit Tournament Settings</span>
+          <Settings className="h-7 w-7 text-[#37003C]" />
         </h1>
-        <p className="text-sm sm:text-base text-[#666666]">
-          Update tournament details, banner, scoring rules, and organizers.
+        <p className="text-xs sm:text-sm text-gray-500">
+          Update tournament title, season, stadium banner, scoring chip rules, and assign co-administrators.
         </p>
       </div>
 

@@ -73,13 +73,13 @@ export function TournamentWizardStepper({
   return (
     <nav
       aria-label="Tournament Creation Progress"
-      className="w-full bg-white rounded-[16px] border border-[#E5E5E5] p-3 sm:p-5 shadow-fpl-sm overflow-hidden"
+      className="w-full bg-white rounded-2xl border border-gray-200/80 p-3.5 sm:p-5 shadow-xs overflow-hidden"
     >
       {/* Mobile Stepper Header: Compact Bar */}
-      <div className="flex sm:hidden flex-col gap-2">
+      <div className="flex sm:hidden flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#37003C] text-[#00FF87] text-[11px] font-black">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#37003C] text-[#00FF87] text-xs font-black">
               {currentStep}
             </span>
             <span className="text-xs font-black text-[#1F1F1F] uppercase tracking-wide">
@@ -87,14 +87,14 @@ export function TournamentWizardStepper({
             </span>
           </div>
           {isPublished && (
-            <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+            <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
               Live
             </span>
           )}
         </div>
 
         {/* Mobile Progress Bar */}
-        <div className="w-full h-1.5 bg-[#F0F0F0] rounded-full overflow-hidden">
+        <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-[#37003C] to-[#00FF87] transition-all duration-300 rounded-full"
             style={{ width: `${(currentStep / 4) * 100}%` }}
@@ -102,7 +102,7 @@ export function TournamentWizardStepper({
         </div>
 
         {/* Mobile Step Badges */}
-        <div className="flex items-center justify-between text-[11px] font-bold text-[#777777] pt-1">
+        <div className="flex items-center justify-between text-[11px] font-bold text-gray-500 pt-1">
           {STEPS.map((step) => {
             const isDone = isPublished || step.number < currentStep;
             const isActive = step.number === currentStep;
@@ -115,14 +115,14 @@ export function TournamentWizardStepper({
                   href={targetHref}
                   className={`transition-colors flex items-center gap-1 ${
                     isActive
-                      ? "text-[#37003C] font-extrabold"
+                      ? "text-[#37003C] font-black"
                       : isDone
                       ? "text-emerald-700 hover:text-[#37003C]"
-                      : "text-[#999999]"
+                      : "text-gray-400"
                   }`}
                 >
                   {isDone ? (
-                    <Check className="h-3 w-3 text-emerald-600" />
+                    <Check className="h-3.5 w-3.5 text-emerald-600" />
                   ) : (
                     <span>{step.number}.</span>
                   )}
@@ -136,10 +136,10 @@ export function TournamentWizardStepper({
                 key={step.number}
                 className={
                   isActive
-                    ? "text-[#37003C] font-extrabold"
+                    ? "text-[#37003C] font-black"
                     : isDone
                     ? "text-emerald-700"
-                    : "text-[#AAAAAA]"
+                    : "text-gray-400"
                 }
               >
                 {isDone ? "✓ " : `${step.number}. `}
@@ -151,7 +151,7 @@ export function TournamentWizardStepper({
       </div>
 
       {/* Desktop Stepper Bar */}
-      <div className="hidden sm:grid grid-cols-4 gap-2 lg:gap-3 items-center relative">
+      <div className="hidden sm:grid grid-cols-4 gap-2.5 lg:gap-3 items-center relative">
         {STEPS.map((step, idx) => {
           const isDone = isPublished || step.number < currentStep;
           const isActive = step.number === currentStep;
@@ -161,22 +161,22 @@ export function TournamentWizardStepper({
 
           const StepContent = (
             <div
-              className={`group flex items-center gap-3 p-2.5 rounded-[12px] transition-all duration-200 border ${
+              className={`group flex items-center gap-3 p-3 rounded-xl transition-all duration-200 border ${
                 isActive
-                  ? "bg-[#37003C] text-white border-[#37003C] shadow-sm ring-2 ring-[#00FF87]/50"
+                  ? "bg-gradient-to-r from-[#170020] via-[#240030] to-[#1F0022] text-white border-[#00FF87]/40 shadow-sm ring-1 ring-[#00FF87]/30"
                   : isDone
-                  ? "bg-emerald-50/60 text-[#1F1F1F] border-emerald-200/80 hover:bg-emerald-100/50 hover:border-emerald-300"
-                  : "bg-[#FAFAFA] text-[#777777] border-transparent opacity-75"
+                  ? "bg-emerald-50/70 text-[#1F1F1F] border-emerald-200/80 hover:bg-emerald-100/50 hover:border-emerald-300"
+                  : "bg-gray-50/70 text-gray-400 border-transparent opacity-75"
               }`}
             >
               {/* Step Icon / Number Indicator */}
               <div
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black transition-transform duration-200 ${
                   isActive
-                    ? "bg-[#00FF87] text-[#37003C] shadow-xs scale-105"
+                    ? "bg-[#00FF87] text-[#063319] shadow-xs scale-105"
                     : isDone
                     ? "bg-emerald-600 text-white shadow-2xs group-hover:scale-105"
-                    : "bg-[#EAEAEA] text-[#777777]"
+                    : "bg-gray-200 text-gray-500"
                 }`}
               >
                 {isDone ? (
@@ -195,7 +195,7 @@ export function TournamentWizardStepper({
                         ? "text-[#00FF87]"
                         : isDone
                         ? "text-emerald-700"
-                        : "text-[#888888]"
+                        : "text-gray-400"
                     }`}
                   >
                     Step 0{step.number}
@@ -205,12 +205,12 @@ export function TournamentWizardStepper({
                   )}
                 </div>
                 <p
-                  className={`text-xs sm:text-sm font-extrabold truncate ${
+                  className={`text-xs sm:text-sm font-black truncate ${
                     isActive
                       ? "text-white"
                       : isDone
                       ? "text-[#1F1F1F]"
-                      : "text-[#777777]"
+                      : "text-gray-500"
                   }`}
                 >
                   {step.title}
@@ -220,8 +220,8 @@ export function TournamentWizardStepper({
                     isActive
                       ? "text-white/70"
                       : isDone
-                      ? "text-[#666666]"
-                      : "text-[#999999]"
+                      ? "text-gray-500"
+                      : "text-gray-400"
                   }`}
                 >
                   {step.description}
@@ -237,7 +237,7 @@ export function TournamentWizardStepper({
                         ? "text-white/40"
                         : isDone
                         ? "text-emerald-400"
-                        : "text-[#D0D0D0]"
+                        : "text-gray-300"
                     }`}
                   />
                 </div>
@@ -251,7 +251,7 @@ export function TournamentWizardStepper({
                 key={step.number}
                 href={targetHref}
                 title={`Go to Step ${step.number}: ${step.title}`}
-                className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#37003C] rounded-[12px]"
+                className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-[#37003C] rounded-xl"
               >
                 {StepContent}
               </Link>
