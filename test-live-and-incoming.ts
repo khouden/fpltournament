@@ -22,9 +22,11 @@ async function runLiveAndIncomingTests() {
   console.log(`GW1 status: ${gw1Status.status} (finished: ${gw1Status.isFinished})`);
   assert(gw1Status.status === "FINISHED", "GW1 should be FINISHED");
 
+  setSimulatedGameweekStatus(3, "LIVE");
   const gw3Status = await getGameweekStatus(3);
   console.log(`GW3 status: ${gw3Status.status} (current/live: ${gw3Status.isCurrent})`);
-  assert(gw3Status.status === "LIVE", "GW3 in current season should be LIVE");
+  assert(gw3Status.status === "LIVE", "GW3 with simulated status should be LIVE");
+  clearSimulatedGameweekStatuses();
 
   const gw35Status = await getGameweekStatus(35);
   console.log(`GW35 status: ${gw35Status.status}`);
