@@ -42,6 +42,7 @@ export async function deleteTournamentAction(id: string) {
       }),
     ]);
 
+    safeRevalidate("/");
     safeRevalidate("/admin");
     safeRevalidate("/tournaments");
 
@@ -63,6 +64,7 @@ export async function publishTournamentAction(id: string) {
       data: { status: "PUBLISHED" },
     });
 
+    safeRevalidate("/");
     safeRevalidate("/admin");
     safeRevalidate("/tournaments");
 
@@ -84,6 +86,7 @@ export async function unpublishTournamentAction(id: string) {
       data: { status: "DRAFT" },
     });
 
+    safeRevalidate("/");
     safeRevalidate("/admin");
     safeRevalidate("/tournaments");
 

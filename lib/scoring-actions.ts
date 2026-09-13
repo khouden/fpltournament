@@ -248,6 +248,7 @@ export async function finishTournamentAction(tournamentId: string) {
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate("/tournaments");
     safeRevalidate(`/tournaments/${tournamentId}`);
+    safeRevalidate("/");
 
     return { success: true, tournament };
   } catch (error) {

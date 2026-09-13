@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Play, Trophy } from "lucide-react";
 import { Header } from "@/components/navigation/header";
 import { Container } from "@/components/layout/container";
 import { Footer } from "@/components/layout/footer";
@@ -13,7 +13,7 @@ import {
   type FeaturedTournamentItem,
 } from "@/components/home/featured-tournament-card";
 import { HowItWorks } from "@/components/home/how-it-works";
-import { getTournamentBannerOrDefault, TOURNAMENT_BANNERS } from "@/lib/tournament-banners";
+import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -142,44 +142,7 @@ export default async function Home() {
     };
   });
 
-  // Fallback defaults with preset default banners if no tournaments exist in the database yet
-  const showcaseDefaults: FeaturedTournamentItem[] = [
-    {
-      id: "fpl-champions-cup",
-      name: "FPL Champions Cup",
-      status: "LIVE",
-      crestType: "cup",
-      banner: TOURNAMENT_BANNERS[0].path,
-      participants: "16 Teams",
-      gameweeks: "GW 5 - GW 38",
-      href: "/tournaments",
-      buttonVariant: "dark",
-    },
-    {
-      id: "weekend-rivals",
-      name: "Weekend Rivals",
-      status: "UPCOMING",
-      crestType: "crown",
-      banner: TOURNAMENT_BANNERS[1].path,
-      participants: "8 Teams",
-      gameweeks: "GW 8 - GW 12",
-      href: "/tournaments",
-      buttonVariant: "dark",
-    },
-    {
-      id: "elite-managers-league",
-      name: "Elite Managers League",
-      status: "LIVE",
-      crestType: "shield",
-      banner: TOURNAMENT_BANNERS[3].path,
-      participants: "32 Teams",
-      gameweeks: "GW 4 - GW 38",
-      href: "/tournaments",
-      buttonVariant: "dark",
-    },
-  ];
-
-  const featuredList = dynamicFeatured.length > 0 ? dynamicFeatured : showcaseDefaults;
+  const featuredList = dynamicFeatured;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F8F9FD] text-[#0B081E]">
@@ -295,30 +258,54 @@ export default async function Home() {
                 </p>
               </div>
 
-              <Link
-                href="/tournaments"
-                className="group inline-flex items-center gap-1.5 text-sm font-black text-[#059669] hover:text-[#047857] transition-colors self-start sm:self-auto shrink-0 cursor-pointer"
-              >
-                <span>View all tournaments</span>
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
+              {featuredList.length > 0 && (
+                <Link
+                  href="/tournaments"
+                  className="group inline-flex items-center gap-1.5 text-sm font-black text-[#059669] hover:text-[#047857] transition-colors self-start sm:self-auto shrink-0 cursor-pointer"
+                >
+                  <span>View all tournaments</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </Link>
+              )}
             </div>
 
-            {/* Featured Tournaments Grid */}
-            <div
-              className={cn(
-                "grid gap-6 lg:gap-8",
-                featuredList.length === 1
-                  ? "grid-cols-1 max-w-md mx-auto"
-                  : featuredList.length === 2
-                  ? "grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto"
-                  : "grid-cols-1 md:grid-cols-3"
-              )}
-            >
-              {featuredList.map((item) => (
-                <FeaturedTournamentCard key={item.id} item={item} />
-              ))}
-            </div>
+            {/* Featured Tournaments Grid or Empty State */}
+            {featuredList.length > 0 ? (
+              <div
+                className={cn(
+                  "grid gap-6 lg:gap-8",
+                  featuredList.length === 1
+                    ? "grid-cols-1 max-w-md mx-auto"
+                    : featuredList.length === 2
+                    ? "grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto"
+                    : "grid-cols-1 md:grid-cols-3"
+                )}
+              >
+                {featuredList.map((item) => (
+                  <FeaturedTournamentCard key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-dashed border-[#CBD5E1] bg-white p-10 sm:p-14 text-center max-w-xl mx-auto shadow-xs">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#00FFA3]/15 text-[#0B081E] mb-4">
+                  <Trophy className="h-7 w-7 text-[#059669]" />
+                </div>
+                <h3 className="text-lg font-black text-[#0B081E]">No tournaments available</h3>
+                <p className="mt-1.5 text-sm text-[#64748B] max-w-md mx-auto leading-relaxed">
+                  No active tournaments found. Once new competitions are created and published, they will appear here.
+                </p>
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="pill"
+                    className="border-[#CBD5E1] text-[#0B081E] hover:bg-[#F8F9FD] font-bold"
+                  >
+                    <Link href="/tournaments">Explore Tournaments</Link>
+                  </Button>
+                </div>
+              </div>
+            )}
           </Container>
         </section>
 

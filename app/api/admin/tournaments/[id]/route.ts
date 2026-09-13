@@ -147,6 +147,7 @@ export async function PATCH(
     safeRevalidate(`/admin/tournaments/${tournament.id}/schedule`);
     safeRevalidate(`/tournaments/${tournament.id}`);
     safeRevalidate("/tournaments");
+    safeRevalidate("/");
 
     return NextResponse.json({ tournament });
   } catch (error) {
@@ -204,6 +205,10 @@ export async function DELETE(
         where: { id },
       }),
     ]);
+
+    safeRevalidate("/");
+    safeRevalidate("/admin");
+    safeRevalidate("/tournaments");
 
     return NextResponse.json({ success: true });
   } catch (error) {
