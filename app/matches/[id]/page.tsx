@@ -1,19 +1,16 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import type { Metadata } from "next";
-import {
-  Trophy,
-  ArrowLeft,
-  Sparkles,
-  Handshake,
-  Clock,
-} from "lucide-react";
-import { MatchScoreBreakdown } from "@/components/match-squad-client";
+import { calculateLeagueStandings } from "@/lib/scoring";
+import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import { Header } from "@/components/navigation/header";
 import { Footer } from "@/components/layout/footer";
-import { Container } from "@/components/layout/container";
-import { Card } from "@/components/ui/card";
+import {
+  MatchDetailView,
+  MatchTeamDetail,
+  SisterMatchSummary,
+  TournamentStandingSnapshot,
+} from "@/components/matches/match-detail-view";
 
 export async function generateMetadata(
   props: PageProps<"/matches/[id]">
@@ -33,7 +30,9 @@ export async function generateMetadata(
   const away = match.awayGroup?.name || "TBD";
   return {
     title: `${home} vs ${away} — ${match.round.tournament.name}`,
-    description: `Match ${match.matchNumber}: ${home} vs ${away} in ${match.round.name || `Round ${match.round.roundNumber}`}.`,
+    description: `Match ${match.matchNumber}: ${home} vs ${away} in ${
+      match.round.name || `Round ${match.round.roundNumber}`
+    }.`,
   };
 }
 
@@ -48,6 +47,13 @@ export default async function MatchPage(
       round: {
         include: {
           tournament: true,
+          matches: {
+            include: {
+              homeGroup: true,
+              awayGroup: true,
+            },
+            orderBy: { matchNumber: "asc" },
+          },
         },
       },
       homeGroup: {
@@ -58,6 +64,10 @@ export default async function MatchPage(
       },
       scores: {
         include: { member: true },
+        orderBy: [
+          { isExcluded: "asc" },
+          { gameweekPoints: "desc" },
+        ],
       },
     },
   });
@@ -73,360 +83,146 @@ export default async function MatchPage(
     notFound();
   }
 
-  const hasScore =
-    match.homeScore !== null && match.awayScore !== null;
+  // Calculate live tournament standings for context
+  const rawStandings = await calculateLeagueStandings(tournament.id);
 
-  // Build score breakdowns per group
+  const bannerSrc = getTournamentBannerOrDefault(
+    tournament.banner,
+    tournament.id
+  );
+
+  // Mapped scores for Home squad
   const homeScores = match.scores
     .filter((s) => s.member.groupId === match.homeGroupId)
-    .sort((a, b) => {
-      if (a.isExcluded !== b.isExcluded) return a.isExcluded ? 1 : -1;
-      return b.gameweekPoints - a.gameweekPoints;
-    });
+    .map((s) => ({
+      id: s.id,
+      memberId: s.memberId,
+      fplName: s.member.fplName,
+      fplTeamName: s.member.fplTeamName,
+      fplId: s.member.fplId,
+      gameweekPoints: s.gameweekPoints,
+      rawPoints: s.gameweekPoints + s.chipDeduction,
+      isExcluded: s.isExcluded,
+      activeChip: s.activeChip,
+      chipDeduction: s.chipDeduction,
+    }));
 
+  // Mapped scores for Away squad
   const awayScores = match.scores
     .filter((s) => s.member.groupId === match.awayGroupId)
-    .sort((a, b) => {
-      if (a.isExcluded !== b.isExcluded) return a.isExcluded ? 1 : -1;
-      return b.gameweekPoints - a.gameweekPoints;
-    });
-  const homeName = match.homeGroup?.name || "TBD";
-  const awayName = match.awayGroup?.name || "TBD";
-  const roundLabel = match.round.name || `Round ${match.round.roundNumber}`;
+    .map((s) => ({
+      id: s.id,
+      memberId: s.memberId,
+      fplName: s.member.fplName,
+      fplTeamName: s.member.fplTeamName,
+      fplId: s.member.fplId,
+      gameweekPoints: s.gameweekPoints,
+      rawPoints: s.gameweekPoints + s.chipDeduction,
+      isExcluded: s.isExcluded,
+      activeChip: s.activeChip,
+      chipDeduction: s.chipDeduction,
+    }));
+
+  const homeStanding = rawStandings.find(
+    (s) => s.groupId === match.homeGroupId
+  );
+  const awayStanding = rawStandings.find(
+    (s) => s.groupId === match.awayGroupId
+  );
+
+  const homeTeam: MatchTeamDetail = {
+    id: match.homeGroupId || "",
+    name: match.homeGroup?.name || "TBD",
+    logo: match.homeGroup?.logo || null,
+    score: match.homeScore,
+    isWinner: match.result === "HOME_WIN",
+    isDraw: match.result === "DRAW",
+    members: homeScores,
+    rank: homeStanding?.rank,
+    leaguePoints: homeStanding?.leaguePoints,
+  };
+
+  const awayTeam: MatchTeamDetail = {
+    id: match.awayGroupId || "",
+    name: match.awayGroup?.name || "TBD",
+    logo: match.awayGroup?.logo || null,
+    score: match.awayScore,
+    isWinner: match.result === "AWAY_WIN",
+    isDraw: match.result === "DRAW",
+    members: awayScores,
+    rank: awayStanding?.rank,
+    leaguePoints: awayStanding?.leaguePoints,
+  };
+
+  // Sister matches in the same round
+  const sisterMatches: SisterMatchSummary[] = match.round.matches.map((m) => ({
+    id: m.id,
+    matchNumber: m.matchNumber,
+    status: m.status,
+    homeName: m.homeGroup?.name || "TBD",
+    homeLogo: m.homeGroup?.logo || null,
+    homeScore: m.homeScore,
+    awayName: m.awayGroup?.name || "TBD",
+    awayLogo: m.awayGroup?.logo || null,
+    awayScore: m.awayScore,
+    isCurrent: m.id === match.id,
+  }));
+
+  // Standings snapshot
+  const standingsSnapshot: TournamentStandingSnapshot[] = rawStandings.map(
+    (s) => ({
+      rank: s.rank,
+      groupId: s.groupId,
+      groupName: s.groupName,
+      logo: s.logo || null,
+      played: s.played,
+      won: s.won,
+      drawn: s.drawn,
+      lost: s.lost,
+      pointsFor: s.pointsFor,
+      pointsAgainst: s.pointsAgainst,
+      pointsDiff: s.pointsDiff,
+      leaguePoints: s.leaguePoints,
+      form: s.form,
+      isHome: s.groupId === match.homeGroupId,
+      isAway: s.groupId === match.awayGroupId,
+    })
+  );
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F7F7F7] text-[#1F1F1F]">
-      {/* Global Shared FPL Header */}
+    <div className="min-h-screen flex flex-col bg-[#F8F9FA] text-[#1F1F1F]">
+      {/* Global Shared Header — Untouched */}
       <Header />
 
-      <main className="flex-1 pb-16 sm:pb-24">
-        <Container className="py-6 sm:py-8 space-y-6 sm:space-y-8 max-w-6xl">
-          {/* Breadcrumb Back Navigation */}
-          <div>
-            <Link
-              href={`/tournaments/${tournament.id}`}
-              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#37003C] hover:text-[#5A0A63] bg-white hover:bg-[#37003C]/5 px-3 py-1.5 rounded-[8px] border border-[#E5E5E5] transition-colors shadow-2xs group"
-            >
-              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-              <span>Back to {tournament.name}</span>
-            </Link>
-          </div>
-
-          {/* Match Center Hero Card */}
-          <Card className="rounded-2xl border border-[#E5E5E5] bg-white p-6 sm:p-8 shadow-xs relative overflow-hidden">
-            {/* Subtle background branding accents */}
-            <div
-              aria-hidden="true"
-              className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#00FF87]/10 blur-3xl pointer-events-none"
-            />
-            <div
-              aria-hidden="true"
-              className="absolute -left-16 -bottom-16 h-56 w-56 rounded-full bg-[#37003C]/5 blur-3xl pointer-events-none"
-            />
-
-            {/* Top Bar: Round Context & Match Status */}
-            <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 pb-5 border-b border-[#EAEAEA]">
-              <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-[#666666]">
-                  {roundLabel} · Gameweek {match.round.gameweek}
-                </span>
-              </div>
-
-              {/* Status Badge */}
-              <div>
-                {match.status === "FINALIZED" ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border bg-[#00FF87]/20 text-[#008744] border-[#00FF87]/40">
-                    <span className="h-2 w-2 rounded-full bg-[#008744]" />
-                    <span>FINALIZED</span>
-                  </span>
-                ) : match.status === "IN_PROGRESS" ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border bg-rose-500/15 text-rose-600 border-rose-500/40 shadow-xs">
-                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-                    <span>LIVE · IN PROGRESS</span>
-                  </span>
-                ) : match.status === "COMPLETED" ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full border bg-[#37003C]/10 text-[#37003C] border-[#37003C]/20">
-                    <span className="h-2 w-2 rounded-full bg-[#37003C]" />
-                    <span>COMPLETED</span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border bg-sky-50 text-sky-700 border-sky-200">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>INCOMING MATCH</span>
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Gameweek Context Notice */}
-            {match.status === "IN_PROGRESS" ? (
-              <div className="relative z-10 mt-4 rounded-xl bg-rose-500/10 border border-rose-500/30 p-3.5 flex items-center gap-3 text-rose-700 text-xs sm:text-sm font-semibold">
-                <span className="flex h-3 w-3 relative shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-600" />
-                </span>
-                <span>
-                  <strong>Live Match in Progress:</strong> Gameweek {match.round.gameweek} matches are currently underway. Match scores and member points are provisional and will update live until the Gameweek finishes.
-                </span>
-              </div>
-            ) : match.status === "SCHEDULED" ? (
-              <div className="relative z-10 mt-4 rounded-xl bg-sky-50 border border-sky-200 p-3.5 flex items-center gap-3 text-sky-800 text-xs sm:text-sm font-semibold">
-                <Clock className="h-4 w-4 shrink-0 text-sky-600" />
-                <span>
-                  <strong>Incoming Fixture:</strong> Gameweek {match.round.gameweek} has not started yet. Team lineups and player points will track live once the Gameweek kicks off.
-                </span>
-              </div>
-            ) : null}
-
-            {/* Matchup Centerpiece */}
-            <div className="relative z-10 py-6 sm:py-8">
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-6 sm:gap-8 text-center">
-                {/* Home Team */}
-                <div className="flex flex-col md:flex-row items-center md:justify-end gap-3 sm:gap-4 md:text-right">
-                  <div className="order-2 md:order-1">
-                    <h1
-                      className={`text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight ${
-                        match.result === "HOME_WIN"
-                          ? "text-[#008744]"
-                          : "text-[#1F1F1F]"
-                      }`}
-                    >
-                      {homeName}
-                    </h1>
-
-                    {/* Outcome Badge */}
-                    {match.result && (
-                      <div className="mt-1.5 flex items-center justify-center md:justify-end">
-                        {match.result === "HOME_WIN" ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-[#008744] bg-[#00FF87]/20 border border-[#00FF87]/40 px-2.5 py-0.5 rounded-full shadow-2xs">
-                            <Sparkles className="h-3 w-3" />
-                            <span>+3 PTS · WIN</span>
-                          </span>
-                        ) : match.result === "DRAW" ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-[#92400E] bg-[#FEF3C7] border border-[#FDE68A] px-2.5 py-0.5 rounded-full">
-                            <Handshake className="h-3 w-3" />
-                            <span>+1 PT · DRAW</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center text-xs font-bold uppercase tracking-wider text-[#777777] bg-[#F3F4F6] border border-[#E5E5E5] px-2.5 py-0.5 rounded-full">
-                            0 PTS · LOSS
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Home Logo */}
-                  <div className="order-1 md:order-2 shrink-0">
-                    {match.homeGroup?.logo ? (
-                      <div className="relative flex h-16 w-16 sm:h-20 sm:w-20 lg:h-22 lg:w-22 items-center justify-center rounded-2xl bg-white p-2 border border-[#E5E5E5] shadow-xs">
-                        <img
-                          src={match.homeGroup.logo}
-                          alt={homeName}
-                          className="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 object-contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex h-16 w-16 sm:h-20 sm:w-20 lg:h-22 lg:w-22 items-center justify-center rounded-2xl bg-[#37003C] text-xl sm:text-2xl font-black text-[#00FF87] shadow-xs border border-[#37003C]">
-                        {homeName.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Score or VS Display */}
-                <div className="shrink-0 px-4 sm:px-6">
-                  {hasScore ? (
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="inline-flex items-center gap-3 sm:gap-4 bg-[#F7F7F7] px-6 py-3 rounded-2xl border border-[#E5E5E5] shadow-2xs">
-                        <span
-                          className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight ${
-                            match.result === "HOME_WIN"
-                              ? "text-[#008744]"
-                              : "text-[#37003C]"
-                          }`}
-                        >
-                          {match.homeScore}
-                        </span>
-                        <span className="text-xl sm:text-2xl font-bold text-[#8A8A8A]">
-                          –
-                        </span>
-                        <span
-                          className={`text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight ${
-                            match.result === "AWAY_WIN"
-                              ? "text-[#008744]"
-                              : "text-[#37003C]"
-                          }`}
-                        >
-                          {match.awayScore}
-                        </span>
-                      </div>
-                      {match.status === "IN_PROGRESS" ? (
-                        <span className="inline-flex items-center gap-1.5 mt-2 text-xs font-black text-rose-600 uppercase tracking-wider">
-                          <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
-                          Live Match · Results Not Completed Yet
-                        </span>
-                      ) : (
-                        <span className="mt-2 text-xs font-bold text-[#777777] uppercase tracking-wider">
-                          Official Match Result
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center gap-1.5">
-                      <div className="inline-flex items-center justify-center h-12 w-16 rounded-xl bg-sky-50 border border-sky-200">
-                        <span className="text-xl sm:text-2xl font-black text-sky-700 tracking-wider">
-                          VS
-                        </span>
-                      </div>
-                      <span className="text-[11px] font-bold text-[#888888] uppercase tracking-wider">
-                        Not Started Yet
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Away Team */}
-                <div className="flex flex-col md:flex-row items-center md:justify-start gap-3 sm:gap-4 md:text-left">
-                  {/* Away Logo */}
-                  <div className="shrink-0">
-                    {match.awayGroup?.logo ? (
-                      <div className="relative flex h-16 w-16 sm:h-20 sm:w-20 lg:h-22 lg:w-22 items-center justify-center rounded-2xl bg-white p-2 border border-[#E5E5E5] shadow-xs">
-                        <img
-                          src={match.awayGroup.logo}
-                          alt={awayName}
-                          className="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 object-contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex h-16 w-16 sm:h-20 sm:w-20 lg:h-22 lg:w-22 items-center justify-center rounded-2xl bg-[#37003C] text-xl sm:text-2xl font-black text-[#00FF87] shadow-xs border border-[#37003C]">
-                        {awayName.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <h1
-                      className={`text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight ${
-                        match.result === "AWAY_WIN"
-                          ? "text-[#008744]"
-                          : "text-[#1F1F1F]"
-                      }`}
-                    >
-                      {awayName}
-                    </h1>
-
-                    {/* Outcome Badge */}
-                    {match.result && (
-                      <div className="mt-1.5 flex items-center justify-center md:justify-start">
-                        {match.result === "AWAY_WIN" ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-[#008744] bg-[#00FF87]/20 border border-[#00FF87]/40 px-2.5 py-0.5 rounded-full shadow-2xs">
-                            <Sparkles className="h-3 w-3" />
-                            <span>+3 PTS · WIN</span>
-                          </span>
-                        ) : match.result === "DRAW" ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-black uppercase tracking-wider text-[#92400E] bg-[#FEF3C7] border border-[#FDE68A] px-2.5 py-0.5 rounded-full">
-                            <Handshake className="h-3 w-3" />
-                            <span>+1 PT · DRAW</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center text-xs font-bold uppercase tracking-wider text-[#777777] bg-[#F3F4F6] border border-[#E5E5E5] px-2.5 py-0.5 rounded-full">
-                            0 PTS · LOSS
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Result Announcement Banner */}
-              {match.result && (
-                <div className="mt-6 sm:mt-8 pt-5 border-t border-[#EAEAEA] flex justify-center">
-                  {match.result === "DRAW" ? (
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FEF3C7] border border-[#FDE68A] text-[#92400E] text-xs sm:text-sm font-bold shadow-2xs">
-                      <Handshake className="h-4 w-4 text-[#D97706]" />
-                      <span>MATCH DRAW — 1 tournament point awarded to each team</span>
-                    </div>
-                  ) : match.result === "HOME_WIN" ? (
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#00FF87]/15 border border-[#00FF87]/30 text-[#008744] text-xs sm:text-sm font-bold shadow-2xs">
-                      <Trophy className="h-4 w-4 text-[#008744]" />
-                      <span>🏆 {homeName} WINS (+3 tournament points)</span>
-                    </div>
-                  ) : (
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#00FF87]/15 border border-[#00FF87]/30 text-[#008744] text-xs sm:text-sm font-bold shadow-2xs">
-                      <Trophy className="h-4 w-4 text-[#008744]" />
-                      <span>🏆 {awayName} WINS (+3 tournament points)</span>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* Score Breakdown Section */}
-          {hasScore && (homeScores.length > 0 || awayScores.length > 0) && (
-            <section className="space-y-4">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-[#1F1F1F] tracking-tight">
-                  Match Score Breakdown
-                </h2>
-                <p className="text-xs sm:text-sm text-[#666666] mt-0.5">
-                  See how each manager contributed to the final team score.
-                </p>
-              </div>
-
-              {/* 2-Column Team Breakdown */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-                {/* Home Group Breakdown */}
-                {match.homeGroup && (
-                  <MatchScoreBreakdown
-                    groupName={match.homeGroup.name}
-                    logo={match.homeGroup.logo}
-                    scores={homeScores}
-                    total={match.homeScore!}
-                    isWinner={match.result === "HOME_WIN"}
-                    gameweek={match.round.gameweek}
-                    allowBenchBoost={tournament.allowBenchBoost}
-                    allowTripleCaptain={tournament.allowTripleCaptain}
-                  />
-                )}
-
-                {/* Away Group Breakdown */}
-                {match.awayGroup && (
-                  <MatchScoreBreakdown
-                    groupName={match.awayGroup.name}
-                    logo={match.awayGroup.logo}
-                    scores={awayScores}
-                    total={match.awayScore!}
-                    isWinner={match.result === "AWAY_WIN"}
-                    gameweek={match.round.gameweek}
-                    allowBenchBoost={tournament.allowBenchBoost}
-                    allowTripleCaptain={tournament.allowTripleCaptain}
-                  />
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Unplayed / Future Match State */}
-          {!hasScore && (
-            <Card className="rounded-2xl border border-[#E5E5E5] bg-white p-8 sm:p-12 text-center shadow-xs space-y-3">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#37003C]/5 text-[#37003C] border border-[#37003C]/10">
-                <Clock className="h-6 w-6" />
-              </div>
-              <h3 className="text-lg font-bold text-[#1F1F1F]">
-                Scores not calculated yet
-              </h3>
-              <p className="text-sm text-[#666666] max-w-md mx-auto">
-                Scores will appear once Gameweek {match.round.gameweek} is complete and official FPL points are synced.
-              </p>
-            </Card>
-          )}
-        </Container>
+      {/* Redesigned Match Presentation */}
+      <main className="flex-1">
+        <MatchDetailView
+          match={{
+            id: match.id,
+            matchNumber: match.matchNumber,
+            status: match.status,
+            result: match.result,
+            roundNumber: match.round.roundNumber,
+            roundName: match.round.name || `Round ${match.round.roundNumber}`,
+            gameweek: match.round.gameweek,
+            homeTeam,
+            awayTeam,
+          }}
+          tournament={{
+            id: tournament.id,
+            name: tournament.name,
+            season: tournament.season,
+            seasonDisplay: `${tournament.season}/${Number(tournament.season) + 1}`,
+            bannerSrc,
+            allowBenchBoost: tournament.allowBenchBoost,
+            allowTripleCaptain: tournament.allowTripleCaptain,
+          }}
+          sisterMatches={sisterMatches}
+          standings={standingsSnapshot}
+        />
       </main>
 
-      {/* Global Shared FPL Footer */}
+      {/* Global Shared Footer */}
       <Footer />
     </div>
   );

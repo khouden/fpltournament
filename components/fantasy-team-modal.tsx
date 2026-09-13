@@ -13,6 +13,9 @@ import {
   Shield,
   RefreshCw,
   Clock,
+  Award,
+  CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 import type { FantasyTeamSquadView, FantasyPlayerPick } from "@/lib/fpl";
 import {
@@ -98,7 +101,6 @@ export function FantasyTeamModal({
     let isMounted = true;
     const controller = new AbortController();
 
-    // Avoid synchronous setState in effect body by running inside microtask
     queueMicrotask(async () => {
       if (!isMounted) return;
       setLoading(true);
@@ -166,7 +168,7 @@ export function FantasyTeamModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-4xl lg:max-w-5xl max-h-[94vh] p-0 overflow-hidden flex flex-col bg-white border border-[#E5E5E5] text-[#1F1F1F] shadow-2xl rounded-2xl"
+        className="max-w-4xl lg:max-w-5xl max-h-[94vh] p-0 overflow-hidden flex flex-col bg-[#F8F9FA] border border-gray-200 text-[#1F1F1F] shadow-2xl rounded-3xl"
         aria-describedby="fantasy-team-modal-description"
       >
         {/* Screen-reader accessible dialog header */}
@@ -180,36 +182,42 @@ export function FantasyTeamModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Visible Header: Light FPL Brand Style */}
-        <div className="border-b border-[#E5E5E5] bg-white px-4 sm:px-6 pt-4 pb-3">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        {/* ===================================================================== */}
+        {/* PREMIUM MODAL HEADER (Dark Stadium Aesthetics)                        */}
+        {/* ===================================================================== */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-[#170020] via-[#240030] to-[#0F0015] text-white px-5 sm:px-7 pt-5 pb-4 border-b border-white/10 shadow-md">
+          {/* Subtle neon stadium glow accents */}
+          <div className="absolute top-0 right-1/4 w-72 h-72 bg-[#00FF87]/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-10 w-56 h-56 bg-[#A855F7]/15 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Team Crest & Manager Meta */}
-            <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-3.5 min-w-0">
               {tournamentTeamLogo && !logoFailed ? (
-                <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white p-1 border border-[#E5E5E5] shadow-xs">
+                <div className="relative flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md p-2 border border-white/20 shadow-sm">
                   <Image
                     src={tournamentTeamLogo}
                     alt={tournamentTeamName || "Team Crest"}
-                    width={36}
-                    height={36}
-                    className="h-8 w-8 object-contain"
+                    width={44}
+                    height={44}
+                    className="h-full w-full object-contain"
                     onError={() => setLogoFailed(true)}
                     unoptimized
                   />
                 </div>
               ) : (
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#37003C] text-white shadow-xs">
-                  <Shield className="h-5 w-5 text-[#00FF87]" />
+                <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-[#37003C] border border-[#00FF87]/40 text-white shadow-sm">
+                  <Shield className="h-6 w-6 text-[#00FF87]" />
                 </div>
               )}
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg sm:text-xl font-black tracking-tight text-[#37003C] truncate">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-sm truncate">
                     {displayTeamName}
                   </h2>
                   {isManualPlayer ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#555555] bg-[#F7F7F7] px-2 py-0.5 rounded-full border border-[#E5E5E5]">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-white/80 bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/15">
                       Manual Player
                     </span>
                   ) : (
@@ -217,27 +225,27 @@ export function FantasyTeamModal({
                       href={fplProfileUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#555555] hover:text-[#37003C] transition-colors shrink-0 bg-[#F7F7F7] hover:bg-[#EEEEEE] px-2 py-0.5 rounded-full border border-[#E5E5E5]"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full border border-white/15 transition-colors"
                       title="Open on official Fantasy Premier League website"
                     >
-                      <span>View on FPL</span>
+                      <span>FPL Profile</span>
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
                 </div>
 
-                <div className="text-xs text-[#666666] flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 font-medium">
-                  <span className="font-bold text-[#1F1F1F] truncate">
+                <div className="text-xs text-white/80 flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 font-medium">
+                  <span className="font-bold text-white truncate">
                     {displayManager}
                   </span>
-                  <span className="text-[#CCCCCC]">•</span>
-                  <span className="text-[#555555] font-semibold">
+                  <span className="text-white/40">•</span>
+                  <span className="text-white/90 font-semibold">
                     Gameweek {gameweek}
                   </span>
                   {tournamentTeamName && (
                     <>
-                      <span className="text-[#CCCCCC]">•</span>
-                      <span className="text-[#37003C] font-extrabold truncate">
+                      <span className="text-white/40">•</span>
+                      <span className="text-[#00FF87] font-black truncate">
                         {tournamentTeamName}
                       </span>
                     </>
@@ -246,36 +254,23 @@ export function FantasyTeamModal({
               </div>
             </div>
 
-            {/* Score Callout & Chip Indicator */}
+            {/* Total Points & Chip Status */}
             {squad && (
-              <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#EEEEEE]">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl sm:text-3xl font-black text-[#37003C] tracking-tight leading-none">
+              <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-white/10">
+                <div className="flex items-baseline gap-2 bg-black/40 border border-white/15 rounded-2xl px-4 py-2 shadow-inner">
+                  <span className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none">
                     {squad.adjustedPoints}
                   </span>
-                  <span className="text-xs font-black uppercase text-[#008744] bg-[#00FF87]/20 border border-[#00FF87]/40 px-1.5 py-0.5 rounded-[4px]">
+                  <span className="text-xs font-black uppercase text-[#063319] bg-[#00FF87] px-2 py-0.5 rounded-md shadow-xs">
                     PTS
                   </span>
                 </div>
 
-                {/* Active Chip Badge with scoring rule explanation */}
-                <div className="mt-1">
+                {/* Active Chip Badge */}
+                <div className="mt-1.5">
                   {squad.activeChip ? (
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full bg-[#E7FF00]/30 border border-[#E7FF00] px-2.5 py-0.5 text-[10px] font-black text-[#37003C] shadow-2xs"
-                      title={
-                        squad.activeChip === "3xc"
-                          ? allowTripleCaptain
-                            ? "Triple Captain: 3× captain points applied"
-                            : "Triple Captain: Limited to 2× per tournament rules"
-                          : squad.activeChip === "bboost"
-                          ? allowBenchBoost
-                            ? "Bench Boost: Bench points included"
-                            : "Bench Boost: Excluded by tournament rules"
-                          : `${squad.activeChip} Active`
-                      }
-                    >
-                      <Zap className="h-3 w-3 text-[#37003C]" />
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-400/20 border border-amber-400/40 px-3 py-0.5 text-[11px] font-black text-amber-300 shadow-xs">
+                      <Zap className="h-3 w-3 text-amber-400" />
                       <span>
                         {squad.activeChip === "3xc"
                           ? allowTripleCaptain
@@ -289,12 +284,12 @@ export function FantasyTeamModal({
                           ? "Free Hit"
                           : squad.activeChip === "wildcard"
                           ? "Wildcard"
-                          : squad.activeChip}
+                          : squad.activeChip.toUpperCase()}
                       </span>
                     </span>
                   ) : (
-                    <span className="text-[10px] text-[#888888] font-medium">
-                      No chip played
+                    <span className="text-[11px] text-white/60 font-medium">
+                      Standard Squad
                     </span>
                   )}
                 </div>
@@ -302,20 +297,20 @@ export function FantasyTeamModal({
             )}
           </div>
 
-          {/* Subheader Toolbar: Formation & View Switcher */}
-          <div className="mt-3 pt-2.5 border-t border-[#EEEEEE] flex flex-wrap items-center justify-between gap-2">
+          {/* Subheader Toolbar: Formation & View Toggle */}
+          <div className="relative z-10 mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-[#777777] font-semibold">Formation:</span>
-              <span className="font-extrabold text-[#37003C] bg-[#37003C]/5 px-2 py-0.5 rounded-[6px] border border-[#37003C]/10">
+              <span className="text-white/70 font-semibold">Formation:</span>
+              <span className="font-black text-[#00FF87] bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-lg border border-white/15">
                 {squad?.formation || "—"}
               </span>
 
               {squad?.activeChip === "bboost" && (
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] ${
+                  className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border ${
                     allowBenchBoost
-                      ? "bg-[#00FF87]/20 text-[#008744] border border-[#00FF87]/40"
-                      : "bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]"
+                      ? "bg-[#00FF87]/20 text-[#00FF87] border-[#00FF87]/40"
+                      : "bg-amber-400/20 text-amber-300 border-amber-400/30"
                   }`}
                 >
                   {allowBenchBoost
@@ -326,20 +321,20 @@ export function FantasyTeamModal({
 
               {squad?.activeChip === "3xc" && (
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] ${
+                  className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg border ${
                     allowTripleCaptain
-                      ? "bg-[#00FF87]/20 text-[#008744] border border-[#00FF87]/40"
-                      : "bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]"
+                      ? "bg-[#00D9FF]/20 text-[#00D9FF] border-[#00D9FF]/40"
+                      : "bg-amber-400/20 text-amber-300 border-amber-400/30"
                   }`}
                 >
                   {allowTripleCaptain
                     ? "3x Captain Multiplier Applied"
-                    : "Captain Limited to 2x (Tournament Rule)"}
+                    : "Captain Reduced to 2x (Rules)"}
                 </span>
               )}
 
               {squad && squad.transfersCost > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-[6px] bg-[#FEE2E2] text-[#B91C1C] border border-[#FECACA]">
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/30">
                   -{squad.transfersCost} Transfer Cost
                 </span>
               )}
@@ -349,17 +344,17 @@ export function FantasyTeamModal({
               value={activeTab}
               onValueChange={(v) => setActiveTab(v as "pitch" | "list")}
             >
-              <TabsList className="bg-[#F5F5F5] border border-[#E5E5E5] p-0.5 rounded-[8px] h-8">
+              <TabsList className="bg-black/35 backdrop-blur-md border border-white/15 p-0.5 rounded-xl h-9">
                 <TabsTrigger
                   value="pitch"
-                  className="gap-1 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#37003C] data-[state=active]:text-white rounded-[6px] transition-all"
+                  className="gap-1.5 text-xs font-bold px-3.5 py-1 text-white/70 data-[state=active]:bg-[#00FF87] data-[state=active]:text-[#063319] rounded-lg transition-all cursor-pointer shadow-xs"
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
                   <span>Pitch View</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="list"
-                  className="gap-1 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#37003C] data-[state=active]:text-white rounded-[6px] transition-all"
+                  className="gap-1.5 text-xs font-bold px-3.5 py-1 text-white/70 data-[state=active]:bg-[#00FF87] data-[state=active]:text-[#063319] rounded-lg transition-all cursor-pointer shadow-xs"
                 >
                   <List className="h-3.5 w-3.5" />
                   <span>List View</span>
@@ -369,36 +364,38 @@ export function FantasyTeamModal({
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-[#F7F7F7]">
+        {/* ===================================================================== */}
+        {/* MODAL BODY                                                            */}
+        {/* ===================================================================== */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#F8F9FA]">
           {/* Loading Skeleton */}
           {loading && (
-            <div className="flex flex-col items-center justify-center py-20 text-[#777777]">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#37003C]/5 text-[#37003C] mb-3">
-                <Loader2 className="h-6 w-6 animate-spin" />
+            <div className="flex flex-col items-center justify-center py-24 text-gray-500">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#37003C]/5 text-[#37003C] mb-3">
+                <Loader2 className="h-7 w-7 animate-spin" />
               </div>
-              <p className="text-sm font-bold text-[#1F1F1F]">
-                Fetching squad line-up from FPL...
+              <p className="text-base font-extrabold text-gray-900">
+                Fetching tactical squad line-up from FPL...
               </p>
-              <p className="text-xs text-[#777777] mt-1">
-                Loading official Gameweek picks and points
+              <p className="text-xs text-gray-500 mt-1">
+                Loading official Gameweek picks, captain multiplier, and player scores
               </p>
             </div>
           )}
 
           {/* FPL Deadline Locked State */}
           {error && !loading && isDeadline && (
-            <div className="my-8 max-w-md mx-auto text-center p-6 bg-white rounded-2xl border border-amber-200/80 shadow-md animate-fpl-fade-in">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500/20 to-purple-900/10 border border-amber-500/30 text-amber-700 mb-4 shadow-xs">
-                <Clock className="h-7 w-7 animate-pulse text-amber-600" />
+            <div className="my-8 max-w-md mx-auto text-center p-6 bg-white rounded-3xl border border-amber-200/90 shadow-md animate-fpl-fade-in">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 mb-4 shadow-xs">
+                <Clock className="h-7 w-7 animate-pulse" />
               </div>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white mb-2">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white mb-2 shadow-xs">
                 Deadline Locked
               </span>
-              <h3 className="text-base font-extrabold text-[#37003C]">
+              <h3 className="text-lg font-black text-[#37003C]">
                 Squad Picks Hidden by Premier League
               </h3>
-              <p className="text-xs sm:text-sm text-[#666666] mt-2 leading-relaxed">
+              <p className="text-xs sm:text-sm text-gray-600 mt-2 leading-relaxed">
                 The official Fantasy Premier League website locks player picks and lineups while processing the Gameweek deadline. Full squad selections will be accessible once the game update completes and matches kick off.
               </p>
               <div className="mt-5 flex justify-center gap-2">
@@ -406,7 +403,7 @@ export function FantasyTeamModal({
                   variant="outline"
                   size="sm"
                   onClick={handleRetry}
-                  className="gap-1.5 font-bold border-[#E5E5E5] text-[#37003C] hover:bg-[#F7F7F7] shadow-2xs"
+                  className="gap-1.5 font-bold border-gray-200 text-[#37003C] hover:bg-gray-50 rounded-xl"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
                   <span>Check Status</span>
@@ -415,10 +412,10 @@ export function FantasyTeamModal({
                   href={fplProfileUrl}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-[8px] bg-[#37003C] text-white hover:bg-[#200023] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-[#37003C] text-white hover:bg-[#250029] transition-colors shadow-xs"
                 >
                   <span>Official FPL Profile</span>
-                  <ExternalLink className="h-3 w-3" />
+                  <ExternalLink className="h-3.5 w-3.5" />
                 </a>
               </div>
             </div>
@@ -427,10 +424,10 @@ export function FantasyTeamModal({
           {/* Standard Error State with Retry */}
           {error && !loading && !isDeadline && (
             <div className="my-6 max-w-md mx-auto">
-              <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-900">
-                <AlertCircle className="h-4 w-4 text-red-600" />
+              <Alert variant="destructive" className="border-rose-200 bg-rose-50 text-rose-900 rounded-2xl">
+                <AlertCircle className="h-4 w-4 text-rose-600" />
                 <AlertTitle className="font-bold">Unable to Load Squad</AlertTitle>
-                <AlertDescription className="text-xs mt-1 text-red-800">
+                <AlertDescription className="text-xs mt-1 text-rose-800">
                   {error}
                 </AlertDescription>
               </Alert>
@@ -439,7 +436,7 @@ export function FantasyTeamModal({
                   variant="outline"
                   size="sm"
                   onClick={handleRetry}
-                  className="gap-1.5 font-bold border-[#E5E5E5] text-[#37003C] hover:bg-white"
+                  className="gap-1.5 font-bold border-gray-200 text-[#37003C] hover:bg-white rounded-xl"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
                   <span>Try Again</span>
@@ -450,17 +447,17 @@ export function FantasyTeamModal({
 
           {/* Manual Tournament Player State */}
           {isManualPlayer && !loading && (
-            <div className="my-8 max-w-md mx-auto text-center p-6 bg-white rounded-2xl border border-[#E5E5E5] shadow-md animate-fpl-fade-in">
+            <div className="my-8 max-w-md mx-auto text-center p-6 bg-white rounded-3xl border border-gray-200/90 shadow-md">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#37003C]/10 border border-[#37003C]/20 text-[#37003C] mb-4 shadow-xs">
                 <Shield className="h-7 w-7 text-[#37003C]" />
               </div>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#37003C] text-[#00FF87] mb-2">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#37003C] text-[#00FF87] mb-2 shadow-xs">
                 Manual Tournament Player
               </span>
-              <h3 className="text-base font-extrabold text-[#37003C]">
+              <h3 className="text-lg font-black text-[#37003C]">
                 Direct Roster Entry
               </h3>
-              <p className="text-xs sm:text-sm text-[#666666] mt-2 leading-relaxed">
+              <p className="text-xs sm:text-sm text-gray-600 mt-2 leading-relaxed">
                 This player is participating in the tournament via manual roster entry without an external Fantasy Premier League account. Their scores and statistics are entered directly by the tournament administrator for each fixture.
               </p>
             </div>
@@ -468,29 +465,57 @@ export function FantasyTeamModal({
 
           {/* Empty State */}
           {!loading && !error && !squad && !isManualPlayer && (
-            <div className="flex flex-col items-center justify-center py-16 text-center text-[#777777]">
-              <Shield className="h-10 w-10 text-[#CCCCCC] mb-2" />
-              <p className="text-sm font-bold text-[#1F1F1F]">Squad Unavailable</p>
-              <p className="text-xs text-[#777777] mt-1">
+            <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+              <Shield className="h-10 w-10 text-gray-300 mb-2" />
+              <p className="text-sm font-bold text-gray-900">Squad Unavailable</p>
+              <p className="text-xs text-gray-500 mt-1">
                 No player data was returned for this Gameweek.
               </p>
             </div>
           )}
 
-          {/* Squad Content */}
+          {/* =================================================================== */}
+          {/* SQUAD CONTENT                                                       */}
+          {/* =================================================================== */}
           {!loading && !error && squad && (
             <>
               {activeTab === "pitch" ? (
                 /* -------------------------------------------------------------
-                 * Pitch View
+                 * PITCH VIEW WITH PLAYER PLACEHOLDERS
                  * ------------------------------------------------------------- */
-                <div className="space-y-4">
-                  {/* Clean Football Pitch */}
-                  <div className="relative rounded-2xl border border-[#0d4f26] bg-gradient-to-b from-[#095228] via-[#0b5c2d] to-[#073d1b] p-3 sm:p-5 shadow-md select-none">
-                    {/* Pitch line markings - clipped to rounded corners */}
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl overflow-hidden opacity-25">
+                <div className="space-y-5">
+                  {/* Authentic Premier League Football Pitch */}
+                  <div className="relative rounded-3xl border-2 border-[#094621] bg-gradient-to-b from-[#0b6330] via-[#095427] to-[#063e1c] p-3 sm:p-6 shadow-xl select-none overflow-hidden">
+                    {/* Alternating horizontal grass lawn mow stripes */}
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 pointer-events-none opacity-20 flex flex-col justify-between"
+                    >
+                      <div className="h-1/6 w-full bg-black/15" />
+                      <div className="h-1/6 w-full bg-white/10" />
+                      <div className="h-1/6 w-full bg-black/15" />
+                      <div className="h-1/6 w-full bg-white/10" />
+                      <div className="h-1/6 w-full bg-black/15" />
+                      <div className="h-1/6 w-full bg-white/10" />
+                    </div>
+
+                    {/* Floodlight ambience glow */}
+                    <div
+                      aria-hidden="true"
+                      className="absolute -top-12 -left-12 w-64 h-64 bg-white/15 rounded-full blur-3xl pointer-events-none"
+                    />
+                    <div
+                      aria-hidden="true"
+                      className="absolute -top-12 -right-12 w-64 h-64 bg-white/15 rounded-full blur-3xl pointer-events-none"
+                    />
+
+                    {/* Field Line Markings */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 rounded-3xl overflow-hidden opacity-30"
+                    >
                       {/* Outer boundary */}
-                      <div className="absolute inset-2 sm:inset-4 rounded-xl border-2 border-white" />
+                      <div className="absolute inset-2 sm:inset-4 rounded-2xl border-2 border-white" />
                       {/* Halfway line */}
                       <div className="absolute top-1/2 left-2 sm:left-4 right-2 sm:right-4 h-0.5 bg-white -translate-y-1/2" />
                       {/* Center circle */}
@@ -498,22 +523,22 @@ export function FantasyTeamModal({
                       {/* Center spot */}
                       <div className="absolute top-1/2 left-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
                       {/* Top penalty box */}
-                      <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 w-44 sm:w-56 h-14 sm:h-20 border-2 border-t-0 border-white rounded-b-lg" />
-                      {/* Top goal area (6-yard) */}
-                      <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 w-20 sm:w-28 h-6 sm:h-9 border-2 border-t-0 border-white rounded-b-md" />
+                      <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 w-44 sm:w-56 h-14 sm:h-20 border-2 border-t-0 border-white rounded-b-xl" />
+                      {/* Top goal area */}
+                      <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 w-20 sm:w-28 h-6 sm:h-9 border-2 border-t-0 border-white rounded-b-lg" />
                       {/* Top penalty spot */}
                       <div className="absolute top-12 sm:top-16 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-white" />
                       {/* Bottom penalty box */}
-                      <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-44 sm:w-56 h-14 sm:h-20 border-2 border-b-0 border-white rounded-t-lg" />
-                      {/* Bottom goal area (6-yard) */}
-                      <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-20 sm:w-28 h-6 sm:h-9 border-2 border-b-0 border-white rounded-t-md" />
+                      <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-44 sm:w-56 h-14 sm:h-20 border-2 border-b-0 border-white rounded-t-xl" />
+                      {/* Bottom goal area */}
+                      <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-20 sm:w-28 h-6 sm:h-9 border-2 border-b-0 border-white rounded-t-lg" />
                       {/* Bottom penalty spot */}
                       <div className="absolute bottom-12 sm:bottom-16 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-white" />
                     </div>
 
                     {/* Tactical Formation Rows: GKP -> DEF -> MID -> FWD */}
-                    <div className="relative z-10 flex flex-col justify-between gap-2 sm:gap-3.5 py-1.5 min-h-[340px] sm:min-h-[390px]">
-                      {/* Row 1: Goalkeeper (tooltip renders downward) */}
+                    <div className="relative z-10 flex flex-col justify-between gap-4 sm:gap-6 py-2 min-h-[380px] sm:min-h-[440px]">
+                      {/* Row 1: Goalkeeper */}
                       <div className="flex justify-around items-center pt-1">
                         {gkps.map((p) => (
                           <PitchPlayerCard
@@ -580,70 +605,81 @@ export function FantasyTeamModal({
                     </div>
                   </div>
 
-                  {/* Bench / Reserves Container */}
-                  <div className="rounded-2xl border border-[#E5E5E5] bg-white p-3.5 sm:p-4 shadow-fpl-sm">
-                    <div className="flex items-center justify-between text-xs pb-2 mb-3 border-b border-[#EEEEEE]">
+                  {/* ========================================================= */}
+                  {/* BENCH / RESERVES SECTION                                 */}
+                  {/* ========================================================= */}
+                  <div className="rounded-3xl border border-gray-200/90 bg-white p-4 sm:p-5 shadow-xs">
+                    <div className="flex items-center justify-between text-xs pb-3 mb-3 border-b border-gray-100">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-black uppercase tracking-wider text-[#37003C]">
-                          Bench / Reserves
+                          Substitutes / Bench
                         </span>
                         {squad.activeChip === "bboost" ? (
                           <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] ${
+                            className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                               allowBenchBoost
-                                ? "bg-[#00FF87]/20 text-[#008744] border border-[#00FF87]/40"
-                                : "bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]"
+                                ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                                : "bg-amber-50 text-amber-800 border-amber-300"
                             }`}
                           >
                             {allowBenchBoost
-                              ? "Bench Boost Active · Counted in Score"
+                              ? "Bench Boost Active · Points Counted"
                               : "Bench Boost Excluded by Rules"}
                           </span>
                         ) : (
-                          <span className="text-[#888888] text-[11px] font-medium">
-                            (Excluded from match total per rules)
+                          <span className="text-gray-400 text-[11px] font-medium">
+                            (Points not counted unless Bench Boost active)
                           </span>
                         )}
                       </div>
 
                       <span className="font-bold text-[#37003C] text-xs">
                         Bench:{" "}
-                        <span className="font-black text-sm text-[#1F1F1F]">
+                        <span className="font-black text-sm text-gray-900">
                           {benchTotal} pts
                         </span>
                       </span>
                     </div>
 
-                    {/* 4 Bench Players */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {/* 4 Bench Players with Kit Placeholders */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {squad.bench.map((p, idx) => (
                         <div
                           key={p.elementId}
-                          className="flex items-center justify-between rounded-xl bg-[#F9F9F9] p-2 sm:p-2.5 border border-[#EAEAEA] hover:border-[#37003C]/30 transition-colors shadow-2xs"
+                          className="flex items-center gap-2.5 rounded-2xl bg-gray-50/80 p-2.5 sm:p-3 border border-gray-200/80 hover:border-gray-300 hover:bg-white transition-all shadow-2xs group cursor-pointer"
                         >
-                          <div className="flex items-center gap-2 min-w-0 pr-1">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#EEEEEE] text-[10px] font-black text-[#555555]">
-                              {idx === 0 ? "GK" : idx}
-                            </span>
-                            <div className="min-w-0">
-                              <p className="font-bold text-[#1F1F1F] text-xs truncate">
-                                {p.webName}
-                              </p>
-                              <p className="text-[10px] text-[#777777] truncate">
-                                {p.teamShortName} · {p.positionType}
-                              </p>
+                          {/* Mini Kit Placeholder */}
+                          <div className="shrink-0">
+                            <PlayerKitPlaceholder
+                              positionType={p.positionType}
+                              teamShortName={p.teamShortName}
+                              className="w-8 h-9"
+                            />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] font-black text-gray-400 uppercase">
+                                {idx === 0 ? "GK" : `Sub ${idx}`}
+                              </span>
                             </div>
+                            <p className="font-bold text-gray-900 text-xs truncate group-hover:text-[#37003C] transition-colors">
+                              {p.webName}
+                            </p>
+                            <p className="text-[10px] text-gray-500 font-medium truncate">
+                              {p.teamShortName} · {p.positionType}
+                            </p>
                           </div>
 
                           <div className="shrink-0 text-right">
                             <span
-                              className={`font-black text-xs px-2 py-0.5 rounded-[6px] ${
+                              className={`font-black text-xs px-2 py-0.5 rounded-md ${
                                 squad.activeChip === "bboost" && allowBenchBoost
-                                  ? "bg-[#00FF87]/20 text-[#008744] border border-[#00FF87]/40"
-                                  : "bg-[#EEEEEE] text-[#555555]"
+                                  ? "bg-[#00FF87]/30 text-[#008744] font-black"
+                                  : "bg-gray-200 text-gray-700"
                               }`}
                             >
-                              {p.points} <span className="text-[9px] font-normal">pts</span>
+                              {p.points} <span className="text-[9px] font-medium">pts</span>
                             </span>
                           </div>
                         </div>
@@ -653,78 +689,87 @@ export function FantasyTeamModal({
                 </div>
               ) : (
                 /* -------------------------------------------------------------
-                 * List View (Detailed Statistical Table)
+                 * LIST VIEW (Detailed Statistical Table)
                  * ------------------------------------------------------------- */
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Starters Table */}
-                  <div className="rounded-2xl border border-[#E5E5E5] bg-white overflow-hidden shadow-fpl-sm">
-                    <div className="bg-[#FAFAFA] px-4 py-2.5 border-b border-[#E5E5E5] flex items-center justify-between">
+                  <div className="rounded-3xl border border-gray-200/90 bg-white overflow-hidden shadow-xs">
+                    <div className="bg-gray-50/80 px-5 py-3 border-b border-gray-200 flex items-center justify-between">
                       <span className="text-xs font-black uppercase tracking-wider text-[#37003C]">
                         Starting XI ({squad.formation})
                       </span>
-                      <span className="text-xs text-[#37003C] font-black">
+                      <span className="text-xs text-gray-900 font-black">
                         {squad.starters.reduce((acc, p) => acc + p.totalPoints, 0)} PTS
                       </span>
                     </div>
 
                     <div className="overflow-x-auto">
                       <Table>
-                        <TableHeader className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
-                          <TableRow className="border-[#E5E5E5] hover:bg-transparent">
-                            <TableHead className="py-2.5 px-3 text-[#777777] font-bold text-xs whitespace-nowrap">
+                        <TableHeader className="bg-gray-50/50 border-b border-gray-200">
+                          <TableRow className="border-gray-200 hover:bg-transparent">
+                            <TableHead className="py-2.5 px-4 text-gray-500 font-bold text-xs whitespace-nowrap">
                               Player
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-gray-500 font-bold text-xs">
                               Club
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-gray-500 font-bold text-xs">
                               Pos
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-gray-500 font-bold text-xs">
                               Role
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-center text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-center text-gray-500 font-bold text-xs">
                               Mins
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-center text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-center text-gray-500 font-bold text-xs">
                               G / A
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-center text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-center text-gray-500 font-bold text-xs">
                               CS
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-center text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-center text-gray-500 font-bold text-xs">
                               Bonus
                             </TableHead>
-                            <TableHead className="py-2.5 px-3 text-right text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-4 text-right text-gray-900 font-black text-xs">
                               GW Pts
                             </TableHead>
                           </TableRow>
                         </TableHeader>
-                        <TableBody className="divide-y divide-[#E5E5E5]/70 text-[#1F1F1F]">
+                        <TableBody className="divide-y divide-gray-100 text-gray-900">
                           {squad.starters.map((p) => (
                             <TableRow
                               key={p.elementId}
-                              className="border-[#E5E5E5]/70 hover:bg-[#F9F9F9] transition-colors"
+                              className="border-gray-100 hover:bg-gray-50/80 transition-colors"
                             >
-                              <TableCell className="py-2.5 px-3 whitespace-nowrap">
-                                <div className="font-bold text-[#37003C] text-sm">
-                                  {p.webName}
-                                </div>
-                                <div className="text-[10px] text-[#777777]">
-                                  {p.fullName}
+                              <TableCell className="py-3 px-4 whitespace-nowrap">
+                                <div className="flex items-center gap-3">
+                                  <PlayerKitPlaceholder
+                                    positionType={p.positionType}
+                                    teamShortName={p.teamShortName}
+                                    className="w-7 h-8 shrink-0"
+                                  />
+                                  <div>
+                                    <div className="font-bold text-gray-900 text-sm">
+                                      {p.webName}
+                                    </div>
+                                    <div className="text-[11px] text-gray-500">
+                                      {p.fullName}
+                                    </div>
+                                  </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 font-bold text-xs text-[#555555]">
+                              <TableCell className="py-3 px-2 font-bold text-xs text-gray-600">
                                 {p.teamShortName}
                               </TableCell>
-                              <TableCell className="py-2.5 px-2">
-                                <span className="text-[10px] font-bold text-[#37003C] bg-[#37003C]/5 px-1.5 py-0.5 rounded">
+                              <TableCell className="py-3 px-2">
+                                <span className="text-[10px] font-bold text-[#37003C] bg-[#37003C]/5 px-2 py-0.5 rounded-md border border-[#37003C]/10">
                                   {p.positionType}
                                 </span>
                               </TableCell>
-                              <TableCell className="py-2.5 px-2">
+                              <TableCell className="py-3 px-2">
                                 {p.isCaptain ? (
-                                  <span className="inline-flex items-center gap-0.5 rounded bg-[#FFD700] text-[#37003C] px-1.5 py-0.5 text-[10px] font-black shadow-2xs">
+                                  <span className="inline-flex items-center gap-1 rounded-md bg-[#FFD700] text-[#37003C] px-2 py-0.5 text-[10px] font-black shadow-2xs">
                                     {p.multiplier === 3 ? (
                                       <>
                                         <Crown className="h-3 w-3" />
@@ -735,35 +780,35 @@ export function FantasyTeamModal({
                                     )}
                                   </span>
                                 ) : p.isViceCaptain ? (
-                                  <span className="rounded bg-[#E2E8F0] text-[#37003C] px-1.5 py-0.5 text-[10px] font-black">
+                                  <span className="rounded-md bg-gray-200 text-gray-800 px-2 py-0.5 text-[10px] font-black">
                                     V
                                   </span>
                                 ) : (
-                                  <span className="text-[#888888] text-[10px] font-medium">
+                                  <span className="text-gray-400 text-[10px] font-medium">
                                     Starter
                                   </span>
                                 )}
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 text-center text-xs font-semibold text-[#555555]">
+                              <TableCell className="py-3 px-2 text-center text-xs font-semibold text-gray-600">
                                 {p.stats?.minutes ?? "—"}&apos;
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 text-center text-xs font-semibold text-[#37003C]">
+                              <TableCell className="py-3 px-2 text-center text-xs font-bold text-[#37003C]">
                                 {(p.stats?.goals || 0) > 0 || (p.stats?.assists || 0) > 0
                                   ? `${p.stats?.goals || 0} / ${p.stats?.assists || 0}`
                                   : "—"}
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 text-center text-xs font-semibold text-[#555555]">
+                              <TableCell className="py-3 px-2 text-center text-xs font-semibold text-gray-600">
                                 {p.stats?.cleanSheets ? "Yes" : "—"}
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 text-center text-xs font-semibold text-[#666666]">
+                              <TableCell className="py-3 px-2 text-center text-xs font-semibold text-gray-600">
                                 {p.stats?.bonus ? `+${p.stats.bonus}` : "—"}
                               </TableCell>
-                              <TableCell className="py-2.5 px-3 text-right whitespace-nowrap">
-                                <span className="font-black text-sm text-[#37003C]">
+                              <TableCell className="py-3 px-4 text-right whitespace-nowrap">
+                                <span className="font-black text-sm text-gray-900">
                                   {p.totalPoints}
                                 </span>
                                 {p.multiplier > 1 && (
-                                  <span className="text-[10px] text-[#777777] ml-1">
+                                  <span className="text-[10px] text-gray-500 ml-1">
                                     ({p.points}×{p.multiplier})
                                   </span>
                                 )}
@@ -776,84 +821,93 @@ export function FantasyTeamModal({
                   </div>
 
                   {/* Bench Table */}
-                  <div className="rounded-2xl border border-[#E5E5E5] bg-white overflow-hidden shadow-fpl-sm">
-                    <div className="bg-[#FAFAFA] px-4 py-2.5 border-b border-[#E5E5E5] flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#777777]">
+                  <div className="rounded-3xl border border-gray-200/90 bg-white overflow-hidden shadow-xs">
+                    <div className="bg-gray-50/80 px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-600">
                         Substitutes / Bench
                       </span>
-                      <span className="text-xs text-[#777777] font-bold">
+                      <span className="text-xs text-gray-600 font-bold">
                         {benchTotal} PTS
                       </span>
                     </div>
 
                     <div className="overflow-x-auto">
                       <Table>
-                        <TableHeader className="bg-[#FAFAFA] border-b border-[#E5E5E5]">
-                          <TableRow className="border-[#E5E5E5] hover:bg-transparent">
-                            <TableHead className="py-2.5 px-3 text-[#777777] font-bold text-xs whitespace-nowrap">
+                        <TableHeader className="bg-gray-50/50 border-b border-gray-200">
+                          <TableRow className="border-gray-200 hover:bg-transparent">
+                            <TableHead className="py-2.5 px-4 text-gray-500 font-bold text-xs whitespace-nowrap">
                               Player
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-gray-500 font-bold text-xs">
                               Club
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-gray-500 font-bold text-xs">
                               Pos
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-gray-500 font-bold text-xs">
                               Sub Order
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-center text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-center text-gray-500 font-bold text-xs">
                               Mins
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-center text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-center text-gray-500 font-bold text-xs">
                               G / A
                             </TableHead>
-                            <TableHead className="py-2.5 px-2 text-center text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-2 text-center text-gray-500 font-bold text-xs">
                               CS
                             </TableHead>
-                            <TableHead className="py-2.5 px-3 text-right text-[#777777] font-bold text-xs">
+                            <TableHead className="py-2.5 px-4 text-right text-gray-900 font-black text-xs">
                               Pts
                             </TableHead>
                           </TableRow>
                         </TableHeader>
-                        <TableBody className="divide-y divide-[#E5E5E5]/70 text-[#1F1F1F]">
+                        <TableBody className="divide-y divide-gray-100 text-gray-900">
                           {squad.bench.map((p, idx) => (
                             <TableRow
                               key={p.elementId}
-                              className="border-[#E5E5E5]/70 hover:bg-[#F9F9F9] transition-colors"
+                              className="border-gray-100 hover:bg-gray-50/80 transition-colors"
                             >
-                              <TableCell className="py-2.5 px-3 whitespace-nowrap">
-                                <div className="font-bold text-[#1F1F1F] text-sm">
-                                  {p.webName}
-                                </div>
-                                <div className="text-[10px] text-[#777777]">
-                                  {p.fullName}
+                              <TableCell className="py-3 px-4 whitespace-nowrap">
+                                <div className="flex items-center gap-3">
+                                  <PlayerKitPlaceholder
+                                    positionType={p.positionType}
+                                    teamShortName={p.teamShortName}
+                                    className="w-7 h-8 shrink-0"
+                                  />
+                                  <div>
+                                    <div className="font-bold text-gray-900 text-sm">
+                                      {p.webName}
+                                    </div>
+                                    <div className="text-[11px] text-gray-500">
+                                      {p.fullName}
+                                    </div>
+                                  </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 font-bold text-xs text-[#555555]">
+                              <TableCell className="py-3 px-2 font-bold text-xs text-gray-600">
                                 {p.teamShortName}
                               </TableCell>
-                              <TableCell className="py-2.5 px-2">
-                                <span className="text-[10px] font-bold text-[#777777] bg-[#F5F5F5] px-1.5 py-0.5 rounded">
+                              <TableCell className="py-3 px-2">
+                                <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md">
                                   {p.positionType}
                                 </span>
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 text-[#666666] font-semibold text-xs">
+                              <TableCell className="py-3 px-2 text-gray-600 font-semibold text-xs">
                                 {idx === 0 ? "Sub GK" : `Sub ${idx}`}
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 text-center text-xs font-semibold text-[#555555]">
+                              <TableCell className="py-3 px-2 text-center text-xs font-semibold text-gray-600">
                                 {p.stats?.minutes ?? "—"}&apos;
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 text-center text-xs font-semibold text-[#37003C]">
+                              <TableCell className="py-3 px-2 text-center text-xs font-bold text-[#37003C]">
                                 {(p.stats?.goals || 0) > 0 || (p.stats?.assists || 0) > 0
                                   ? `${p.stats?.goals || 0} / ${p.stats?.assists || 0}`
                                   : "—"}
                               </TableCell>
-                              <TableCell className="py-2.5 px-2 text-center text-xs font-semibold text-[#555555]">
+                              <TableCell className="py-3 px-2 text-center text-xs font-semibold text-gray-600">
                                 {p.stats?.cleanSheets ? "Yes" : "—"}
                               </TableCell>
-                              <TableCell className="py-2.5 px-3 text-right whitespace-nowrap">
-                                <span className="font-black text-sm text-[#555555]">
+                              <TableCell className="py-3 px-4 text-right whitespace-nowrap">
+                                <span className="font-black text-sm text-gray-700">
                                   {p.points}
                                 </span>
                               </TableCell>
@@ -870,21 +924,21 @@ export function FantasyTeamModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="border-t border-[#E5E5E5] bg-white px-4 sm:px-6 py-3 flex items-center justify-between text-xs text-[#777777]">
+        <div className="border-t border-gray-200 bg-white px-5 sm:px-7 py-3.5 flex items-center justify-between text-xs text-gray-500">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-[#37003C]">
-              {isManualPlayer ? "Manual Scoring" : "FPL Sync"}
+            <span className="font-bold text-[#37003C]">
+              {isManualPlayer ? "Manual Scoring" : "Official FPL Data"}
             </span>
-            <span className="text-[#CCCCCC]">•</span>
+            <span className="text-gray-300">•</span>
             <span>
-              {isManualPlayer ? "Admin Managed Roster" : "Official Premier League Data"}
+              {isManualPlayer ? "Admin Managed Roster" : "Premier League Scoring Engine"}
             </span>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="font-bold border-[#E5E5E5] hover:bg-[#F7F7F7] text-[#37003C] rounded-lg px-4"
+            className="font-bold border-gray-200 hover:bg-gray-50 text-gray-800 rounded-xl px-4 cursor-pointer"
           >
             Close
           </Button>
@@ -895,9 +949,149 @@ export function FantasyTeamModal({
 }
 
 /**
+ * Player Jersey Kit Placeholder:
+ * SVG Vector Premier League jersey kit tailored for Goalkeepers vs Outfielders.
+ */
+function PlayerKitPlaceholder({
+  positionType,
+  teamShortName,
+  isCaptain = false,
+  isViceCaptain = false,
+  multiplier = 1,
+  className = "w-10 h-11 sm:w-12 sm:h-13",
+}: {
+  positionType: "GKP" | "DEF" | "MID" | "FWD";
+  teamShortName: string;
+  isCaptain?: boolean;
+  isViceCaptain?: boolean;
+  multiplier?: number;
+  className?: string;
+}) {
+  const isGkp = positionType === "GKP";
+
+  return (
+    <div className={`relative inline-flex items-center justify-center ${className}`}>
+      <svg
+        viewBox="0 0 100 110"
+        className="w-full h-full drop-shadow-md transition-transform duration-200 group-hover:scale-105"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <defs>
+          {/* Outfield Jersey Gradients (Premier League purple & emerald) */}
+          <linearGradient id="outfieldBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#37003C" />
+            <stop offset="55%" stopColor="#240028" />
+            <stop offset="100%" stopColor="#140016" />
+          </linearGradient>
+          <linearGradient id="outfieldSleevesGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#00FF87" />
+            <stop offset="100%" stopColor="#00A855" />
+          </linearGradient>
+
+          {/* Goalkeeper Jersey Gradients (Electric cyan & emerald) */}
+          <linearGradient id="gkpBodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#00E5FF" />
+            <stop offset="55%" stopColor="#0091EA" />
+            <stop offset="100%" stopColor="#00609C" />
+          </linearGradient>
+          <linearGradient id="gkpSleevesGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#00FF87" />
+            <stop offset="100%" stopColor="#00C853" />
+          </linearGradient>
+        </defs>
+
+        {/* Sleeves (Left & Right) */}
+        <path
+          d="M20 32 L2 54 L16 66 L30 48 Z"
+          fill={isGkp ? "url(#gkpSleevesGrad)" : "url(#outfieldSleevesGrad)"}
+          stroke="rgba(255,255,255,0.3)"
+          strokeWidth="1.2"
+        />
+        <path
+          d="M80 32 L98 54 L84 66 L70 48 Z"
+          fill={isGkp ? "url(#gkpSleevesGrad)" : "url(#outfieldSleevesGrad)"}
+          stroke="rgba(255,255,255,0.3)"
+          strokeWidth="1.2"
+        />
+
+        {/* Main Body */}
+        <path
+          d="M26 30 L35 22 C44 26 56 26 65 22 L74 30 L72 96 C72 98 70 100 68 100 L32 100 C30 100 28 98 28 96 Z"
+          fill={isGkp ? "url(#gkpBodyGrad)" : "url(#outfieldBodyGrad)"}
+          stroke="rgba(255,255,255,0.35)"
+          strokeWidth="1.4"
+        />
+
+        {/* Collar Trim */}
+        <path
+          d="M38 23 C45 32 55 32 62 23"
+          stroke={isGkp ? "#FFFFFF" : "#00FF87"}
+          strokeWidth="2.8"
+          strokeLinecap="round"
+          fill="none"
+        />
+
+        {/* Subtle Horizontal Chest Accent Line */}
+        <path
+          d="M30 46 L70 46"
+          stroke={isGkp ? "rgba(255,255,255,0.4)" : "rgba(0,255,135,0.4)"}
+          strokeWidth="1.5"
+          strokeDasharray="2 2"
+        />
+
+        {/* Club Code Text on Jersey Front */}
+        <text
+          x="50"
+          y="69"
+          textAnchor="middle"
+          fill="#FFFFFF"
+          fontSize="15"
+          fontWeight="900"
+          letterSpacing="0.6"
+          fontFamily="system-ui, -apple-system, sans-serif"
+          className="select-none"
+        >
+          {teamShortName}
+        </text>
+      </svg>
+
+      {/* Captaincy Badges */}
+      {isCaptain && (
+        <span
+          className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#FFD700] font-black text-[#37003C] text-[10px] shadow-md border border-[#FFF066] z-10"
+          title={`Captain (${multiplier}x points)`}
+        >
+          {multiplier === 3 ? (
+            <Crown className="h-3 w-3 text-[#37003C]" />
+          ) : (
+            "C"
+          )}
+        </span>
+      )}
+      {!isCaptain && isViceCaptain && (
+        <span
+          className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white font-black text-[#37003C] text-[10px] shadow-md border border-gray-200 z-10"
+          title="Vice-Captain"
+        >
+          V
+        </span>
+      )}
+
+      {/* Multiplier Tag if > 1 */}
+      {multiplier > 1 && (
+        <span className="absolute -bottom-1 -left-1 rounded-md bg-[#37003C] px-1 py-0.2 text-[8px] font-black text-[#00FF87] border border-[#00FF87]/40 shadow-xs z-10">
+          {multiplier}x
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
  * Individual Player Pitch Card:
- * Responsive, solid card with strong contrast on emerald pitch,
- * dynamic captain/vice-captain/multiplier badges, and performance tooltip.
+ * Features Player Kit Placeholder, dark high-contrast nameplate, vibrant emerald points badge,
+ * and smart directional popover tooltip with performance statistics.
  */
 function PitchPlayerCard({
   player,
@@ -929,69 +1123,40 @@ function PitchPlayerCard({
 
   return (
     <div
-      className="group relative flex flex-col items-center select-none cursor-pointer focus:outline-none"
+      className="group relative flex flex-col items-center select-none cursor-pointer focus:outline-none transition-transform hover:-translate-y-0.5"
       tabIndex={0}
       role="button"
       aria-label={accessibleLabel}
     >
-      {/* Kit / Club Badge Avatar Container */}
-      <div className="relative">
-        <div className="relative flex h-8 w-8 xs:h-9 xs:w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl bg-white shadow-md border border-white/80 text-[#37003C] font-black text-xs transition-transform duration-150 group-hover:scale-110 group-focus-visible:ring-2 group-focus-visible:ring-white">
-          <span className="text-[9px] xs:text-[10px] sm:text-xs font-black tracking-tight">
-            {player.teamShortName}
-          </span>
+      {/* Player Kit Placeholder Graphic */}
+      <PlayerKitPlaceholder
+        positionType={player.positionType}
+        teamShortName={player.teamShortName}
+        isCaptain={player.isCaptain}
+        isViceCaptain={player.isViceCaptain}
+        multiplier={player.multiplier}
+      />
 
-          {/* Captaincy Badge */}
-          {player.isCaptain && (
-            <span
-              className="absolute -top-1.5 -right-1.5 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#FFD700] font-black text-[#37003C] text-[9px] sm:text-[10px] shadow-xs border border-[#FFE033]"
-              title={`Captain (${player.multiplier}x points)`}
-            >
-              {player.multiplier === 3 ? (
-                <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[#37003C]" />
-              ) : (
-                "C"
-              )}
-            </span>
-          )}
-          {!player.isCaptain && player.isViceCaptain && (
-            <span
-              className="absolute -top-1.5 -right-1.5 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#E2E8F0] font-black text-[#37003C] text-[9px] sm:text-[10px] shadow-xs border border-white"
-              title="Vice-Captain"
-            >
-              V
-            </span>
-          )}
-
-          {/* Multiplier Tag if > 1 */}
-          {player.multiplier > 1 && (
-            <span className="absolute -bottom-1 -left-1 rounded bg-[#37003C] px-1 py-0.2 text-[8px] font-black text-[#00FF87] shadow-xs">
-              {player.multiplier}x
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Name and Points Plate */}
+      {/* Name and Points Container */}
       <div className="mt-1 flex flex-col items-center w-full">
         {/* Name Plate */}
-        <div className="max-w-[56px] xs:max-w-[68px] sm:max-w-[88px] truncate rounded bg-white/95 px-1 py-0.5 text-center text-[9px] xs:text-[10px] sm:text-[11px] font-bold text-[#1F1F1F] shadow-xs border border-white/70">
+        <div className="max-w-[62px] xs:max-w-[74px] sm:max-w-[92px] truncate rounded bg-black/80 backdrop-blur-md px-1.5 py-0.5 text-center text-[9px] xs:text-[10px] sm:text-[11px] font-bold text-white shadow-sm border border-white/20 group-hover:bg-[#37003C] transition-colors">
           {player.webName}
         </div>
 
         {/* Gameweek Points Pill */}
         <div
-          className={`mt-0.5 rounded-full px-1.5 sm:px-2 py-0.2 text-[8px] xs:text-[9px] sm:text-[10px] font-black shadow-xs ${
+          className={`mt-0.5 rounded-full px-2 sm:px-2.5 py-0.2 text-[8px] xs:text-[9px] sm:text-[10px] font-black shadow-sm ${
             player.totalPoints >= 10
-              ? "bg-[#00FF87] text-[#37003C] ring-1 ring-white/60"
-              : "bg-[#00FF87] text-[#37003C]"
+              ? "bg-[#00FF87] text-[#072B15] ring-2 ring-[#FFD700]"
+              : "bg-[#00FF87] text-[#072B15]"
           }`}
         >
           {player.totalPoints} pts
         </div>
       </div>
 
-      {/* Hover & Focus Stat Tooltip (smart direction: top-full for goalkeeper, bottom-full for outfield) */}
+      {/* Hover & Focus Stat Tooltip */}
       <div
         className={`pointer-events-none absolute hidden group-hover:flex group-focus-visible:flex flex-col items-center z-40 animate-fpl-fade-in ${horizontalAlignClass} ${
           isGkp ? "top-full mt-2" : "bottom-full mb-2"
@@ -999,40 +1164,45 @@ function PitchPlayerCard({
       >
         {/* If GKP: Arrow on top pointing up */}
         {isGkp && (
-          <div className="h-2 w-2 translate-y-1 rotate-45 bg-[#37003C] border-l border-t border-[#5A0A63] z-10 shrink-0" />
+          <div className="h-2 w-2 translate-y-1 rotate-45 bg-[#170020] border-l border-t border-[#37003C] z-10 shrink-0" />
         )}
 
-        <div className="rounded-xl bg-[#37003C] border border-[#5A0A63] p-2.5 text-center text-[11px] text-white shadow-2xl whitespace-nowrap">
-          <p className="font-bold text-xs text-[#00FF87]">{player.fullName}</p>
-          <p className="text-gray-300 text-[10px] font-medium">
+        <div className="rounded-2xl bg-[#170020] border border-[#37003C] p-3 text-center text-[11px] text-white shadow-2xl whitespace-nowrap">
+          <p className="font-extrabold text-xs text-[#00FF87]">{player.fullName}</p>
+          <p className="text-gray-300 text-[10px] font-medium mt-0.5">
             {player.teamShortName} · {player.positionType}
             {player.isCaptain && ` · Captain (${player.multiplier}x)`}
             {player.isViceCaptain && " · Vice-Captain"}
           </p>
-          <div className="mt-1.5 pt-1.5 border-t border-white/10 flex items-center justify-center gap-2.5 text-[10px]">
+          <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-center gap-3 text-[10px]">
             {player.stats?.minutes !== undefined && (
               <span>⏱️ {player.stats.minutes}&apos;</span>
             )}
             {(player.stats?.goals || 0) > 0 && (
-              <span className="font-bold text-[#E7FF00]">
+              <span className="font-black text-[#FFD700]">
                 ⚽ {player.stats?.goals}
               </span>
             )}
             {(player.stats?.assists || 0) > 0 && (
-              <span className="font-bold text-[#00D9FF]">
+              <span className="font-black text-[#00D9FF]">
                 👟 {player.stats?.assists}
               </span>
             )}
-            {player.stats?.cleanSheets ? <span>🧤 CS</span> : null}
+            {player.stats?.cleanSheets ? <span className="font-bold text-[#00FF87]">🧤 CS</span> : null}
             {player.stats?.bonus ? (
-              <span className="text-[#00FF87]">+{player.stats.bonus} bonus</span>
+              <span className="text-[#00FF87] font-bold">+{player.stats.bonus} bonus</span>
             ) : null}
           </div>
+          {player.multiplier > 1 && (
+            <p className="text-[9px] text-[#00D9FF] font-semibold mt-1">
+              Multiplier applied: {player.points} pts × {player.multiplier} = {player.totalPoints} pts
+            </p>
+          )}
         </div>
 
         {/* If not GKP: Arrow on bottom pointing down */}
         {!isGkp && (
-          <div className="h-2 w-2 -translate-y-1 rotate-45 bg-[#37003C] border-r border-b border-[#5A0A63] z-10 shrink-0" />
+          <div className="h-2 w-2 -translate-y-1 rotate-45 bg-[#170020] border-r border-b border-[#37003C] z-10 shrink-0" />
         )}
       </div>
     </div>

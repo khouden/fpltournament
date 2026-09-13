@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifySessionToken } from "@/lib/auth-crypto";
+
+const SESSION_COOKIE_NAME = "admin_session";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -7,25 +10,12 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
     const isApi = pathname.startsWith("/api/admin");
 
-    // Check for admin session
-    const sessionCookie = request.cookies.get("admin_session");
-    let isValidSession = false;
-
-    if (sessionCookie?.value) {
-      try {
-        const session = JSON.parse(sessionCookie.value);
-        if (
-          session &&
-          session.user &&
-          session.expiresAt &&
-          session.expiresAt > Date.now()
-        ) {
-          isValidSession = true;
-        }
-      } catch {
-        isValidSession = false;
-      }
-    }
+    // Cryptographically verify admin session cookie HMAC signature
+    const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME);
+    const session = sessionCookie?.value
+      ? await verifySessionToken(sessionCookie.value)
+      : null;
+    const isValidSession = session !== null && session.expiresAt > Date.now();
 
     // If user is already authenticated and visits /admin/login, redirect to /admin dashboard
     if (pathname === "/admin/login") {
@@ -35,7 +25,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Reject or redirect unauthenticated requests
+    // Reject or redirect unauthenticated or forged requests
     if (!isValidSession) {
       if (isApi) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -5,6 +5,7 @@ import { ArrowRight, Check, Minus, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/stats/progress-bar";
+import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 
 export interface TournamentCardData {
   id: string;
@@ -57,31 +58,32 @@ export function TournamentCard({
   const allowBB = tournament.allowBenchBoost ?? true;
   const allowTC = tournament.allowTripleCaptain ?? true;
 
-  const hasBanner = !!tournament.banner;
+  const bannerSrc = getTournamentBannerOrDefault(tournament.banner, tournament.id);
+  const hasBanner = !!bannerSrc;
 
   return (
     <Link
       href={`/tournaments/${tournament.id}`}
       className={cn(
-        "group block rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#37003C] focus-visible:ring-offset-2 transition-transform duration-200",
+        "group block rounded-[18px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00FFA3] focus-visible:ring-offset-2 transition-transform duration-200",
         className
       )}
     >
       <article
         className={cn(
-          "relative overflow-hidden rounded-[14px] border border-[#E5E5E5] bg-white p-5 sm:p-6 transition-all duration-200 flex flex-col justify-between",
-          "shadow-fpl-sm hover:shadow-fpl-md hover:-translate-y-0.5 hover:border-[#37003C]/30",
+          "relative overflow-hidden rounded-[18px] border border-[#E8ECF2] bg-white p-5 sm:p-6 transition-all duration-200 flex flex-col justify-between",
+          "shadow-[0_4px_20px_rgba(11,8,30,0.04)] hover:shadow-[0_16px_36px_rgba(11,8,30,0.08)] hover:-translate-y-0.5 hover:border-[#CBD5E1]",
           isCompleted && "bg-white/95 border-[#E8E8E8]"
         )}
       >
         {/* If card has banner: render cinematic top banner header */}
         {hasBanner ? (
-          <div className="relative -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 mb-4 h-32 sm:h-36 bg-[#1F0022] overflow-hidden">
+          <div className="relative -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 mb-4 h-32 sm:h-36 bg-[#12092B] overflow-hidden">
             <Image
-              src={tournament.banner!}
+              src={bannerSrc}
               alt={tournament.name}
               fill
-              unoptimized={tournament.banner!.startsWith("http")}
+              unoptimized={bannerSrc.startsWith("http")}
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
             {/* Gradient Overlays for contrast */}
@@ -91,7 +93,7 @@ export function TournamentCard({
               className={cn(
                 "absolute inset-x-0 top-0 h-[3px]",
                 isPublished
-                  ? "bg-gradient-to-r from-[#00D9FF] via-[#00FF87] to-[#E7FF00]"
+                  ? "bg-gradient-to-r from-[#00D9FF] via-[#00FFA3] to-[#E7FF00]"
                   : "bg-gradient-to-r from-[#5A0A63] to-[#37003C]"
               )}
             />
@@ -101,9 +103,9 @@ export function TournamentCard({
               {isPublished ? (
                 <Badge
                   variant="outline"
-                  className="gap-1.5 border-[#00FF87]/50 bg-black/50 backdrop-blur-md text-[#00FF87] font-black uppercase tracking-wider text-[10px] px-2.5 py-0.5 rounded-full shadow-xs"
+                  className="gap-1.5 border-transparent bg-[#00FFA3] text-[#0B081E] font-black uppercase tracking-wider text-[10px] px-2.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(0,255,163,0.35)]"
                 >
-                  <span className="h-2 w-2 rounded-full bg-[#00FF87] animate-fpl-pulse-dot" />
+                  <span className="h-2 w-2 rounded-full bg-[#0B081E] animate-fpl-pulse-dot" />
                   <span>ACTIVE</span>
                 </Badge>
               ) : (

@@ -98,13 +98,25 @@ export function TournamentActions({
         </div>
       )}
 
-      <div className="flex items-center gap-2.5 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Primary Action: Manage Hub */}
+        <Button
+          size="sm"
+          asChild
+          className="h-8.5 px-3.5 text-xs font-bold bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-xl shadow-xs transition-colors gap-1.5 cursor-pointer"
+        >
+          <Link href={`/admin/tournaments/${tournamentId}`}>
+            <Rocket className="h-3.5 w-3.5 text-[#00FF87]" />
+            <span>Manage Hub</span>
+          </Link>
+        </Button>
+
         {/* Secondary: Edit */}
         <Button
           variant="outline"
           size="sm"
           asChild
-          className="h-9 px-3.5 text-xs font-semibold text-[#1F1F1F] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] transition-colors gap-1.5 shadow-2xs"
+          className="h-8.5 px-3 text-xs font-semibold text-[#1F1F1F] border-gray-200 bg-white hover:bg-gray-50 hover:border-[#37003C]/40 hover:text-[#37003C] rounded-xl transition-colors gap-1.5 shadow-2xs"
         >
           <Link href={`/admin/tournaments/${tournamentId}/edit`}>
             <Pencil className="h-3.5 w-3.5 text-[#37003C]" />
@@ -117,7 +129,7 @@ export function TournamentActions({
           variant="outline"
           size="sm"
           asChild
-          className="h-9 px-3.5 text-xs font-semibold text-[#333333] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] transition-colors gap-1.5 shadow-2xs"
+          className="h-8.5 px-3 text-xs font-semibold text-[#333333] border-gray-200 bg-white hover:bg-gray-50 hover:border-[#37003C]/40 hover:text-[#37003C] rounded-xl transition-colors gap-1.5 shadow-2xs"
         >
           <Link href={`/admin/tournaments/${tournamentId}/groups`}>
             <Users className="h-3.5 w-3.5 text-[#666666]" />
@@ -130,7 +142,7 @@ export function TournamentActions({
           variant="outline"
           size="sm"
           asChild
-          className="h-9 px-3.5 text-xs font-semibold text-[#333333] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] transition-colors gap-1.5 shadow-2xs"
+          className="h-8.5 px-3 text-xs font-semibold text-[#333333] border-gray-200 bg-white hover:bg-gray-50 hover:border-[#37003C]/40 hover:text-[#37003C] rounded-xl transition-colors gap-1.5 shadow-2xs"
         >
           <Link href={`/admin/tournaments/${tournamentId}/schedule`}>
             <Calendar className="h-3.5 w-3.5 text-[#666666]" />
@@ -144,11 +156,11 @@ export function TournamentActions({
             variant="default"
             size="sm"
             asChild
-            className="h-9 px-4 text-xs font-bold bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] shadow-xs transition-colors gap-1.5 cursor-pointer"
+            className="h-8.5 px-3.5 text-xs font-bold bg-[#00A855] hover:bg-[#008744] text-white rounded-xl shadow-xs transition-colors gap-1.5 cursor-pointer"
           >
             <Link href={`/admin/tournaments/${tournamentId}/publish`}>
               <Rocket className="h-3.5 w-3.5 text-[#00FF87]" />
-              <span>Review &amp; Publish</span>
+              <span>Publish Wizard</span>
             </Link>
           </Button>
         )}
@@ -160,7 +172,7 @@ export function TournamentActions({
             size="sm"
             onClick={handleUnpublish}
             disabled={isLoading}
-            className="h-9 px-4 text-xs font-semibold border-amber-300 bg-white text-amber-800 hover:bg-amber-50 hover:border-amber-400 rounded-[8px] transition-colors gap-1.5 cursor-pointer disabled:opacity-50"
+            className="h-8.5 px-3 text-xs font-semibold border-amber-300 bg-amber-50/50 text-amber-800 hover:bg-amber-100 hover:border-amber-400 rounded-xl transition-colors gap-1.5 cursor-pointer disabled:opacity-50"
           >
             {isLoading ? (
               <>
@@ -169,7 +181,7 @@ export function TournamentActions({
               </>
             ) : (
               <>
-                <EyeOff className="h-3.5 w-3.5" />
+                <EyeOff className="h-3.5 w-3.5 text-amber-700" />
                 <span>Unpublish</span>
               </>
             )}
@@ -182,7 +194,7 @@ export function TournamentActions({
           size="sm"
           onClick={() => setShowDeleteConfirm(true)}
           disabled={isLoading}
-          className="h-9 px-3.5 text-xs font-semibold border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 rounded-[8px] transition-colors gap-1.5 cursor-pointer disabled:opacity-50 sm:ml-auto"
+          className="h-8.5 px-3 text-xs font-semibold border-rose-200 bg-white text-rose-600 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 rounded-xl transition-colors gap-1.5 cursor-pointer disabled:opacity-50 sm:ml-auto"
           aria-label={`Delete ${tournamentName}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -192,32 +204,31 @@ export function TournamentActions({
 
       {/* Delete Confirmation Modal */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent className="max-w-md rounded-[16px] border border-[#E5E5E5] bg-white p-6 shadow-fpl-lg">
+        <AlertDialogContent className="max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl">
           <AlertDialogHeader className="text-left space-y-2">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-red-50 border border-red-100 shrink-0">
-                <Trash2 className="h-4 w-4 text-red-600" />
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 border border-rose-100 shrink-0">
+                <Trash2 className="h-5 w-5 text-rose-600" />
               </div>
-              <AlertDialogTitle className="text-lg font-bold text-[#1F1F1F]">
+              <AlertDialogTitle className="text-lg font-black text-[#1F1F1F] tracking-tight">
                 Delete Tournament?
               </AlertDialogTitle>
             </div>
-            <AlertDialogDescription className="text-sm text-[#666666] leading-relaxed pt-1">
-              Are you sure you want to delete &quot;{tournamentName}&quot;? This action
-              cannot be undone and all associated rounds and matches will be removed.
+            <AlertDialogDescription className="text-xs sm:text-sm text-[#666666] leading-relaxed pt-1">
+              Are you sure you want to permanently delete &quot;<strong className="text-[#1F1F1F]">{tournamentName}</strong>&quot;? All associated groups, rounds, fixtures, and match scorecards will be deleted. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-6 flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3">
             <AlertDialogCancel
               disabled={isLoading}
-              className="h-10 rounded-[8px] border-[#E5E5E5] text-[#1F1F1F] hover:bg-[#F7F7F7] font-medium"
+              className="h-10 rounded-xl border-gray-200 text-[#1F1F1F] hover:bg-gray-50 font-semibold text-xs"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isLoading}
-              className="h-10 rounded-[8px] bg-[#E9007F] hover:bg-[#d00072] text-white font-semibold gap-1.5"
+              className="h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs gap-1.5"
             >
               {isLoading ? (
                 <>
@@ -227,7 +238,7 @@ export function TournamentActions({
               ) : (
                 <>
                   <Trash2 className="h-4 w-4" />
-                  <span>Delete</span>
+                  <span>Permanently Delete</span>
                 </>
               )}
             </AlertDialogAction>

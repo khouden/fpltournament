@@ -15,6 +15,14 @@ const buttonVariants = cva(
           "bg-[#37003C] text-white hover:bg-[#5A0A63] shadow-sm",
         fantasy:
           "bg-[#00FF87] text-[#37003C] hover:bg-[#E7FF00] font-bold shadow-sm",
+        neon:
+          "bg-[#00FFA3] text-[#0B081E] font-extrabold hover:bg-[#00E592] hover:shadow-[0_0_24px_rgba(0,255,163,0.45)] rounded-full transition-all duration-200",
+        glass:
+          "bg-white/[0.07] text-white hover:bg-white/[0.14] border border-white/20 rounded-full backdrop-blur-md transition-all duration-200",
+        darkPill:
+          "bg-[#12092B] text-white hover:bg-[#1C0F3F] border border-transparent rounded-full font-bold transition-all duration-200",
+        outlinePill:
+          "border border-[#E2E8F0] bg-white text-[#0B081E] hover:bg-[#F8F9FD] rounded-full font-bold transition-all duration-200",
         accent:
           "bg-[#E9007F] text-white hover:bg-[#d00072] font-semibold shadow-sm",
         destructive:
@@ -34,6 +42,8 @@ const buttonVariants = cva(
         default: "h-10 px-4 py-2",
         sm: "h-8 px-3 text-xs",
         lg: "h-12 px-6 text-base",
+        pill: "h-11 px-6 text-sm rounded-full",
+        "pill-lg": "h-13 px-8 text-base rounded-full",
         icon: "h-10 w-10 p-0",
         "icon-sm": "h-8 w-8 p-0",
       },

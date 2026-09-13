@@ -22,6 +22,7 @@ import {
   EyeOff,
   Pencil,
   Check,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -176,34 +177,34 @@ export function TournamentPublishWizard({
     <div className="space-y-6 sm:space-y-8 animate-fpl-fade-in">
       {/* 1. Header & Stepper */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="space-y-1 min-w-0">
+        <div className="space-y-1.5 min-w-0">
           <nav
             aria-label="Breadcrumb"
-            className="flex items-center gap-1.5 text-xs sm:text-sm text-[#777777]"
+            className="flex items-center gap-2 text-xs sm:text-sm text-gray-500"
           >
             <Link
               href="/admin"
-              className="font-medium text-[#666666] hover:text-[#37003C] transition-colors"
+              className="font-semibold text-gray-600 hover:text-[#37003C] transition-colors"
             >
               Dashboard
             </Link>
-            <span className="text-[#AAAAAA]">/</span>
+            <ChevronRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
             <Link
               href={`/admin/tournaments/${tournament.id}`}
-              className="font-medium text-[#666666] hover:text-[#37003C] transition-colors truncate max-w-[180px] sm:max-w-xs"
+              className="font-semibold text-gray-600 hover:text-[#37003C] transition-colors truncate max-w-[180px] sm:max-w-xs"
               title={tournament.name}
             >
               {tournament.name}
             </Link>
-            <span className="text-[#AAAAAA]">/</span>
-            <span className="font-semibold text-[#1F1F1F]">Review &amp; Publish</span>
+            <ChevronRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+            <span className="font-bold text-[#1F1F1F]">Review &amp; Publish</span>
           </nav>
 
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1F1F1F] tracking-tight leading-tight flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-black text-[#1F1F1F] tracking-tight leading-tight flex items-center gap-2.5">
             <span>Review &amp; Publish Tournament</span>
-            <Rocket className="h-6 w-6 text-[#37003C]" />
+            <Rocket className="h-6 w-6 text-[#00A855]" />
           </h1>
-          <p className="text-xs sm:text-sm text-[#666666] font-medium max-w-2xl">
+          <p className="text-xs sm:text-sm text-gray-500 max-w-2xl">
             Step 4 of 4: Inspect pre-flight readiness checks, verify tournament configuration, and launch the competition live.
           </p>
         </div>
@@ -745,12 +746,12 @@ export function TournamentPublishWizard({
       </section>
 
       {/* 7. Bottom Navigation Bar */}
-      <div className="rounded-[16px] border border-[#E5E5E5] bg-white p-4 sm:p-5 shadow-fpl-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="rounded-2xl border border-gray-200/80 bg-white p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
         <Button
           variant="outline"
           size="sm"
           asChild
-          className="h-10 px-4 text-xs font-semibold text-[#555555] hover:text-[#1F1F1F] border-[#D5D5D5] bg-white hover:bg-[#F9F9F9] rounded-[8px] gap-2 w-full sm:w-auto cursor-pointer"
+          className="h-10 px-4 text-xs font-bold text-gray-700 hover:text-[#1F1F1F] border-gray-200 bg-white hover:bg-gray-50 rounded-xl gap-2 w-full sm:w-auto cursor-pointer"
         >
           <Link href={`/admin/tournaments/${tournament.id}/schedule?wizard=true`}>
             <ArrowLeft className="h-4 w-4" />
@@ -762,10 +763,10 @@ export function TournamentPublishWizard({
           variant="ghost"
           size="sm"
           asChild
-          className="h-10 px-5 text-xs font-semibold text-[#37003C] hover:bg-[#37003C]/5 rounded-[8px] gap-1.5 w-full sm:w-auto cursor-pointer"
+          className="h-10 px-5 text-xs font-bold text-[#37003C] hover:bg-[#37003C]/5 rounded-xl gap-1.5 w-full sm:w-auto cursor-pointer"
         >
           <Link href={`/admin/tournaments/${tournament.id}`}>
-            <span>Go to Tournament Dashboard</span>
+            <span>Go to Tournament Control Center</span>
             <ArrowRight className="h-4 w-4" />
           </Link>
         </Button>
@@ -773,22 +774,22 @@ export function TournamentPublishWizard({
 
       {/* Publish Confirmation Dialog */}
       <AlertDialog open={showPublishDialog} onOpenChange={setShowPublishDialog}>
-        <AlertDialogContent className="bg-white border-[#E5E5E5] rounded-[16px] max-w-md">
+        <AlertDialogContent className="bg-white border-gray-200 rounded-2xl max-w-md p-6 shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-bold text-[#1F1F1F]">
+            <AlertDialogTitle className="text-lg font-black text-[#1F1F1F] tracking-tight">
               Publish Tournament Live?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs sm:text-sm text-[#666666]">
+            <AlertDialogDescription className="text-xs sm:text-sm text-gray-600">
               Publishing <strong className="text-[#1F1F1F]">{tournament.name}</strong> will make the competition publicly accessible. Managers will be able to view fixtures, and scores will update with official FPL points.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0 mt-3">
-            <AlertDialogCancel className="border-[#E5E5E5] text-[#555555]">
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
+            <AlertDialogCancel className="border-gray-200 text-gray-600 rounded-xl font-semibold text-xs">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handlePublish}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs cursor-pointer"
             >
               Publish Competition Now
             </AlertDialogAction>
@@ -798,22 +799,22 @@ export function TournamentPublishWizard({
 
       {/* Unpublish Confirmation Dialog */}
       <AlertDialog open={showUnpublishDialog} onOpenChange={setShowUnpublishDialog}>
-        <AlertDialogContent className="bg-white border-[#E5E5E5] rounded-[16px] max-w-md">
+        <AlertDialogContent className="bg-white border-gray-200 rounded-2xl max-w-md p-6 shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-lg font-bold text-[#1F1F1F]">
+            <AlertDialogTitle className="text-lg font-black text-[#1F1F1F] tracking-tight">
               Unpublish Tournament?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs sm:text-sm text-[#666666]">
+            <AlertDialogDescription className="text-xs sm:text-sm text-gray-600">
               Returning <strong className="text-[#1F1F1F]">{tournament.name}</strong> to DRAFT will hide the tournament from the public directory while you make adjustments.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0 mt-3">
-            <AlertDialogCancel className="border-[#E5E5E5] text-[#555555]">
+          <AlertDialogFooter className="gap-2 sm:gap-0 mt-4">
+            <AlertDialogCancel className="border-gray-200 text-gray-600 rounded-xl font-semibold text-xs">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleUnpublish}
-              className="bg-amber-600 hover:bg-amber-700 text-white font-bold cursor-pointer"
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs cursor-pointer"
             >
               Unpublish Tournament
             </AlertDialogAction>

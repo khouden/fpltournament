@@ -32,9 +32,11 @@ const badgeVariants = cva(
         cyan:
           "border-transparent bg-[#00D9FF] text-[#37003C] font-bold shadow-xs",
         live:
-          "border-transparent bg-[#E9007F] text-white font-black tracking-wider uppercase shadow-xs",
+          "border-transparent bg-[#00FFA3] text-[#0B081E] font-black tracking-wider uppercase shadow-xs",
         upcoming:
-          "border-[#1689E8]/30 bg-[#1689E8]/10 text-[#1689E8] font-semibold",
+          "border-[#8B5CF6]/40 bg-[#8B5CF6]/25 text-[#C4B5FD] font-bold tracking-wider uppercase",
+        mint:
+          "border-[#00FFA3]/40 bg-[#00FFA3]/15 text-[#00FFA3] font-bold tracking-wider uppercase",
         completed:
           "border-[#777777]/30 bg-[#777777]/10 text-[#555555] font-semibold",
         locked:

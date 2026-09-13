@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { getManager, verifyManagerInLeague, FPLDeadlineError } from "@/lib/fpl";
 import { recalculateTournamentScores } from "@/lib/scoring";
 import { safeRevalidate } from "@/lib/safe-revalidate";
+import { getDefaultBanner } from "@/lib/tournament-banners";
 import { NextRequest, NextResponse } from "next/server";
 
 interface AdminInput {
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name,
         season: body.season,
-        banner: body.banner ? String(body.banner).trim() : null,
+        banner: body.banner ? String(body.banner).trim() : getDefaultBanner().path,
         adminFplId: primaryAdmin.fplId,
         allowBenchBoost: body.allowBenchBoost ?? true,
         allowTripleCaptain: body.allowTripleCaptain ?? true,

@@ -1,32 +1,28 @@
 import { cookies } from "next/headers";
-import { validateSession } from "@/lib/session";
+import { verifySessionCookieValue, SESSION_STORAGE_KEY } from "@/lib/session";
 import type { Session } from "@/types/auth";
 
 /**
- * Retrieves the current admin session from incoming cookies.
- * Returns null if unauthenticated, expired, or called outside a request context.
+ * Retrieves and cryptographically verifies the current admin session from incoming cookies.
+ * Returns null if unauthenticated, expired, forged, or called outside a request context.
  */
 export async function getAdminSessionServer(): Promise<Session | null> {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("admin_session");
+    const sessionCookie = cookieStore.get(SESSION_STORAGE_KEY);
     if (!sessionCookie?.value) {
       return null;
     }
 
-    const session = JSON.parse(sessionCookie.value) as Session;
-    if (!validateSession(session)) {
-      return null;
-    }
-    return session;
+    return await verifySessionCookieValue(sessionCookie.value);
   } catch {
     return null;
   }
 }
 
 /**
- * Asserts that the current request has an active, valid admin session.
- * Throws an Error if called in an unauthenticated request context.
+ * Asserts that the current request has an active, cryptographically signed admin session.
+ * Throws an Error if called in an unauthenticated or forged request context.
  * Gracefully allows execution if called outside a Next.js request scope (e.g. CLI/tests).
  */
 export async function requireAdminSession(): Promise<Session | null> {
@@ -38,21 +34,15 @@ export async function requireAdminSession(): Promise<Session | null> {
     return null;
   }
 
-  const sessionCookie = cookieStore.get("admin_session");
+  const sessionCookie = cookieStore.get(SESSION_STORAGE_KEY);
   if (!sessionCookie?.value) {
     throw new Error("Unauthorized: Admin session required");
   }
 
-  try {
-    const session = JSON.parse(sessionCookie.value) as Session;
-    if (!validateSession(session)) {
-      throw new Error("Unauthorized: Session expired");
-    }
-    return session;
-  } catch (err) {
-    if (err instanceof Error && err.message.startsWith("Unauthorized")) {
-      throw err;
-    }
-    throw new Error("Unauthorized: Invalid session");
+  const session = await verifySessionCookieValue(sessionCookie.value);
+  if (!session) {
+    throw new Error("Unauthorized: Invalid or expired admin session");
   }
+
+  return session;
 }
