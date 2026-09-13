@@ -83,7 +83,7 @@ export function TournamentCard({
               src={bannerSrc}
               alt={tournament.name}
               fill
-              unoptimized={bannerSrc.startsWith("http")}
+              unoptimized={bannerSrc.startsWith("http") || bannerSrc.startsWith("data:")}
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
             {/* Gradient Overlays for contrast */}

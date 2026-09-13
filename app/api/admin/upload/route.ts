@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import { requireAdminSession } from "@/lib/auth-server";
+import { put } from "@vercel/blob";
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -55,20 +56,61 @@ export async function POST(request: NextRequest) {
     const randomHash = crypto.randomBytes(8).toString("hex");
     const filename = `banner-${Date.now()}-${randomHash}${ext}`;
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "banners");
-    await mkdir(uploadDir, { recursive: true });
+    // 1. If Vercel Blob token is configured, upload to Vercel Blob Storage CDN
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      const blob = await put(`banners/${filename}`, file, {
+        access: "public",
+      });
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const filePath = path.join(uploadDir, filename);
-    await writeFile(filePath, buffer);
+      return NextResponse.json({
+        success: true,
+        url: blob.url,
+        filename,
+      });
+    }
 
-    const publicUrl = `/uploads/banners/${filename}`;
+    // 2. If running in a serverless environment (e.g. Vercel) with a read-only filesystem,
+    // convert to a Base64 data URL so uploads work immediately without any extra setup
+    if (process.env.VERCEL) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const base64 = buffer.toString("base64");
+      const dataUrl = `data:${mimeType};base64,${base64}`;
 
-    return NextResponse.json({
-      success: true,
-      url: publicUrl,
-      filename,
-    });
+      return NextResponse.json({
+        success: true,
+        url: dataUrl,
+        filename,
+      });
+    }
+
+    // 3. Local development fallback: save to public/uploads/banners
+    try {
+      const uploadDir = path.join(process.cwd(), "public", "uploads", "banners");
+      await mkdir(uploadDir, { recursive: true });
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const filePath = path.join(uploadDir, filename);
+      await writeFile(filePath, buffer);
+
+      const publicUrl = `/uploads/banners/${filename}`;
+
+      return NextResponse.json({
+        success: true,
+        url: publicUrl,
+        filename,
+      });
+    } catch (fsErr) {
+      // If filesystem write fails (e.g. permission or read-only container), return data URL
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const base64 = buffer.toString("base64");
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+
+      return NextResponse.json({
+        success: true,
+        url: dataUrl,
+        filename,
+      });
+    }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to upload banner";

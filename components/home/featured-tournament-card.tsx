@@ -45,7 +45,7 @@ export function FeaturedTournamentCard({
               src={item.banner}
               alt={item.name}
               fill
-              unoptimized={item.banner.startsWith("http")}
+              unoptimized={item.banner.startsWith("http") || item.banner.startsWith("data:")}
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
             {/* Top fantasy neon accent glow line */}
