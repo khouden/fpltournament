@@ -169,7 +169,6 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
-                  placeholder="admin@tournament.local"
                   required
                   autoComplete="email"
                   className="h-11 px-3.5 text-sm bg-white/10 border-white/20 text-white placeholder:text-white/40 focus-visible:ring-2 focus-visible:ring-[#00FF87] focus-visible:border-[#00FF87] rounded-xl transition-all"

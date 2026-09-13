@@ -80,7 +80,7 @@ Adhering to the platform's global Premier League aesthetic with restrained admin
 - **Card Header:** "Welcome back" with descriptive subtitle "Sign in to manage your fantasy tournaments."
 - **Email Field:**
   - Label: `Label htmlFor="email"` ("Email address")
-  - Input: `Input type="email"` with placeholder `admin@tournament.local`, `autoComplete="email"`, required validation.
+  - Input: `Input type="email"` with `autoComplete="email"`, required validation.
   - Disabled during submission.
 - **Password Field:**
   - Label: `Label htmlFor="password"` ("Password")
