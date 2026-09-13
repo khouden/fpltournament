@@ -22,6 +22,8 @@ export const metadata: Metadata = {
     "Join fantasy tournaments created by the community and prove your FPL skills with automated scoring and knockout progression.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const [tournaments, totalTeamsCount, completedMatchesCount] = await Promise.all([
     prisma.tournament.findMany({
