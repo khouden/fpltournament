@@ -9,7 +9,6 @@ const ALLOWED_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
-  "image/svg+xml",
   "image/gif",
 ]);
 
@@ -17,7 +16,6 @@ const EXTENSION_MAP: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
   "image/webp": ".webp",
-  "image/svg+xml": ".svg",
   "image/gif": ".gif",
 };
 
@@ -47,7 +45,7 @@ export async function POST(request: NextRequest) {
     const mimeType = file.type;
     if (!ALLOWED_TYPES.has(mimeType)) {
       return NextResponse.json(
-        { error: "Invalid image type. Allowed: JPG, PNG, WEBP, SVG, GIF" },
+        { error: "Invalid image type. Allowed: JPG, PNG, WEBP, GIF" },
         { status: 400 }
       );
     }

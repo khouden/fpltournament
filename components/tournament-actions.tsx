@@ -39,7 +39,6 @@ export function TournamentActions({
   tournamentId,
   tournamentName,
   status,
-  hasGroups: _hasGroups,
 }: TournamentActionsProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);

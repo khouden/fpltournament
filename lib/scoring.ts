@@ -321,7 +321,6 @@ export async function calculateMatchScore(
     allMembers.every((m) => m.isAdmin || hasMockPoints(m.fplId, gameweek));
 
   const hasExistingScores = match.homeScore !== null && match.awayScore !== null;
-  const hasManualGroup = Boolean(match.homeGroup?.isManual || match.awayGroup?.isManual);
 
   // If the Gameweek has NOT started yet (incoming matches / future rounds) and not mock and not manual with entered scores:
   if (gwInfo.status === "UPCOMING" && !isMockMatch && !isAllManualMatch && !hasExistingScores) {
@@ -407,33 +406,31 @@ export async function calculateMatchScore(
       where: { matchId: match.id },
     });
 
-    // Insert home group member scores
-    for (const m of homeResult.members) {
-      await tx.matchMemberScore.create({
-        data: {
-          matchId: match.id,
-          memberId: m.memberId,
-          gameweekPoints: m.gameweekPoints,
-          isExcluded: m.isExcluded,
-          activeChip: m.activeChip || null,
-          chipDeduction: m.chipDeduction || 0,
-          isFinal: matchStatus === "FINALIZED",
-        },
-      });
-    }
+    // Batch insert member scores
+    const allScoresData = [
+      ...homeResult.members.map((m) => ({
+        matchId: match.id,
+        memberId: m.memberId,
+        gameweekPoints: m.gameweekPoints,
+        isExcluded: m.isExcluded,
+        activeChip: m.activeChip || null,
+        chipDeduction: m.chipDeduction || 0,
+        isFinal: matchStatus === "FINALIZED",
+      })),
+      ...awayResult.members.map((m) => ({
+        matchId: match.id,
+        memberId: m.memberId,
+        gameweekPoints: m.gameweekPoints,
+        isExcluded: m.isExcluded,
+        activeChip: m.activeChip || null,
+        chipDeduction: m.chipDeduction || 0,
+        isFinal: matchStatus === "FINALIZED",
+      })),
+    ];
 
-    // Insert away group member scores
-    for (const m of awayResult.members) {
-      await tx.matchMemberScore.create({
-        data: {
-          matchId: match.id,
-          memberId: m.memberId,
-          gameweekPoints: m.gameweekPoints,
-          isExcluded: m.isExcluded,
-          activeChip: m.activeChip || null,
-          chipDeduction: m.chipDeduction || 0,
-          isFinal: matchStatus === "FINALIZED",
-        },
+    if (allScoresData.length > 0) {
+      await tx.matchMemberScore.createMany({
+        data: allScoresData,
       });
     }
 
@@ -511,71 +508,109 @@ export async function recalculateTournamentScores(
         );
       });
 
-    // If this round's Gameweek has not started yet, keep matches scheduled / incoming
-    // and skip making premature external API calls, but preserve matches with manual scores or all-manual
-    if (gwInfo.status === "UPCOMING" && !allRoundMatchesMock) {
-      for (const match of round.matches) {
-        const isMatchAllManual = Boolean(match.homeGroup?.isManual && match.awayGroup?.isManual);
-        const hasManualScores =
-          (match.homeGroup?.isManual || match.awayGroup?.isManual) &&
-          match.homeScore !== null &&
-          match.awayScore !== null;
+    const roundResults = await processRoundMatches(
+      round,
+      gwInfo.status,
+      allRoundMatchesMock,
+      forceRecalculate
+    );
+    results.push(...roundResults);
+  }
 
-        if (isMatchAllManual || hasManualScores) {
-          try {
-            const matchResult = await calculateMatchScore(match.id, forceRecalculate);
-            results.push(matchResult);
-            continue;
-          } catch (e) {
-            console.warn(`Could not calculate manual match ${match.id}:`, e);
-          }
-        }
+  return results;
+}
 
-        if (match.status !== "FINALIZED") {
-          await prisma.match.update({
-            where: { id: match.id },
-            data: { status: "SCHEDULED" },
-          });
-        }
-        results.push({
-          matchId: match.id,
-          matchNumber: match.matchNumber,
-          gameweek: round.gameweek,
-          homeGroup: null,
-          awayGroup: null,
-          homeScore: null,
-          awayScore: null,
-          result: null,
-          winnerGroupId: null,
-          status: match.status === "FINALIZED" ? "FINALIZED" : "SCHEDULED",
-        });
-      }
-      continue;
-    }
+interface ScorableMatch {
+  id: string;
+  matchNumber: number;
+  status: string;
+  homeGroupId: string | null;
+  awayGroupId: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  result: string | null;
+  winnerId: string | null;
+  homeGroup?: { isManual?: boolean; members?: Array<{ isAdmin: boolean; fplId: number }> } | null;
+  awayGroup?: { isManual?: boolean; members?: Array<{ isAdmin: boolean; fplId: number }> } | null;
+}
 
-    // For LIVE and FINISHED Gameweeks:
+interface ScorableRound {
+  gameweek: number;
+  matches: ScorableMatch[];
+}
+
+async function processRoundMatches(
+  round: ScorableRound,
+  gwStatus: string,
+  allRoundMatchesMock: boolean,
+  forceRecalculate: boolean
+): Promise<MatchScoreResult[]> {
+  const results: MatchScoreResult[] = [];
+
+  // If this round's Gameweek has not started yet, keep matches scheduled / incoming
+  // and skip making premature external API calls, but preserve matches with manual scores or all-manual
+  if (gwStatus === "UPCOMING" && !allRoundMatchesMock) {
     for (const match of round.matches) {
-      try {
-        const matchResult = await calculateMatchScore(match.id, forceRecalculate);
-        results.push(matchResult);
-      } catch (matchErr) {
-        console.error(
-          `Failed to calculate score for match ${match.id} (GW${round.gameweek}):`,
-          matchErr
-        );
-        results.push({
-          matchId: match.id,
-          matchNumber: match.matchNumber,
-          gameweek: round.gameweek,
-          homeGroup: null,
-          awayGroup: null,
-          homeScore: match.homeScore,
-          awayScore: match.awayScore,
-          result: match.result as "HOME_WIN" | "AWAY_WIN" | "DRAW" | null,
-          winnerGroupId: match.winnerId,
-          status: match.status,
+      const isMatchAllManual = Boolean(match.homeGroup?.isManual && match.awayGroup?.isManual);
+      const hasManualScores =
+        (match.homeGroup?.isManual || match.awayGroup?.isManual) &&
+        match.homeScore !== null &&
+        match.awayScore !== null;
+
+      if (isMatchAllManual || hasManualScores) {
+        try {
+          const matchResult = await calculateMatchScore(match.id, forceRecalculate);
+          results.push(matchResult);
+          continue;
+        } catch (e) {
+          console.warn(`Could not calculate manual match ${match.id}:`, e);
+        }
+      }
+
+      if (match.status !== "FINALIZED") {
+        await prisma.match.update({
+          where: { id: match.id },
+          data: { status: "SCHEDULED" },
         });
       }
+      results.push({
+        matchId: match.id,
+        matchNumber: match.matchNumber,
+        gameweek: round.gameweek,
+        homeGroup: null,
+        awayGroup: null,
+        homeScore: null,
+        awayScore: null,
+        result: null,
+        winnerGroupId: null,
+        status: match.status === "FINALIZED" ? "FINALIZED" : "SCHEDULED",
+      });
+    }
+    return results;
+  }
+
+  // For LIVE and FINISHED Gameweeks:
+  for (const match of round.matches) {
+    try {
+      const matchResult = await calculateMatchScore(match.id, forceRecalculate);
+      results.push(matchResult);
+    } catch (matchErr) {
+      console.error(
+        `Failed to calculate score for match ${match.id} (GW${round.gameweek}):`,
+        matchErr
+      );
+      results.push({
+        matchId: match.id,
+        matchNumber: match.matchNumber,
+        gameweek: round.gameweek,
+        homeGroup: null,
+        awayGroup: null,
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
+        result: match.result as "HOME_WIN" | "AWAY_WIN" | "DRAW" | null,
+        winnerGroupId: match.winnerId,
+        status: match.status,
+      });
     }
   }
 
@@ -625,73 +660,12 @@ export async function recalculateRoundScores(
       );
     });
 
-  const results: MatchScoreResult[] = [];
-
-  if (gwInfo.status === "UPCOMING" && !allRoundMatchesMock) {
-    for (const match of round.matches) {
-      const isMatchAllManual = Boolean(match.homeGroup?.isManual && match.awayGroup?.isManual);
-      const hasManualScores =
-        (match.homeGroup?.isManual || match.awayGroup?.isManual) &&
-        match.homeScore !== null &&
-        match.awayScore !== null;
-
-      if (isMatchAllManual || hasManualScores) {
-        try {
-          const matchResult = await calculateMatchScore(match.id, forceRecalculate);
-          results.push(matchResult);
-          continue;
-        } catch (e) {
-          console.warn(`Could not calculate manual match ${match.id}:`, e);
-        }
-      }
-
-      if (match.status !== "FINALIZED") {
-        await prisma.match.update({
-          where: { id: match.id },
-          data: { status: "SCHEDULED" },
-        });
-      }
-      results.push({
-        matchId: match.id,
-        matchNumber: match.matchNumber,
-        gameweek: round.gameweek,
-        homeGroup: null,
-        awayGroup: null,
-        homeScore: null,
-        awayScore: null,
-        result: null,
-        winnerGroupId: null,
-        status: match.status === "FINALIZED" ? "FINALIZED" : "SCHEDULED",
-      });
-    }
-    return results;
-  }
-
-  for (const match of round.matches) {
-    try {
-      const matchResult = await calculateMatchScore(match.id, forceRecalculate);
-      results.push(matchResult);
-    } catch (matchErr) {
-      console.error(
-        `Failed to calculate score for match ${match.id} (GW${round.gameweek}):`,
-        matchErr
-      );
-      results.push({
-        matchId: match.id,
-        matchNumber: match.matchNumber,
-        gameweek: round.gameweek,
-        homeGroup: null,
-        awayGroup: null,
-        homeScore: match.homeScore,
-        awayScore: match.awayScore,
-        result: match.result as "HOME_WIN" | "AWAY_WIN" | "DRAW" | null,
-        winnerGroupId: match.winnerId,
-        status: match.status,
-      });
-    }
-  }
-
-  return results;
+  return processRoundMatches(
+    round,
+    gwInfo.status,
+    allRoundMatchesMock,
+    forceRecalculate
+  );
 }
 
 export interface GroupStanding {
@@ -711,44 +685,34 @@ export interface GroupStanding {
   form: ("W" | "D" | "L")[];
 }
 
+export interface StandingsMatchData {
+  status: string;
+  homeGroupId: string | null;
+  awayGroupId: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  result: string | null;
+}
+
+export interface StandingsRoundData {
+  matches: StandingsMatchData[];
+}
+
+export interface StandingsGroupData {
+  id: string;
+  name: string;
+  logo?: string | null;
+  fplLeagueId?: number | null;
+}
+
 /**
- * Calculate live Head-to-Head League Standings for a tournament.
- * Standard football league rules:
- * - Win: +3 PTS
- * - Draw: +1 PT
- * - Loss: 0 PTS
- * Tiebreakers:
- * 1. PTS (leaguePoints)
- * 2. Diff (pointsDiff = pointsFor - pointsAgainst)
- * 3. PF (pointsFor)
- * 4. Group Name (alphabetical)
+ * Pure in-memory calculation of Head-to-Head league standings from pre-loaded groups and rounds.
+ * Eliminates redundant database roundtrips when groups and rounds are already in memory.
  */
-export async function calculateLeagueStandings(
-  tournamentId: string
-): Promise<GroupStanding[]> {
-  const tournament = await prisma.tournament.findUnique({
-    where: { id: tournamentId },
-    include: {
-      groups: true,
-      rounds: {
-        include: {
-          matches: {
-            include: {
-              homeGroup: true,
-              awayGroup: true,
-            },
-            orderBy: { matchNumber: "asc" },
-          },
-        },
-        orderBy: { roundNumber: "asc" },
-      },
-    },
-  });
-
-  if (!tournament) {
-    throw new Error(`Tournament ${tournamentId} not found`);
-  }
-
+export function computeStandingsFromData(
+  groups: StandingsGroupData[],
+  rounds: StandingsRoundData[]
+): GroupStanding[] {
   // Initialize standings map for every group in the tournament
   const map = new Map<
     string,
@@ -769,12 +733,12 @@ export async function calculateLeagueStandings(
     }
   >();
 
-  for (const group of tournament.groups) {
+  for (const group of groups) {
     map.set(group.id, {
       groupId: group.id,
       groupName: group.name,
       logo: group.logo || null,
-      fplLeagueId: group.fplLeagueId,
+      fplLeagueId: group.fplLeagueId ?? null,
       played: 0,
       won: 0,
       drawn: 0,
@@ -788,7 +752,7 @@ export async function calculateLeagueStandings(
   }
 
   // Iterate chronologically through all completed or finalized matches
-  for (const round of tournament.rounds) {
+  for (const round of rounds) {
     for (const match of round.matches) {
       if (
         (match.status === "COMPLETED" || match.status === "FINALIZED") &&
@@ -862,4 +826,41 @@ export async function calculateLeagueStandings(
     ...item,
     rank: index + 1,
   }));
+}
+
+/**
+ * Calculate live Head-to-Head League Standings for a tournament.
+ * Standard football league rules:
+ * - Win: +3 PTS
+ * - Draw: +1 PT
+ * - Loss: 0 PTS
+ * Tiebreakers:
+ * 1. PTS (leaguePoints)
+ * 2. Diff (pointsDiff = pointsFor - pointsAgainst)
+ * 3. PF (pointsFor)
+ * 4. Group Name (alphabetical)
+ */
+export async function calculateLeagueStandings(
+  tournamentId: string
+): Promise<GroupStanding[]> {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+    include: {
+      groups: true,
+      rounds: {
+        include: {
+          matches: {
+            orderBy: { matchNumber: "asc" },
+          },
+        },
+        orderBy: { roundNumber: "asc" },
+      },
+    },
+  });
+
+  if (!tournament) {
+    throw new Error(`Tournament ${tournamentId} not found`);
+  }
+
+  return computeStandingsFromData(tournament.groups, tournament.rounds);
 }

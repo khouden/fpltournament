@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/db";
-import { getManager, verifyManagerInLeague, FPLDeadlineError } from "@/lib/fpl";
+import { getManager, FPLDeadlineError } from "@/lib/fpl";
 import { recalculateTournamentScores } from "@/lib/scoring";
 import { safeRevalidate } from "@/lib/safe-revalidate";
 import { getDefaultBanner } from "@/lib/tournament-banners";
+import { requireAdminSession } from "@/lib/auth-server";
 import { NextRequest, NextResponse } from "next/server";
 
 interface AdminInput {
@@ -56,6 +57,8 @@ async function validateTournament(data: {
 
 export async function GET() {
   try {
+    await requireAdminSession();
+
     const tournaments = await prisma.tournament.findMany({
       include: {
         admins: true,
@@ -77,6 +80,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdminSession();
+
     const body = await request.json();
 
     await validateTournament(body);
@@ -133,6 +138,8 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    await requireAdminSession();
+
     const body = await request.json();
 
     if (!body.id) {
@@ -226,6 +233,8 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    await requireAdminSession();
+
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get("id");
 

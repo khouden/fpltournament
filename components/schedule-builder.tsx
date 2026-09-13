@@ -16,7 +16,11 @@ import {
   recalculateAllScoresAction,
   recalculateRoundScoresAction,
 } from "@/lib/scoring-actions";
-import { ManualMatchScoreModal } from "./manual-match-score-modal";
+import {
+  ManualMatchScoreModal,
+  type MatchGroupData,
+  type MatchScoreData,
+} from "./manual-match-score-modal";
 import {
   Zap,
   CheckCircle2,
@@ -1729,15 +1733,15 @@ export function ScheduleBuilder({
           homeGroup={
             (groups.find(
               (g) => g.id === activeScoreModalMatch.match.homeGroupId
-            ) as any) || null
+            ) as unknown as MatchGroupData) || null
           }
           awayGroup={
             (groups.find(
               (g) => g.id === activeScoreModalMatch.match.awayGroupId
-            ) as any) || null
+            ) as unknown as MatchGroupData) || null
           }
           existingScores={
-            (activeScoreModalMatch.match.scores as any) || []
+            (activeScoreModalMatch.match.scores as unknown as MatchScoreData[]) || []
           }
           onScoresSaved={() => {
             showMsg("Scores saved successfully!");

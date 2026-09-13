@@ -49,7 +49,9 @@ export function ManualPlayerModal({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    queueMicrotask(() => {
       if (playerToEdit) {
         setName(playerToEdit.fplName);
         setTeamName(playerToEdit.fplTeamName || "");
@@ -63,7 +65,7 @@ export function ManualPlayerModal({
       }
       setError("");
       setLoading(false);
-    }
+    });
   }, [isOpen, playerToEdit]);
 
   const handleSubmit = async (e: React.FormEvent) => {

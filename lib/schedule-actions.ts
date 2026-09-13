@@ -415,6 +415,8 @@ export async function deleteMatchAction(matchId: string, tournamentId: string) {
 export async function validateScheduleAction(
   tournamentId: string
 ): Promise<ScheduleValidationResult> {
+  await requireAdminSession();
+
   const issues: string[] = [];
 
   const tournament = await prisma.tournament.findUnique({

@@ -82,9 +82,21 @@ export async function loginAction(
     process.env.ADMIN_EMAIL || "admin@tournament.local"
   ).trim().toLowerCase();
 
-  // Target password: prioritzes ADMIN_PASSWORD_HASH, falls back to ADMIN_PASSWORD
+  // Target password: prioritizes ADMIN_PASSWORD_HASH, falls back to ADMIN_PASSWORD
   const configuredPasswordHash = process.env.ADMIN_PASSWORD_HASH;
   const configuredPlainPassword = process.env.ADMIN_PASSWORD || "admin123";
+
+  // In production, block authentication if credentials are not configured
+  if (
+    process.env.NODE_ENV === "production" &&
+    !configuredPasswordHash &&
+    !process.env.ADMIN_PASSWORD
+  ) {
+    return {
+      success: false,
+      error: "Authentication error: Admin credentials are not configured on this server.",
+    };
+  }
 
   // Constant-time email check
   const isEmailValid = timingSafeEqual(normalizedEmail, configuredEmail);

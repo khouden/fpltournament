@@ -143,10 +143,6 @@ export function timingSafeEqual(a: string, b: string): boolean {
   const bufB = encoder.encode(b);
 
   if (bufA.byteLength !== bufB.byteLength) {
-    let diff = 1;
-    for (let i = 0; i < bufA.byteLength; i++) {
-      diff |= bufA[i] ^ (bufB[i % bufB.byteLength] || 0);
-    }
     return false;
   }
 

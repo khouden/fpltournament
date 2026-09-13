@@ -89,14 +89,7 @@ export function FantasyTeamModal({
   const isManualPlayer = !fplId || fplId <= 0;
 
   useEffect(() => {
-    if (!isOpen || !fplId) return;
-
-    if (fplId <= 0) {
-      setSquad(null);
-      setLoading(false);
-      setError(null);
-      return;
-    }
+    if (!isOpen || !fplId || fplId <= 0) return;
 
     let isMounted = true;
     const controller = new AbortController();

@@ -1,5 +1,6 @@
 import { checkFPLDeadlineStatus } from "@/lib/fpl";
 import { setSimulatedDeadline } from "@/lib/fpl-deadline";
+import { requireAdminSession } from "@/lib/auth-server";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
@@ -9,6 +10,8 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdminSession();
+
     const body = await request.json().catch(() => ({}));
     const shouldSimulate =
       body.simulate !== undefined ? Boolean(body.simulate) : true;

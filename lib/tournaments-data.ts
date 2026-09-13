@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { calculateLeagueStandings } from "@/lib/scoring";
+import { computeStandingsFromData } from "@/lib/scoring";
 import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 
 export interface TournamentCardItem {
@@ -117,7 +117,7 @@ export async function getTournamentsPageData(): Promise<{
     }> = [];
 
     try {
-      const standings = await calculateLeagueStandings(t.id);
+      const standings = computeStandingsFromData(t.groups, t.rounds);
       if (standings.length > 0) {
         top3 = standings.slice(0, 3).map((s, idx) => ({
           rank: idx + 1,

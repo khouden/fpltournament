@@ -103,7 +103,9 @@ export function ManualMatchScoreModal({
 
   // Initialize or reset scores when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    queueMicrotask(() => {
       const initial: Record<string, { points: number; chip: string | null }> = {};
 
       const allMembers = [...homeMembers, ...awayMembers];
@@ -119,7 +121,7 @@ export function ManualMatchScoreModal({
       setMemberScores(initial);
       setError("");
       setLoading(false);
-    }
+    });
   }, [isOpen, existingScores, homeMembers, awayMembers]);
 
   // Calculate live team total scores
