@@ -103,9 +103,10 @@ export async function loginAction(
 
   // Secure password verification (PBKDF2 hash or timing-safe fallback)
   let isPasswordValid = false;
-  if (configuredPasswordHash) {
+  if (configuredPasswordHash && configuredPasswordHash.startsWith("pbkdf2$sha256$")) {
     isPasswordValid = await verifyPassword(password, configuredPasswordHash);
-  } else {
+  }
+  if (!isPasswordValid && configuredPlainPassword) {
     isPasswordValid = await verifyPassword(password, configuredPlainPassword);
   }
 

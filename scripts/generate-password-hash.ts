@@ -17,8 +17,8 @@ async function main() {
   const hash = await hashPassword(password);
 
   console.log(`Generated Hash: ${hash}\n`);
-  console.log("Add this to your .env file:");
-  console.log(`ADMIN_PASSWORD_HASH="${hash}"\n`);
+  console.log("Add this to your .env file (dollar signs escaped for Next.js variable expansion):");
+  console.log(`ADMIN_PASSWORD_HASH="${hash.replace(/\$/g, "\\$")}"\n`);
 }
 
 main().catch(console.error);
