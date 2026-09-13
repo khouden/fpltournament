@@ -154,7 +154,7 @@ export async function generateRoundRobinScheduleAction(
  */
 export async function createRoundAction(
   tournamentId: string,
-  gameweek: number,
+  gameweek?: number,
   name?: string,
   roundNumber?: number
 ) {
@@ -169,15 +169,22 @@ export async function createRoundAction(
       return { success: false, error: "Tournament not found" };
     }
 
-    if (gameweek < 1 || gameweek > 38) {
-      return { success: false, error: "Gameweek must be between 1 and 38" };
-    }
-
     const nextRoundNumber =
       roundNumber ||
       (tournament.rounds.length > 0
         ? Math.max(...tournament.rounds.map((r) => r.roundNumber)) + 1
         : 1);
+
+    const calculatedGW =
+      typeof gameweek === "number" && !isNaN(gameweek)
+        ? gameweek
+        : tournament.rounds.length > 0
+        ? Math.min(38, Math.max(...tournament.rounds.map((r) => r.gameweek)) + 1)
+        : 1;
+
+    if (calculatedGW < 1 || calculatedGW > 38) {
+      return { success: false, error: "Gameweek must be between 1 and 38" };
+    }
 
     // Check unique round number
     const existing = tournament.rounds.find(
@@ -194,7 +201,7 @@ export async function createRoundAction(
       data: {
         tournamentId,
         roundNumber: nextRoundNumber,
-        gameweek,
+        gameweek: calculatedGW,
         name: name?.trim() || `Round ${nextRoundNumber}`,
       },
     });

@@ -9,16 +9,9 @@ export async function POST(
     const { id } = await props.params;
     const body = await request.json();
 
-    if (!body.gameweek) {
-      return NextResponse.json(
-        { error: "Gameweek is required" },
-        { status: 400 }
-      );
-    }
-
     const result = await createRoundAction(
       id,
-      Number(body.gameweek),
+      body.gameweek ? Number(body.gameweek) : undefined,
       body.name,
       body.roundNumber ? Number(body.roundNumber) : undefined
     );

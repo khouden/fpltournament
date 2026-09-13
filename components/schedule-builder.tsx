@@ -161,12 +161,6 @@ export function ScheduleBuilder({
     roundId: string;
   } | null>(null);
 
-  // New round form state
-  const [newRoundName, setNewRoundName] = useState("");
-  const [newRoundGW, setNewRoundGW] = useState(
-    rounds.length > 0 ? Math.max(...rounds.map((r) => r.gameweek)) + 1 : 1
-  );
-  const [showAddRound, setShowAddRound] = useState(false);
 
   // Manual Score Entry Modal state
   const [activeScoreModalMatch, setActiveScoreModalMatch] = useState<{
@@ -254,20 +248,29 @@ export function ScheduleBuilder({
   const handleAddRound = async () => {
     setError("");
     setLoading("add-round");
+
+    const nextRoundNumber =
+      rounds.length > 0
+        ? Math.max(...rounds.map((r) => r.roundNumber)) + 1
+        : 1;
+    const nextGW =
+      rounds.length > 0
+        ? Math.min(38, Math.max(...rounds.map((r) => r.gameweek)) + 1)
+        : 1;
+    const roundName = `Round ${nextRoundNumber}`;
+
     const result = await createRoundAction(
       tournamentId,
-      newRoundGW,
-      newRoundName.trim() || undefined
+      nextGW,
+      roundName,
+      nextRoundNumber
     );
     if (result.success && result.round) {
       setRounds((prev) => [
         ...prev,
         { ...result.round!, matches: [] } as Round,
       ]);
-      setShowAddRound(false);
-      setNewRoundName("");
-      setNewRoundGW(newRoundGW + 1);
-      showMsg("Round created successfully");
+      showMsg(`${roundName} created successfully`);
     } else {
       setError(result.error || "Failed to create round");
     }
@@ -563,14 +566,19 @@ export function ScheduleBuilder({
               )}
             </Button>
 
-            {/* Secondary Action: Add Round Manually */}
+            {/* Action: Add Round */}
             <Button
               variant="outline"
-              onClick={() => setShowAddRound((prev) => !prev)}
-              className="h-10 px-3.5 text-xs sm:text-sm font-semibold text-[#1F1F1F] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] transition-colors gap-1.5 shadow-2xs"
+              onClick={handleAddRound}
+              disabled={loading === "add-round"}
+              className="h-10 px-3.5 text-xs sm:text-sm font-semibold text-[#1F1F1F] border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] transition-colors gap-1.5 shadow-2xs cursor-pointer"
             >
-              <Plus className="h-4 w-4 text-[#37003C]" />
-              <span>Add Round</span>
+              {loading === "add-round" ? (
+                <Loader2 className="h-4 w-4 animate-spin text-[#37003C]" />
+              ) : (
+                <Plus className="h-4 w-4 text-[#37003C]" />
+              )}
+              <span>{loading === "add-round" ? "Adding..." : "Add Round"}</span>
             </Button>
 
             {/* Validation Action */}
@@ -816,91 +824,6 @@ export function ScheduleBuilder({
         </Card>
       )}
 
-      {/* 5. Manual Add Round Form (Inline) */}
-      {showAddRound && (
-        <Card className="border-2 border-dashed border-[#37003C]/30 bg-[#37003C]/5 p-4 sm:p-5 space-y-3 rounded-[14px] animate-fpl-slide-up">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-bold text-[#1F1F1F] flex items-center gap-2">
-              <Plus className="h-4 w-4 text-[#37003C]" />
-              <span>Add Round Manually</span>
-            </CardTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAddRound(false)}
-              className="h-7 px-2 text-xs text-[#777777] hover:text-[#1F1F1F]"
-            >
-              Close
-            </Button>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label
-                htmlFor="newRoundName"
-                className="text-xs font-semibold text-[#333333]"
-              >
-                Round Name (Optional)
-              </Label>
-              <Input
-                id="newRoundName"
-                type="text"
-                placeholder={`e.g., Round ${rounds.length + 1}`}
-                value={newRoundName}
-                onChange={(e) => setNewRoundName(e.target.value)}
-                className="bg-white border-[#E5E5E5] h-9 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label
-                htmlFor="newRoundGW"
-                className="text-xs font-semibold text-[#333333]"
-              >
-                Gameweek (1–38) *
-              </Label>
-              <Input
-                id="newRoundGW"
-                type="number"
-                min={1}
-                max={38}
-                value={newRoundGW}
-                onChange={(e) =>
-                  setNewRoundGW(
-                    Math.max(1, Math.min(38, parseInt(e.target.value) || 1))
-                  )
-                }
-                className="bg-white border-[#E5E5E5] h-9 text-xs font-semibold"
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-1">
-            <Button
-              size="sm"
-              onClick={handleAddRound}
-              disabled={loading === "add-round"}
-              className="h-8 px-3.5 text-xs font-bold bg-[#37003C] text-white hover:bg-[#5A0A63] rounded-[6px]"
-            >
-              {loading === "add-round" ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-              ) : (
-                <Check className="h-3.5 w-3.5 mr-1.5" />
-              )}
-              <span>
-                {loading === "add-round" ? "Creating..." : "Create Round"}
-              </span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAddRound(false)}
-              className="h-8 px-3 text-xs font-semibold text-[#555555] border-[#E5E5E5]"
-            >
-              Cancel
-            </Button>
-          </div>
-        </Card>
-      )}
 
       {/* 6. Rounds & Fixtures List */}
       <section aria-label="Rounds & Fixtures" className="space-y-4 sm:space-y-5">
@@ -940,11 +863,16 @@ export function ScheduleBuilder({
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setShowAddRound(true)}
-                className="h-9 px-3.5 text-xs font-semibold text-[#1F1F1F] border-[#E5E5E5] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px]"
+                onClick={handleAddRound}
+                disabled={loading === "add-round"}
+                className="h-9 px-3.5 text-xs font-semibold text-[#1F1F1F] border-[#E5E5E5] hover:border-[#37003C]/40 hover:text-[#37003C] rounded-[8px] gap-1.5 cursor-pointer"
               >
-                <Plus className="h-4 w-4 text-[#37003C]" />
-                <span>Add Round</span>
+                {loading === "add-round" ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-[#37003C]" />
+                ) : (
+                  <Plus className="h-4 w-4 text-[#37003C]" />
+                )}
+                <span>{loading === "add-round" ? "Adding..." : "Add Round"}</span>
               </Button>
             </div>
           </Card>
