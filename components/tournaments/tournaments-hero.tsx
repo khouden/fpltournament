@@ -1,5 +1,7 @@
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { PlusCircle } from "lucide-react";
 import { Container } from "@/components/layout/container";
 
 export function TournamentsHero() {
@@ -68,6 +70,17 @@ export function TournamentsHero() {
           <p className="mt-4 text-sm sm:text-base text-gray-200/90 font-normal leading-relaxed max-w-md sm:max-w-lg">
             Join exciting FPL tournaments, compete with other managers and win amazing rewards.
           </p>
+
+          {/* CTA Action */}
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              href="/create-tournament"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#00FFA3] hover:bg-[#00E592] text-[#0B081E] text-xs sm:text-sm font-black tracking-tight transition-all duration-200 shadow-[0_0_20px_rgba(0,255,163,0.35)] hover:scale-105"
+            >
+              <PlusCircle className="h-4 w-4 stroke-[2.5]" />
+              <span>Create Tournament</span>
+            </Link>
+          </div>
         </div>
       </Container>
     </section>

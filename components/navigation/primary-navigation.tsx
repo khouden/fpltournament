@@ -15,6 +15,7 @@ export interface NavItem {
 export const DEFAULT_NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/" },
   { label: "Tournaments", href: "/tournaments" },
+  { label: "Create Tournament", href: "/create-tournament" },
   { label: "How it works", href: "/#how-it-works" },
 ];
 

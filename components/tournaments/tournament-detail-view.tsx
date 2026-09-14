@@ -41,6 +41,13 @@ import {
   type TeamMemberItem,
   type TeamFixtureItem,
 } from "./team-detail-modal";
+import { RoundPerformersBanner } from "./round-performers-banner";
+import {
+  calculateRoundPerformers,
+  type RoundPerformersResult,
+  type RoundMVPInfo,
+} from "@/lib/round-performers";
+import { FantasyTeamModal } from "@/components/fantasy-team-modal";
 
 export type { TeamDirectoryItem, TeamMemberItem, TeamFixtureItem };
 import { cn } from "@/lib/utils";
@@ -179,10 +186,16 @@ export function TournamentDetailView({
   }, [rounds]);
 
   const [selectedRoundId, setSelectedRoundId] = useState<string>(initialRoundId);
+  const [selectedMVPPlayer, setSelectedMVPPlayer] = useState<RoundMVPInfo | null>(null);
 
   const selectedRound = useMemo(() => {
     return rounds.find((r) => r.id === selectedRoundId) || rounds[0];
   }, [rounds, selectedRoundId]);
+
+  const selectedRoundPerformers = useMemo(() => {
+    if (!selectedRound) return null;
+    return calculateRoundPerformers(selectedRound);
+  }, [selectedRound]);
 
   const selectedRoundIndex = useMemo(() => {
     return rounds.findIndex((r) => r.id === selectedRoundId);
@@ -673,6 +686,20 @@ export function TournamentDetailView({
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
+                  </div>
+                )}
+
+                {/* Round Highlights: MVP & Best Team */}
+                {selectedRoundPerformers && (
+                  <div className="pt-4 pb-1">
+                    <RoundPerformersBanner
+                      performers={selectedRoundPerformers}
+                      onSelectPlayer={(player) => setSelectedMVPPlayer(player)}
+                      onSelectTeam={(teamId) => {
+                        const found = teams.find((t) => t.id === teamId);
+                        if (found) setSelectedTeam(found);
+                      }}
+                    />
                   </div>
                 )}
 
@@ -1396,6 +1423,20 @@ export function TournamentDetailView({
                 })}
               </div>
 
+              {/* Round Highlights: MVP & Best Team */}
+              {selectedRoundPerformers && (
+                <div className="pt-5 pb-1">
+                  <RoundPerformersBanner
+                    performers={selectedRoundPerformers}
+                    onSelectPlayer={(player) => setSelectedMVPPlayer(player)}
+                    onSelectTeam={(teamId) => {
+                      const found = teams.find((t) => t.id === teamId);
+                      if (found) setSelectedTeam(found);
+                    }}
+                  />
+                </div>
+              )}
+
               {/* Matches for the Selected Round */}
               {selectedRound && (
                 <div className="pt-6 space-y-4">
@@ -1730,6 +1771,22 @@ export function TournamentDetailView({
             tournamentName={tournament.name}
             seasonDisplay={tournament.seasonDisplay}
             currentGameweek={selectedRound?.gameweek || 1}
+            allowBenchBoost={tournament.allowBenchBoost}
+            allowTripleCaptain={tournament.allowTripleCaptain}
+          />
+        )}
+
+        {/* Round MVP Fantasy Squad Inspector Modal */}
+        {selectedMVPPlayer && (
+          <FantasyTeamModal
+            isOpen={!!selectedMVPPlayer}
+            onClose={() => setSelectedMVPPlayer(null)}
+            fplId={selectedMVPPlayer.fplId}
+            managerName={selectedMVPPlayer.fplName}
+            fplTeamName={selectedMVPPlayer.fplTeamName}
+            tournamentTeamName={selectedMVPPlayer.tournamentTeamName}
+            tournamentTeamLogo={selectedMVPPlayer.tournamentTeamLogo}
+            gameweek={selectedRound?.gameweek || 1}
             allowBenchBoost={tournament.allowBenchBoost}
             allowTripleCaptain={tournament.allowTripleCaptain}
           />

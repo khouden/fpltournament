@@ -22,6 +22,9 @@ export function Footer() {
             <Link href="/tournaments" className="hover:text-white transition-colors">
               Tournaments
             </Link>
+            <Link href="/create-tournament" className="hover:text-white transition-colors">
+              Create Tournament
+            </Link>
             <Link href="/#how-it-works" className="hover:text-white transition-colors">
               How it works
             </Link>
