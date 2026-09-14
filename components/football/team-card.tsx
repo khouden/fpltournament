@@ -3,10 +3,13 @@ import { ClubBadge } from "@/components/football/club-badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+import { Crown } from "lucide-react";
+
 export interface TeamCardData {
   id?: number | string;
   name: string;
   logoUrl?: string | null;
+  topPlayerName?: string;
   managerName?: string;
   played?: number;
   won?: number;
@@ -22,6 +25,8 @@ export interface TeamCardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export function TeamCard({ team, onClick, className, ...props }: TeamCardProps) {
+  const topPlayer = team.topPlayerName || team.managerName;
+
   return (
     <Card
       variant={onClick ? "interactive" : "default"}
@@ -36,9 +41,10 @@ export function TeamCard({ team, onClick, className, ...props }: TeamCardProps) 
             <h4 className="font-extrabold text-base text-[#1F1F1F] truncate leading-snug">
               {team.name}
             </h4>
-            {team.managerName && (
-              <p className="text-xs text-[#777777] truncate font-medium">
-                Mgr: {team.managerName}
+            {topPlayer && (
+              <p className="text-xs text-[#777777] truncate font-medium flex items-center gap-1">
+                <Crown className="h-3 w-3 text-amber-500 shrink-0 inline" />
+                <span>Top Player: {topPlayer}</span>
               </p>
             )}
           </div>

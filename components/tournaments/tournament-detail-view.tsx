@@ -21,9 +21,11 @@ import {
   Flame,
   Award,
   ExternalLink,
+  Search,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableHeader,
@@ -33,6 +35,14 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { MatchSquadList, MatchPlayerScoreItem } from "@/components/match-squad-client";
+import {
+  TeamDetailModal,
+  type TeamDirectoryItem,
+  type TeamMemberItem,
+  type TeamFixtureItem,
+} from "./team-detail-modal";
+
+export type { TeamDirectoryItem, TeamMemberItem, TeamFixtureItem };
 
 export interface TeamStandingItem {
   rank: number;
@@ -40,6 +50,7 @@ export interface TeamStandingItem {
   groupName: string;
   logo: string | null;
   managerName: string;
+  topPlayerName?: string;
   gwPoints: number;
   totalPoints: number;
   leaguePoints: number;
@@ -90,21 +101,6 @@ export interface RoundItem {
   matches: MatchScoreItem[];
 }
 
-export interface TeamDirectoryItem {
-  id: string;
-  name: string;
-  logo: string | null;
-  managerName: string;
-  activePlayerCount: number;
-  members: Array<{
-    id: string;
-    fplName: string;
-    fplTeamName: string | null;
-    fplId: number;
-    isAdmin: boolean;
-  }>;
-}
-
 export interface TournamentDetailViewProps {
   tournament: {
     id: string;
@@ -127,6 +123,7 @@ export interface TournamentDetailViewProps {
   standings: TeamStandingItem[];
   rounds: RoundItem[];
   teams: TeamDirectoryItem[];
+  initialTab?: "overview" | "standings" | "fixtures" | "teams";
 }
 
 export function TournamentDetailView({
@@ -134,10 +131,30 @@ export function TournamentDetailView({
   standings,
   rounds,
   teams,
+  initialTab = "overview",
 }: TournamentDetailViewProps) {
   const [activeTab, setActiveTab] = useState<
     "overview" | "standings" | "fixtures" | "teams"
-  >("overview");
+  >(initialTab);
+
+  const [selectedTeam, setSelectedTeam] = useState<TeamDirectoryItem | null>(null);
+  const [teamSearchQuery, setTeamSearchQuery] = useState("");
+
+  const filteredDirectoryTeams = useMemo(() => {
+    if (!teamSearchQuery.trim()) return teams;
+    const q = teamSearchQuery.toLowerCase().trim();
+    return teams.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        (t.topPlayerName && t.topPlayerName.toLowerCase().includes(q)) ||
+        (t.managerName && t.managerName.toLowerCase().includes(q)) ||
+        t.members.some(
+          (m) =>
+            m.fplName.toLowerCase().includes(q) ||
+            (m.fplTeamName && m.fplTeamName.toLowerCase().includes(q))
+        )
+    );
+  }, [teams, teamSearchQuery]);
 
   // Default selected round for Fixtures widget
   const initialRoundId = useMemo(() => {
@@ -394,7 +411,7 @@ export function TournamentDetailView({
                         <tr className="border-b border-gray-100 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                           <th className="py-3 px-3 w-12 text-center">#</th>
                           <th className="py-3 px-3">Team</th>
-                          <th className="py-3 px-3">Manager</th>
+                          <th className="py-3 px-3">Top Player</th>
                           <th className="py-3 px-3 text-center">GW</th>
                           <th className="py-3 px-3 text-right">Total</th>
                         </tr>
@@ -407,7 +424,12 @@ export function TournamentDetailView({
                           return (
                             <tr
                               key={team.groupId}
-                              className="hover:bg-gray-50/80 transition-colors group"
+                              onClick={() => {
+                                const found = teams.find((t) => t.id === team.groupId);
+                                if (found) setSelectedTeam(found);
+                              }}
+                              className="hover:bg-gray-50/80 transition-colors group cursor-pointer"
+                              title={`View ${team.groupName} details`}
                             >
                               {/* Rank */}
                               <td className="py-3 px-3 text-center">
@@ -448,9 +470,12 @@ export function TournamentDetailView({
                                 </div>
                               </td>
 
-                              {/* Manager Name */}
+                              {/* Top Player Name */}
                               <td className="py-3 px-3 text-gray-600 text-xs font-medium">
-                                {team.managerName}
+                                <span className="inline-flex items-center gap-1">
+                                  <Crown className="h-3 w-3 text-amber-500/80 shrink-0" />
+                                  <span>{team.topPlayerName || team.managerName}</span>
+                                </span>
                               </td>
 
                               {/* GW Points */}
@@ -486,7 +511,12 @@ export function TournamentDetailView({
                           standingsPreview.bottomTeams.map((team) => (
                             <tr
                               key={team.groupId}
-                              className="hover:bg-gray-50/80 transition-colors group"
+                              onClick={() => {
+                                const found = teams.find((t) => t.id === team.groupId);
+                                if (found) setSelectedTeam(found);
+                              }}
+                              className="hover:bg-gray-50/80 transition-colors group cursor-pointer"
+                              title={`View ${team.groupName} details`}
                             >
                               <td className="py-3 px-3 text-center font-semibold text-gray-600 text-xs">
                                 {team.rank}
@@ -512,7 +542,10 @@ export function TournamentDetailView({
                                 </div>
                               </td>
                               <td className="py-3 px-3 text-gray-600 text-xs font-medium">
-                                {team.managerName}
+                                <span className="inline-flex items-center gap-1">
+                                  <Crown className="h-3 w-3 text-amber-500/80 shrink-0" />
+                                  <span>{team.topPlayerName || team.managerName}</span>
+                                </span>
                               </td>
                               <td className="py-3 px-3 text-center font-bold text-gray-700 text-xs">
                                 {team.gwPoints > 0 ? team.gwPoints : "—"}
@@ -905,16 +938,18 @@ export function TournamentDetailView({
                   {participatingPreview.map((team, idx) => (
                     <div
                       key={team.id}
-                      className="flex items-center gap-3 p-1.5 rounded-xl hover:bg-gray-50 transition-colors"
+                      onClick={() => setSelectedTeam(team)}
+                      className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-100/80 transition-all cursor-pointer group"
+                      title={`View ${team.name} roster & details`}
                     >
-                      <span className="text-xs font-bold text-gray-400 w-4 text-center">
+                      <span className="text-xs font-bold text-gray-400 w-4 text-center group-hover:text-[#37003C]">
                         {idx + 1}
                       </span>
                       {team.logo ? (
                         <img
                           src={team.logo}
                           alt={team.name}
-                          className="h-7 w-7 object-contain shrink-0"
+                          className="h-7 w-7 object-contain shrink-0 group-hover:scale-105 transition-transform"
                         />
                       ) : (
                         <div className="h-7 w-7 rounded-full bg-[#37003C] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
@@ -922,13 +957,17 @@ export function TournamentDetailView({
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-bold text-xs text-gray-900 truncate">
+                        <h4 className="font-bold text-xs text-gray-900 truncate group-hover:text-[#37003C] transition-colors">
                           {team.name}
                         </h4>
-                        <p className="text-[11px] text-gray-500 truncate">
-                          {team.managerName}
+                        <p className="text-[11px] text-gray-500 truncate flex items-center gap-1">
+                          <Crown className="h-3 w-3 text-amber-500 shrink-0 inline" />
+                          <span className="font-semibold text-gray-700 truncate">
+                            {team.topPlayerName || team.managerName}
+                          </span>
                         </p>
                       </div>
+                      <ChevronRight className="h-3.5 w-3.5 text-gray-400 group-hover:text-[#37003C] group-hover:translate-x-0.5 transition-all shrink-0" />
                     </div>
                   ))}
 
@@ -1008,9 +1047,14 @@ export function TournamentDetailView({
                     return (
                       <tr
                         key={team.groupId}
-                        className={`hover:bg-gray-50/90 transition-colors ${
+                        onClick={() => {
+                          const found = teams.find((t) => t.id === team.groupId);
+                          if (found) setSelectedTeam(found);
+                        }}
+                        className={`hover:bg-gray-50/90 transition-colors cursor-pointer group ${
                           isFirst ? "bg-emerald-50/30 font-medium" : ""
                         }`}
+                        title={`View ${team.groupName} details`}
                       >
                         <td className="py-3.5 px-3 text-center font-bold text-xs">
                           {team.rank === 1 ? (
@@ -1027,7 +1071,7 @@ export function TournamentDetailView({
                               <img
                                 src={team.logo}
                                 alt={team.groupName}
-                                className="h-7 w-7 object-contain shrink-0"
+                                className="h-7 w-7 object-contain shrink-0 group-hover:scale-105 transition-transform"
                               />
                             ) : (
                               <div className="h-7 w-7 rounded-full bg-[#37003C] text-white font-bold text-[10px] flex items-center justify-center shrink-0">
@@ -1035,8 +1079,13 @@ export function TournamentDetailView({
                               </div>
                             )}
                             <div>
-                              <div className="font-bold text-gray-900">{team.groupName}</div>
-                              <div className="text-[11px] text-gray-500">{team.managerName}</div>
+                              <div className="font-bold text-gray-900 group-hover:text-[#37003C] transition-colors">
+                                {team.groupName}
+                              </div>
+                              <div className="text-[11px] text-gray-500 flex items-center gap-1">
+                                <Crown className="h-2.5 w-2.5 text-amber-500 shrink-0" />
+                                <span>{team.topPlayerName || team.managerName}</span>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1242,62 +1291,125 @@ export function TournamentDetailView({
         {/* ========================================================================= */}
         {activeTab === "teams" && (
           <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 sm:p-7 space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
               <div>
                 <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">
                   <Users className="h-6 w-6 text-[#37003C]" />
                   <span>Participating Teams</span>
                 </h2>
                 <p className="text-xs text-gray-500 font-medium mt-1">
-                  Directory of all fantasy clubs competing in this tournament
+                  Directory of all fantasy clubs competing in this tournament. Click any team to view full roster and match details.
                 </p>
               </div>
-              <span className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-1.5 rounded-lg">
-                {teams.length} Teams Registered
-              </span>
+
+              <div className="flex items-center gap-3 self-stretch sm:self-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Search teams or players..."
+                    value={teamSearchQuery}
+                    onChange={(e) => setTeamSearchQuery(e.target.value)}
+                    className="h-9 pl-8 text-xs rounded-xl bg-gray-50/70 border-gray-200"
+                  />
+                </div>
+                <span className="text-xs font-bold text-gray-700 bg-gray-100 px-3 py-2 rounded-xl shrink-0">
+                  {teams.length} Teams
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-              {teams.map((team) => (
-                <div
-                  key={team.id}
-                  className="rounded-xl border border-gray-200/80 p-5 flex flex-col items-center text-center hover:border-gray-400 hover:shadow-sm transition-all group"
-                >
-                  {/* Crest */}
-                  <div className="mb-3">
-                    {team.logo ? (
-                      <div className="h-16 w-16 rounded-xl bg-gray-50 p-1.5 border border-gray-200 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <img
-                          src={team.logo}
-                          alt={team.name}
-                          className="h-12 w-12 object-contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="h-16 w-16 rounded-xl bg-[#37003C] text-white font-black text-lg flex items-center justify-center group-hover:scale-105 transition-transform">
-                        {team.name.slice(0, 2).toUpperCase()}
+            {filteredDirectoryTeams.length === 0 ? (
+              <div className="p-12 text-center bg-gray-50 rounded-2xl border border-gray-200 text-xs text-gray-500">
+                No teams found matching &quot;{teamSearchQuery}&quot;
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                {filteredDirectoryTeams.map((team) => (
+                  <div
+                    key={team.id}
+                    onClick={() => setSelectedTeam(team)}
+                    className="relative rounded-2xl border border-gray-200/80 bg-white p-5 flex flex-col items-center text-center hover:border-[#37003C]/40 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group cursor-pointer"
+                    title={`Click to view ${team.name} roster and info`}
+                  >
+                    {/* Rank Badge in Corner */}
+                    {team.rank && (
+                      <div className="absolute top-3 right-3 h-6 w-6 rounded-full bg-gray-100 group-hover:bg-[#37003C] group-hover:text-white transition-colors font-mono text-[10px] font-black text-gray-700 flex items-center justify-center">
+                        #{team.rank}
                       </div>
                     )}
+
+                    {/* Crest */}
+                    <div className="mb-3">
+                      {team.logo ? (
+                        <div className="h-16 w-16 rounded-2xl bg-gray-50 p-2 border border-gray-200 flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs">
+                          <img
+                            src={team.logo}
+                            alt={team.name}
+                            className="h-12 w-12 object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-16 w-16 rounded-2xl bg-[#37003C] text-white font-black text-lg flex items-center justify-center group-hover:scale-105 transition-transform shadow-2xs">
+                          {team.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Team Name */}
+                    <h3 className="font-extrabold text-sm sm:text-base text-gray-900 truncate w-full group-hover:text-[#37003C] transition-colors">
+                      {team.name}
+                    </h3>
+
+                    {/* Top Player Name */}
+                    <div className="text-xs text-gray-600 font-medium mt-1 flex items-center justify-center gap-1.5 truncate max-w-full">
+                      <Crown className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                      <span className="text-gray-400 font-semibold">Top Player:</span>
+                      <span className="font-bold text-gray-800 truncate">
+                        {team.topPlayerName || team.managerName}
+                      </span>
+                    </div>
+
+                    {/* Active Player Count */}
+                    <span className="mt-2.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+                      {team.activePlayerCount} {team.activePlayerCount === 1 ? "Active Player" : "Active Players"}
+                    </span>
+
+                    {/* Quick Standings Stat if available */}
+                    {team.leaguePoints !== undefined && (
+                      <div className="mt-2 text-[11px] font-bold text-gray-500 flex items-center gap-1">
+                        <span>{team.won ?? 0}W-{team.drawn ?? 0}D-{team.lost ?? 0}L</span>
+                        <span className="text-gray-300">·</span>
+                        <span className="text-[#37003C] font-black">{team.leaguePoints} pts</span>
+                      </div>
+                    )}
+
+                    {/* Interactive Hover Prompt */}
+                    <div className="mt-4 pt-3 border-t border-gray-100 w-full text-center">
+                      <span className="text-[11px] font-bold text-[#37003C] group-hover:text-[#5A0A63] flex items-center justify-center gap-1 transition-colors">
+                        <span>View Team &amp; Roster</span>
+                        <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                      </span>
+                    </div>
                   </div>
-
-                  {/* Team Name */}
-                  <h3 className="font-extrabold text-sm sm:text-base text-gray-900 truncate w-full group-hover:text-[#37003C] transition-colors">
-                    {team.name}
-                  </h3>
-
-                  {/* Manager Name */}
-                  <p className="text-xs text-gray-500 font-semibold mt-0.5">
-                    Manager: {team.managerName}
-                  </p>
-
-                  {/* Active Player Count */}
-                  <span className="mt-3 text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
-                    {team.activePlayerCount} {team.activePlayerCount === 1 ? "Active Player" : "Active Players"}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
+        )}
+
+        {/* Team Detail Modal */}
+        {selectedTeam && (
+          <TeamDetailModal
+            isOpen={!!selectedTeam}
+            onClose={() => setSelectedTeam(null)}
+            team={selectedTeam}
+            tournamentName={tournament.name}
+            seasonDisplay={tournament.seasonDisplay}
+            currentGameweek={selectedRound?.gameweek || 1}
+            allowBenchBoost={tournament.allowBenchBoost}
+            allowTripleCaptain={tournament.allowTripleCaptain}
+          />
         )}
       </main>
     </div>

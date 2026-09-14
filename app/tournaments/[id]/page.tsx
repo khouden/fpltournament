@@ -66,6 +66,11 @@ export default async function TournamentPage(
     notFound();
   }
 
+  const searchParams = await props.searchParams;
+  const initialTab =
+    (searchParams?.tab as "overview" | "standings" | "fixtures" | "teams") ||
+    "overview";
+
   // Calculate live league standings (+3 Win, +1 Draw, 0 Loss)
   const standings = await calculateLeagueStandings(tournament.id);
 
@@ -86,14 +91,89 @@ export default async function TournamentPage(
     return { name: "TBD", logo: null };
   };
 
-  // Map each group to its primary manager name
-  const groupManagerMap = new Map<string, string>();
+  // Map member ID -> array of non-excluded score objects
+  const memberScoresMap = new Map<
+    string,
+    Array<{ points: number; gameweek: number }>
+  >();
+  for (const round of tournament.rounds) {
+    for (const match of round.matches) {
+      for (const score of match.scores) {
+        if (!score.isExcluded) {
+          if (!memberScoresMap.has(score.member.id)) {
+            memberScoresMap.set(score.member.id, []);
+          }
+          memberScoresMap.get(score.member.id)!.push({
+            points: score.gameweekPoints,
+            gameweek: round.gameweek,
+          });
+        }
+      }
+    }
+  }
+
+  // Standings lookup map
+  const standingsMap = new Map<string, (typeof standings)[0]>();
+  for (const s of standings) {
+    standingsMap.set(s.groupId, s);
+  }
+
+  // Calculate Top Player for each group (highest non-admin points earner)
+  const groupTopPlayerMap = new Map<
+    string,
+    { name: string; points: number; teamName: string | null; fplId: number }
+  >();
+
   for (const g of tournament.groups) {
-    const manager =
-      g.members.find((m) => !m.isAdmin && m.fplName)?.fplName ||
-      g.members[0]?.fplName ||
-      "Manager";
-    groupManagerMap.set(g.id, manager);
+    const activeMembers = g.members.filter(
+      (m) =>
+        !m.isAdmin &&
+        m.fplId !== tournament.adminFplId &&
+        !tournament.admins?.some((a) => a.fplId === m.fplId)
+    );
+
+    let bestMember: {
+      name: string;
+      points: number;
+      teamName: string | null;
+      fplId: number;
+    } | null = null;
+    let maxPoints = -1;
+
+    for (const m of activeMembers) {
+      const scores = memberScoresMap.get(m.id) || [];
+      const totalPoints = scores.reduce((sum, s) => sum + s.points, 0);
+      if (totalPoints > maxPoints) {
+        maxPoints = totalPoints;
+        bestMember = {
+          name: m.fplName,
+          points: totalPoints,
+          teamName: m.fplTeamName,
+          fplId: m.fplId,
+        };
+      }
+    }
+
+    if (!bestMember && activeMembers.length > 0) {
+      bestMember = {
+        name: activeMembers[0].fplName,
+        points: 0,
+        teamName: activeMembers[0].fplTeamName,
+        fplId: activeMembers[0].fplId,
+      };
+    } else if (!bestMember && g.members.length > 0) {
+      bestMember = {
+        name: g.members[0].fplName,
+        points: 0,
+        teamName: g.members[0].fplTeamName,
+        fplId: g.members[0].fplId,
+      };
+    }
+
+    groupTopPlayerMap.set(
+      g.id,
+      bestMember || { name: "Top Player", points: 0, teamName: null, fplId: 0 }
+    );
   }
 
   // Find latest played round to determine GW scores
@@ -126,7 +206,8 @@ export default async function TournamentPage(
     groupId: s.groupId,
     groupName: s.groupName,
     logo: s.logo || null,
-    managerName: groupManagerMap.get(s.groupId) || "Manager",
+    managerName: groupTopPlayerMap.get(s.groupId)?.name || "Top Player",
+    topPlayerName: groupTopPlayerMap.get(s.groupId)?.name || "Top Player",
     gwPoints: gwPointsMap.get(s.groupId) || 0,
     totalPoints: s.pointsFor > 0 ? s.pointsFor : s.leaguePoints * 100,
     leaguePoints: s.leaguePoints,
@@ -190,8 +271,17 @@ export default async function TournamentPage(
     };
   });
 
-  // Formatted Participating Teams
+  // Formatted Participating Teams with enriched roster & fixture history
   const formattedTeams: TeamDirectoryItem[] = tournament.groups.map((g) => {
+    const topPlayerInfo = groupTopPlayerMap.get(g.id) || {
+      name: "Top Player",
+      points: 0,
+      teamName: null,
+      fplId: 0,
+    };
+
+    const standing = standingsMap.get(g.id);
+
     const activePlayerCount = g.members.filter(
       (m) =>
         !m.isAdmin &&
@@ -199,20 +289,95 @@ export default async function TournamentPage(
         !tournament.admins?.some((a) => a.fplId === m.fplId)
     ).length;
 
-    return {
-      id: g.id,
-      name: g.name,
-      logo: g.logo,
-      managerName: groupManagerMap.get(g.id) || "Manager",
-      activePlayerCount:
-        activePlayerCount > 0 ? activePlayerCount : g.members.length,
-      members: g.members.map((m) => ({
+    // Detailed member roster with individual stats
+    const enrichedMembers = g.members.map((m) => {
+      const isExcludedAdmin =
+        m.isAdmin ||
+        m.fplId === tournament.adminFplId ||
+        Boolean(tournament.admins?.some((a) => a.fplId === m.fplId));
+      const scores = memberScoresMap.get(m.id) || [];
+      const totalPoints = scores.reduce((sum, s) => sum + s.points, 0);
+      const matchCount = scores.length;
+      const highestPoints =
+        scores.length > 0 ? Math.max(...scores.map((s) => s.points)) : 0;
+      const averagePoints =
+        matchCount > 0 ? Math.round((totalPoints / matchCount) * 10) / 10 : 0;
+
+      return {
         id: m.id,
         fplName: m.fplName,
         fplTeamName: m.fplTeamName,
         fplId: m.fplId,
-        isAdmin: m.isAdmin,
-      })),
+        isAdmin: isExcludedAdmin,
+        totalPoints,
+        matchCount,
+        highestPoints,
+        averagePoints,
+        isTopPlayer: m.fplName === topPlayerInfo.name,
+      };
+    });
+
+    // Fixtures for this team
+    const teamFixtures = tournament.rounds.flatMap((round) => {
+      return round.matches
+        .filter((m) => m.homeGroupId === g.id || m.awayGroupId === g.id)
+        .map((m) => {
+          const isHome = m.homeGroupId === g.id;
+          const opponent = isHome
+            ? resolveGroup(m, "away")
+            : resolveGroup(m, "home");
+          const teamScore = isHome ? m.homeScore : m.awayScore;
+          const opponentScore = isHome ? m.awayScore : m.homeScore;
+
+          let matchResult: "WIN" | "DRAW" | "LOSS" | "SCHEDULED" = "SCHEDULED";
+          if (m.status === "COMPLETED" || m.status === "FINALIZED") {
+            if (teamScore !== null && opponentScore !== null) {
+              if (teamScore > opponentScore) matchResult = "WIN";
+              else if (teamScore < opponentScore) matchResult = "LOSS";
+              else matchResult = "DRAW";
+            }
+          }
+
+          return {
+            id: m.id,
+            roundNumber: round.roundNumber,
+            roundName: round.name || `Round ${round.roundNumber}`,
+            gameweek: round.gameweek,
+            opponentName: opponent.name,
+            opponentLogo: opponent.logo,
+            isHome,
+            teamScore: teamScore !== null ? Math.round(teamScore) : null,
+            opponentScore:
+              opponentScore !== null ? Math.round(opponentScore) : null,
+            status: m.status,
+            result: matchResult,
+          };
+        });
+    });
+
+    return {
+      id: g.id,
+      name: g.name,
+      logo: g.logo,
+      topPlayerName: topPlayerInfo.name,
+      topPlayerPoints: topPlayerInfo.points,
+      topPlayerTeamName: topPlayerInfo.teamName,
+      topPlayerFplId: topPlayerInfo.fplId,
+      managerName: topPlayerInfo.name,
+      activePlayerCount:
+        activePlayerCount > 0 ? activePlayerCount : g.members.length,
+      rank: standing?.rank,
+      played: standing?.played ?? 0,
+      won: standing?.won ?? 0,
+      drawn: standing?.drawn ?? 0,
+      lost: standing?.lost ?? 0,
+      pointsFor: standing?.pointsFor ?? 0,
+      pointsAgainst: standing?.pointsAgainst ?? 0,
+      pointsDiff: standing?.pointsDiff ?? 0,
+      leaguePoints: standing?.leaguePoints ?? 0,
+      form: standing?.form ?? [],
+      members: enrichedMembers,
+      fixtures: teamFixtures,
     };
   });
 
@@ -235,6 +400,7 @@ export default async function TournamentPage(
       {/* Main Tournament Show Content */}
       <main className="flex-1">
         <TournamentDetailView
+          initialTab={initialTab}
           tournament={{
             id: tournament.id,
             name: tournament.name,
