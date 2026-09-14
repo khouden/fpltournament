@@ -10,6 +10,10 @@ import {
   deleteMatchAction,
   validateScheduleAction,
   generateRoundRobinScheduleAction,
+  swapMatchSidesAction,
+  autoPairRemainingAction,
+  duplicateRoundAsReverseAction,
+  fillRoundWithEmptyMatchesAction,
 } from "@/lib/schedule-actions";
 import {
   recalculateMatchAction,
@@ -42,6 +46,9 @@ import {
   Check,
   Clock,
   Pencil,
+  ArrowLeftRight,
+  Copy,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -190,6 +197,20 @@ export function ScheduleBuilder({
     match: Match;
     round: Round;
   } | null>(null);
+
+  // Click-to-pair state: holds the roundId and first team selected
+  const [activePairing, setActivePairing] = useState<{
+    roundId: string;
+    groupId: string;
+  } | null>(null);
+
+  // Duplicate round as reverse fixtures state
+  const [duplicateRoundState, setDuplicateRoundState] = useState<{
+    roundId: string;
+    roundName: string;
+    gameweek: number;
+  } | null>(null);
+  const [duplicateTargetGW, setDuplicateTargetGW] = useState<number>(1);
 
   // Collapsed rounds tracking - persisted per tournament in localStorage via useSyncExternalStore
   const storageKey = `fpl_tournament_${tournamentId}_collapsed_rounds`;
@@ -452,6 +473,153 @@ export function ScheduleBuilder({
       showMsg("Match removed from schedule");
     } else {
       setError(result.error || "Failed to delete match");
+    }
+    setLoading(null);
+  };
+
+  // ---- Fast Scheduling Handlers ----
+  const handleSelectPairingTeam = async (roundId: string, groupId: string) => {
+    // If not currently selecting or selecting from another round, select this team as Team A
+    if (!activePairing || activePairing.roundId !== roundId) {
+      setActivePairing({ roundId, groupId });
+      return;
+    }
+
+    // If clicking the same team, toggle off
+    if (activePairing.groupId === groupId) {
+      setActivePairing(null);
+      return;
+    }
+
+    // Clicking Team B: Create match immediately!
+    const homeGroupId = activePairing.groupId;
+    const awayGroupId = groupId;
+    setActivePairing(null);
+    setLoading(`pair-${roundId}`);
+    setError("");
+
+    const homeGroup = groupById(homeGroupId);
+    const awayGroup = groupById(awayGroupId);
+
+    const result = await createMatchAction(roundId, tournamentId, {
+      homeGroupId,
+      awayGroupId,
+    });
+
+    if (result.success && result.match) {
+      setRounds((prev) =>
+        prev.map((r) =>
+          r.id === roundId
+            ? { ...r, matches: [...r.matches, result.match as Match] }
+            : r
+        )
+      );
+      showMsg(
+        `Fixture paired: ${homeGroup?.name || "Team A"} vs ${
+          awayGroup?.name || "Team B"
+        }`
+      );
+    } else {
+      setError(result.error || "Failed to pair teams");
+    }
+    setLoading(null);
+  };
+
+  const handleAutoPairRemaining = async (roundId: string) => {
+    setError("");
+    setLoading(`auto-pair-${roundId}`);
+    setActivePairing(null);
+
+    const result = await autoPairRemainingAction(roundId, tournamentId);
+    if (result.success) {
+      showMsg(result.message || "Remaining teams paired successfully!");
+      startTransition(() => {
+        router.refresh();
+      });
+    } else {
+      setError(result.error || "Failed to auto-pair remaining teams");
+    }
+    setLoading(null);
+  };
+
+  const handleSwapSides = async (matchId: string) => {
+    setError("");
+    setLoading(`swap-${matchId}`);
+
+    const result = await swapMatchSidesAction(matchId, tournamentId);
+    if (result.success && result.match) {
+      setRounds((prev) =>
+        prev.map((r) => ({
+          ...r,
+          matches: r.matches.map((m) =>
+            m.id === matchId ? (result.match as Match) : m
+          ),
+        }))
+      );
+      showMsg("Home and away teams swapped!");
+    } else {
+      setError(result.error || "Failed to swap teams");
+    }
+    setLoading(null);
+  };
+
+  const executeDuplicateRoundAsReverse = async () => {
+    if (!duplicateRoundState) return;
+    const { roundId } = duplicateRoundState;
+    setDuplicateRoundState(null);
+    setError("");
+    setLoading(`dup-round-${roundId}`);
+
+    const result = await duplicateRoundAsReverseAction(
+      roundId,
+      tournamentId,
+      duplicateTargetGW
+    );
+
+    if (result.success && result.round) {
+      const newRound = {
+        ...result.round,
+        matches: result.round.matches || [],
+      } as Round;
+      setRounds((prev) => [...prev, newRound]);
+
+      // Focus on the newly duplicated round
+      const nextCollapsed: Record<string, boolean> = {};
+      rounds.forEach((r) => {
+        nextCollapsed[r.id] = true;
+      });
+      nextCollapsed[newRound.id] = false;
+      updateStoredCollapsed(nextCollapsed);
+
+      showMsg(result.message || "Reverse fixtures round generated!");
+      startTransition(() => {
+        router.refresh();
+      });
+
+      setTimeout(() => {
+        const el = document.getElementById(`round-${newRound.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
+    } else {
+      setError(result.error || "Failed to duplicate round");
+    }
+    setLoading(null);
+  };
+
+  const handleFillEmptyMatches = async (roundId: string) => {
+    setError("");
+    setLoading(`fill-round-${roundId}`);
+
+    const result = await fillRoundWithEmptyMatchesAction(roundId, tournamentId);
+    if (result.success) {
+      showMsg(result.message || "Match slots added to round!");
+      startTransition(() => {
+        router.refresh();
+      });
+    } else {
+      setError(result.error || "Failed to fill round with matches");
     }
     setLoading(null);
   };
@@ -1109,6 +1277,31 @@ export function ScheduleBuilder({
                         </Button>
                       )}
 
+                      {round.matches.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setDuplicateRoundState({
+                              roundId: round.id,
+                              roundName:
+                                round.name || `Round ${round.roundNumber}`,
+                              gameweek: round.gameweek,
+                            });
+                            setDuplicateTargetGW(
+                              Math.min(38, round.gameweek + 1)
+                            );
+                          }}
+                          disabled={loading === `dup-round-${round.id}`}
+                          className="h-8 px-2.5 sm:px-3 text-xs font-semibold text-[#37003C] border-[#37003C]/20 bg-[#37003C]/5 hover:bg-[#37003C]/10 rounded-[6px] gap-1.5 shadow-2xs cursor-pointer"
+                          title="Duplicate this round to the next Gameweek with Home and Away reversed (Leg 2)"
+                        >
+                          <Copy className="h-3.5 w-3.5 text-[#37003C]" />
+                          <span className="hidden sm:inline">Reverse Fixtures</span>
+                          <span className="sm:hidden">Leg 2</span>
+                        </Button>
+                      )}
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -1144,30 +1337,173 @@ export function ScheduleBuilder({
                   </div>
 
                   {/* Matches inside Round */}
-                  {!isCollapsed && (
-                    <div className="p-4 sm:p-5 space-y-4 bg-white">
-                      {round.matches.length === 0 ? (
-                        <div className="rounded-[10px] border border-dashed border-[#E5E5E5] p-6 text-center bg-[#FDFDFD]">
-                          <p className="text-xs sm:text-sm text-[#777777] italic">
-                            No fixtures in this round
-                          </p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleAddMatch(round.id)}
-                            disabled={loading === `add-match-${round.id}`}
-                            className="mt-3 h-8 px-3 text-xs font-semibold text-[#37003C] border-[#E5E5E5] hover:bg-[#F7F7F7] gap-1.5 cursor-pointer"
-                          >
-                            {loading === `add-match-${round.id}` ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#37003C]" />
-                            ) : (
-                              <Plus className="h-3.5 w-3.5" />
-                            )}
-                            <span>Add Match</span>
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
+                  {!isCollapsed && (() => {
+                    const assignedGroupIds = new Set<string>();
+                    round.matches.forEach((m) => {
+                      if (m.homeGroupId) assignedGroupIds.add(m.homeGroupId);
+                      if (m.awayGroupId) assignedGroupIds.add(m.awayGroupId);
+                    });
+                    const unassignedGroups = groups.filter(
+                      (g) => !assignedGroupIds.has(g.id)
+                    );
+
+                    return (
+                      <div className="p-4 sm:p-5 space-y-4 bg-white">
+                        {/* ⚡ Unassigned Teams / Click-to-Pair Tray */}
+                        {unassignedGroups.length > 0 && (
+                          <div className="rounded-[12px] border border-dashed border-[#37003C]/25 bg-[#37003C]/[0.02] p-3 sm:p-3.5 space-y-2.5 transition-all shadow-2xs">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black uppercase tracking-wider text-[#37003C] flex items-center gap-1.5">
+                                  <Sparkles className="h-3.5 w-3.5 text-[#E9007F]" />
+                                  <span>Available Teams ({unassignedGroups.length})</span>
+                                </span>
+                                <span className="text-[11px] text-gray-500 hidden sm:inline">
+                                  {activePairing?.roundId === round.id
+                                    ? "• Click second team to create fixture"
+                                    : "• Click any 2 teams to instantly pair"}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                {activePairing?.roundId === round.id && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setActivePairing(null)}
+                                    className="text-[11px] font-bold text-gray-500 hover:text-gray-800 underline cursor-pointer"
+                                  >
+                                    Cancel
+                                  </button>
+                                )}
+                                {unassignedGroups.length >= 2 && (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleAutoPairRemaining(round.id)}
+                                    disabled={loading === `auto-pair-${round.id}`}
+                                    className="h-7 px-2.5 text-[11px] font-bold text-[#37003C] bg-white hover:bg-[#37003C]/5 border-[#37003C]/25 rounded-[6px] gap-1 shadow-2xs cursor-pointer"
+                                    title="Automatically pair all remaining teams in this round"
+                                  >
+                                    {loading === `auto-pair-${round.id}` ? (
+                                      <Loader2 className="h-3 w-3 animate-spin text-[#37003C]" />
+                                    ) : (
+                                      <Zap className="h-3 w-3 text-[#00FF87] fill-[#00FF87]" />
+                                    )}
+                                    <span>Auto-Pair Remaining</span>
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Click-to-Pair Badges */}
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                              {unassignedGroups.map((group) => {
+                                const isSelected =
+                                  activePairing?.roundId === round.id &&
+                                  activePairing?.groupId === group.id;
+
+                                return (
+                                  <button
+                                    key={group.id}
+                                    type="button"
+                                    onClick={() =>
+                                      handleSelectPairingTeam(round.id, group.id)
+                                    }
+                                    disabled={loading === `pair-${round.id}`}
+                                    className={`group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs border ${
+                                      isSelected
+                                        ? "bg-[#37003C] text-white border-[#37003C] ring-2 ring-[#00FF87] ring-offset-1 scale-105"
+                                        : activePairing?.roundId === round.id
+                                        ? "bg-white text-[#1F1F1F] border-gray-300 hover:border-[#37003C] hover:bg-[#37003C]/5 hover:scale-102"
+                                        : "bg-white text-gray-700 border-gray-200 hover:border-[#37003C]/40 hover:bg-[#37003C]/5"
+                                    }`}
+                                  >
+                                    {group.logo ? (
+                                      <img
+                                        src={group.logo}
+                                        alt=""
+                                        className="h-4 w-4 object-contain shrink-0 rounded"
+                                      />
+                                    ) : (
+                                      <span
+                                        className={`h-4 w-4 rounded text-[9px] flex items-center justify-center font-black ${
+                                          isSelected
+                                            ? "bg-white/20 text-white"
+                                            : "bg-[#37003C]/10 text-[#37003C]"
+                                        }`}
+                                      >
+                                        {group.name.slice(0, 2).toUpperCase()}
+                                      </span>
+                                    )}
+                                    <span>{group.name}</span>
+                                    {isSelected && (
+                                      <span className="text-[10px] text-[#00FF87] font-black ml-0.5 animate-pulse">
+                                        (Pick Opponent)
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {round.matches.length === 0 ? (
+                          <div className="rounded-[10px] border border-dashed border-[#E5E5E5] p-6 text-center bg-[#FDFDFD] space-y-3">
+                            <p className="text-xs sm:text-sm text-[#777777] italic">
+                              No fixtures created yet in this round
+                            </p>
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                              {groups.length >= 2 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleAutoPairRemaining(round.id)}
+                                  disabled={loading === `auto-pair-${round.id}`}
+                                  className="h-8 px-3 text-xs font-bold text-[#37003C] border-[#37003C]/30 bg-[#37003C]/5 hover:bg-[#37003C]/10 gap-1.5 shadow-2xs cursor-pointer"
+                                >
+                                  {loading === `auto-pair-${round.id}` ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[#37003C]" />
+                                  ) : (
+                                    <Zap className="h-3.5 w-3.5 text-[#00FF87] fill-[#00FF87]" />
+                                  )}
+                                  <span>Auto-Pair All Teams</span>
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleFillEmptyMatches(round.id)}
+                                disabled={loading === `fill-round-${round.id}`}
+                                className="h-8 px-3 text-xs font-semibold text-gray-700 border-[#E5E5E5] hover:bg-gray-50 gap-1.5 cursor-pointer"
+                                title="Add empty match slots for all groups"
+                              >
+                                {loading === `fill-round-${round.id}` ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Layers className="h-3.5 w-3.5 text-[#37003C]" />
+                                )}
+                                <span>Create Empty Slots</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAddMatch(round.id)}
+                                disabled={loading === `add-match-${round.id}`}
+                                className="h-8 px-3 text-xs font-semibold text-[#37003C] border-[#E5E5E5] hover:bg-[#F7F7F7] gap-1.5 cursor-pointer"
+                              >
+                                {loading === `add-match-${round.id}` ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#37003C]" />
+                                ) : (
+                                  <Plus className="h-3.5 w-3.5" />
+                                )}
+                                <span>Add 1 Match</span>
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
                           {round.matches
                             .sort((a, b) => a.matchNumber - b.matchNumber)
                           .map((match) => {
@@ -1297,6 +1633,26 @@ export function ScheduleBuilder({
 
                                     {/* Central Scoreboard / VS */}
                                     <div className="flex flex-col items-center justify-center px-3 min-w-[130px]">
+                                      {/* Quick Swap Home/Away button */}
+                                      {!isFinalized && (match.homeGroupId || match.awayGroupId) && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSwapSides(match.id)}
+                                          disabled={loading === `swap-${match.id}`}
+                                          className="mb-1 text-[11px] font-bold text-gray-400 hover:text-[#37003C] hover:bg-[#37003C]/5 px-2 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer border border-transparent hover:border-gray-200 shadow-2xs"
+                                          title="Swap Home and Away teams (⇄)"
+                                        >
+                                          {loading === `swap-${match.id}` ? (
+                                            <Loader2 className="h-3 w-3 animate-spin text-[#37003C]" />
+                                          ) : (
+                                            <ArrowLeftRight className="h-3 w-3 text-[#37003C]" />
+                                          )}
+                                          <span className="text-[9px] uppercase font-extrabold tracking-wider text-[#555555]">
+                                            Swap
+                                          </span>
+                                        </button>
+                                      )}
+
                                       {hasScores ? (
                                         <div className="text-center space-y-1">
                                           <div className="inline-flex items-center gap-2.5 bg-[#F7F7F7] px-4 py-1.5 rounded-[8px] border border-[#E5E5E5] shadow-2xs">
@@ -1432,6 +1788,25 @@ export function ScheduleBuilder({
 
                                     {/* Mobile VS / Scoreboard Divider */}
                                     <div className="flex flex-col items-center justify-center py-1">
+                                      {!isFinalized && (match.homeGroupId || match.awayGroupId) && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSwapSides(match.id)}
+                                          disabled={loading === `swap-${match.id}`}
+                                          className="mb-1.5 text-[11px] font-bold text-gray-600 hover:text-[#37003C] hover:bg-[#37003C]/5 px-2 py-0.5 rounded transition-colors flex items-center gap-1 cursor-pointer border border-gray-200 bg-gray-50/70"
+                                          title="Swap Home and Away teams (⇄)"
+                                        >
+                                          {loading === `swap-${match.id}` ? (
+                                            <Loader2 className="h-3 w-3 animate-spin text-[#37003C]" />
+                                          ) : (
+                                            <ArrowLeftRight className="h-3 w-3 text-[#37003C]" />
+                                          )}
+                                          <span className="text-[10px] uppercase font-bold text-[#555555]">
+                                            Swap Home/Away
+                                          </span>
+                                        </button>
+                                      )}
+
                                       {hasScores ? (
                                         <div className="text-center space-y-1">
                                           <div className="inline-flex items-center gap-3 bg-[#F7F7F7] px-4 py-1 rounded-[6px] border border-[#E5E5E5]">
@@ -1654,7 +2029,8 @@ export function ScheduleBuilder({
                         </>
                       )}
                     </div>
-                  )}
+                  );
+                })()}
                 </Card>
               );
             })
@@ -1742,6 +2118,68 @@ export function ScheduleBuilder({
               className="bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] text-xs font-bold"
             >
               Recalculate All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Duplicate Round as Reverse Confirmation Modal */}
+      <AlertDialog
+        open={!!duplicateRoundState}
+        onOpenChange={(open) => !open && setDuplicateRoundState(null)}
+      >
+        <AlertDialogContent className="rounded-[14px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-extrabold text-[#1F1F1F] flex items-center gap-2">
+              <Copy className="h-5 w-5 text-[#37003C]" />
+              <span>Duplicate as Reverse Fixtures (Leg 2)?</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs sm:text-sm text-[#555555]">
+              This will create a new round containing all fixtures from{" "}
+              <strong className="text-[#1F1F1F]">
+                {duplicateRoundState?.roundName}
+              </strong>{" "}
+              with the Home and Away sides inverted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="py-2 space-y-2">
+            <Label htmlFor="dupGW" className="text-xs font-bold text-[#1F1F1F]">
+              Assign to Gameweek:
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="dupGW"
+                type="number"
+                min={1}
+                max={38}
+                value={duplicateTargetGW}
+                onChange={(e) =>
+                  setDuplicateTargetGW(
+                    Math.max(1, Math.min(38, parseInt(e.target.value) || 1))
+                  )
+                }
+                className="w-28 font-bold text-center h-9 bg-white"
+              />
+              <span className="text-xs text-gray-500">
+                (GW 1–38, recommended GW{" "}
+                {duplicateRoundState
+                  ? Math.min(38, duplicateRoundState.gameweek + 1)
+                  : 1}
+                )
+              </span>
+            </div>
+          </div>
+
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-[8px] text-xs font-semibold">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeDuplicateRoundAsReverse}
+              className="bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] text-xs font-bold"
+            >
+              Create Leg 2 Round
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

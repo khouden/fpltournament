@@ -417,6 +417,341 @@ export async function deleteMatchAction(matchId: string, tournamentId: string) {
 }
 
 /**
+ * Swap the home and away sides of a match
+ */
+export async function swapMatchSidesAction(matchId: string, tournamentId: string) {
+  try {
+    await requireAdminSession();
+    const match = await prisma.match.findUnique({
+      where: { id: matchId },
+    });
+
+    if (!match) {
+      return { success: false, error: "Match not found" };
+    }
+
+    if (match.status === "FINALIZED") {
+      return { success: false, error: "Cannot swap teams on a finalized match" };
+    }
+
+    const updated = await prisma.match.update({
+      where: { id: matchId },
+      data: {
+        homeGroupId: match.awayGroupId,
+        awayGroupId: match.homeGroupId,
+        // If scores already exist, swap them accordingly
+        homeScore: match.awayScore,
+        awayScore: match.homeScore,
+        result:
+          match.result === "HOME_WIN"
+            ? "AWAY_WIN"
+            : match.result === "AWAY_WIN"
+            ? "HOME_WIN"
+            : match.result,
+      },
+    });
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return { success: true, match: updated };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to swap match teams",
+    };
+  }
+}
+
+/**
+ * Automatically pair up all unassigned groups in a round
+ */
+export async function autoPairRemainingAction(
+  roundId: string,
+  tournamentId: string,
+  randomize: boolean = false
+) {
+  try {
+    await requireAdminSession();
+    const round = await prisma.round.findUnique({
+      where: { id: roundId },
+      include: { matches: true },
+    });
+
+    if (!round) {
+      return { success: false, error: "Round not found" };
+    }
+
+    const allGroups = await prisma.group.findMany({
+      where: { tournamentId },
+      orderBy: { createdAt: "asc" },
+    });
+
+    if (allGroups.length < 2) {
+      return {
+        success: false,
+        error: "Tournament needs at least 2 groups to create fixtures",
+      };
+    }
+
+    // Determine which groups are already scheduled in this round
+    const assignedIds = new Set<string>();
+    for (const m of round.matches) {
+      if (m.homeGroupId) assignedIds.add(m.homeGroupId);
+      if (m.awayGroupId) assignedIds.add(m.awayGroupId);
+    }
+
+    const unassigned = allGroups.filter((g) => !assignedIds.has(g.id));
+
+    if (unassigned.length < 2) {
+      return {
+        success: false,
+        error:
+          unassigned.length === 1
+            ? `Only 1 unassigned team left (${unassigned[0].name}). Need at least 2 teams to create a match.`
+            : "All tournament teams are already scheduled in this round.",
+      };
+    }
+
+    // Optionally shuffle unassigned teams
+    const teamsToPair = [...unassigned];
+    if (randomize) {
+      for (let i = teamsToPair.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [teamsToPair[i], teamsToPair[j]] = [teamsToPair[j], teamsToPair[i]];
+      }
+    }
+
+    const createdMatches: any[] = [];
+    const byeGroup =
+      teamsToPair.length % 2 !== 0
+        ? teamsToPair[teamsToPair.length - 1].name
+        : null;
+
+    await prisma.$transaction(async (tx) => {
+      let currentMatchCount = await tx.match.count({
+        where: { round: { tournamentId } },
+      });
+
+      const limit = teamsToPair.length - (teamsToPair.length % 2);
+      for (let i = 0; i < limit; i += 2) {
+        currentMatchCount++;
+        const newMatch = await tx.match.create({
+          data: {
+            roundId,
+            matchNumber: currentMatchCount,
+            status: "SCHEDULED",
+            homeGroupId: teamsToPair[i].id,
+            awayGroupId: teamsToPair[i + 1].id,
+          },
+        });
+        createdMatches.push(newMatch);
+      }
+    });
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return {
+      success: true,
+      count: createdMatches.length,
+      byeGroup,
+      message: byeGroup
+        ? `Created ${createdMatches.length} fixtures! Note: ${byeGroup} has a bye this round.`
+        : `Created ${createdMatches.length} fixtures successfully!`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to auto-pair remaining teams",
+    };
+  }
+}
+
+/**
+ * Duplicate an entire round into a new round with Home and Away reversed (Leg 2 / Reverse fixtures)
+ */
+export async function duplicateRoundAsReverseAction(
+  roundId: string,
+  tournamentId: string,
+  targetGameweek?: number
+) {
+  try {
+    await requireAdminSession();
+    const sourceRound = await prisma.round.findUnique({
+      where: { id: roundId },
+      include: {
+        matches: {
+          orderBy: { matchNumber: "asc" },
+        },
+      },
+    });
+
+    if (!sourceRound) {
+      return { success: false, error: "Source round not found" };
+    }
+
+    if (sourceRound.matches.length === 0) {
+      return {
+        success: false,
+        error: "Cannot duplicate a round with no fixtures",
+      };
+    }
+
+    const allRounds = await prisma.round.findMany({
+      where: { tournamentId },
+      orderBy: { roundNumber: "asc" },
+    });
+
+    const nextRoundNumber =
+      allRounds.length > 0
+        ? Math.max(...allRounds.map((r) => r.roundNumber)) + 1
+        : 1;
+
+    const nextGW =
+      targetGameweek && !isNaN(targetGameweek)
+        ? targetGameweek
+        : Math.min(
+            38,
+            Math.max(...allRounds.map((r) => r.gameweek)) + 1
+          );
+
+    if (nextGW < 1 || nextGW > 38) {
+      return { success: false, error: "Target Gameweek must be between 1 and 38" };
+    }
+
+    let createdRound: any = null;
+
+    await prisma.$transaction(async (tx) => {
+      let currentMatchCount = await tx.match.count({
+        where: { round: { tournamentId } },
+      });
+
+      const newRound = await tx.round.create({
+        data: {
+          tournamentId,
+          roundNumber: nextRoundNumber,
+          gameweek: nextGW,
+          name: sourceRound.name
+            ? `${sourceRound.name} (Leg 2)`
+            : `Round ${nextRoundNumber}`,
+        },
+      });
+
+      for (const m of sourceRound.matches) {
+        currentMatchCount++;
+        await tx.match.create({
+          data: {
+            roundId: newRound.id,
+            matchNumber: currentMatchCount,
+            status: "SCHEDULED",
+            homeGroupId: m.awayGroupId, // Reversed!
+            awayGroupId: m.homeGroupId, // Reversed!
+          },
+        });
+      }
+
+      createdRound = await tx.round.findUnique({
+        where: { id: newRound.id },
+        include: { matches: true },
+      });
+    });
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return {
+      success: true,
+      round: createdRound,
+      message: `Duplicated into ${createdRound?.name || `Round ${nextRoundNumber}`} (GW ${nextGW}) with inverted Home/Away fixtures!`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to duplicate round as reverse fixtures",
+    };
+  }
+}
+
+/**
+ * Fill a round with empty match slots up to half the tournament groups count
+ */
+export async function fillRoundWithEmptyMatchesAction(
+  roundId: string,
+  tournamentId: string
+) {
+  try {
+    await requireAdminSession();
+    const [round, groups] = await Promise.all([
+      prisma.round.findUnique({
+        where: { id: roundId },
+        include: { matches: true },
+      }),
+      prisma.group.findMany({
+        where: { tournamentId },
+      }),
+    ]);
+
+    if (!round) {
+      return { success: false, error: "Round not found" };
+    }
+
+    const targetMatchCount = Math.floor(groups.length / 2);
+    const needed = targetMatchCount - round.matches.length;
+
+    if (needed <= 0) {
+      return {
+        success: false,
+        error: `Round already has ${round.matches.length} fixtures (max expected for ${groups.length} groups is ${targetMatchCount})`,
+      };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      let currentMatchCount = await tx.match.count({
+        where: { round: { tournamentId } },
+      });
+
+      for (let i = 0; i < needed; i++) {
+        currentMatchCount++;
+        await tx.match.create({
+          data: {
+            roundId,
+            matchNumber: currentMatchCount,
+            status: "SCHEDULED",
+          },
+        });
+      }
+    });
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return {
+      success: true,
+      message: `Added ${needed} empty fixture slots to the round!`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to fill round with matches",
+    };
+  }
+}
+
+/**
  * Validate schedule integrity for publishing
  */
 export async function validateScheduleAction(
