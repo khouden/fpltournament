@@ -11,6 +11,8 @@ import {
   Shield,
   ExternalLink,
   Eye,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import {
   Dialog,
@@ -523,13 +525,39 @@ export function TeamDetailModal({
                   ) : (
                     <div className="space-y-2.5">
                       {team.fixtures.map((fixture) => {
+                        const isLive =
+                          fixture.status === "IN_PROGRESS" || fixture.status === "LIVE";
+                        const isCompleted =
+                          fixture.status === "COMPLETED" || fixture.status === "FINALIZED";
                         return (
                           <div
                             key={fixture.id}
-                            className="bg-white rounded-2xl p-4 border border-gray-200/80 shadow-2xs hover:border-gray-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                            className={cn(
+                              "relative overflow-hidden rounded-2xl p-4 border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs",
+                              isLive
+                                ? "border-rose-300/90 bg-gradient-to-r from-rose-50/50 via-white to-rose-50/30"
+                                : isCompleted
+                                ? "border-gray-200/80 bg-white hover:border-gray-300"
+                                : "border-gray-200/60 bg-[#FAFAFA]"
+                            )}
                           >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md shrink-0">
+                            {/* Accent Bar on Left */}
+                            {isLive && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500" />
+                            )}
+                            {isCompleted && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#00D06C]" />
+                            )}
+
+                            <div className="flex items-center gap-3 min-w-0 pl-1.5">
+                              <span
+                                className={cn(
+                                  "text-[11px] font-bold px-2 py-0.5 rounded-md shrink-0",
+                                  isLive
+                                    ? "bg-rose-100 text-rose-700"
+                                    : "bg-gray-100 text-gray-500"
+                                )}
+                              >
                                 GW {fixture.gameweek}
                               </span>
 
@@ -564,8 +592,23 @@ export function TeamDetailModal({
                               <div className="text-right">
                                 {fixture.teamScore !== null &&
                                 fixture.opponentScore !== null ? (
-                                  <div className="font-mono font-black text-sm text-gray-900">
-                                    {fixture.teamScore} - {fixture.opponentScore}
+                                  <div>
+                                    <div
+                                      className={cn(
+                                        "font-mono font-black text-sm",
+                                        isLive ? "text-rose-600" : "text-gray-900"
+                                      )}
+                                    >
+                                      {fixture.teamScore} - {fixture.opponentScore}
+                                    </div>
+                                    <div
+                                      className={cn(
+                                        "text-[9px] font-bold uppercase tracking-wider",
+                                        isLive ? "text-rose-500" : "text-gray-400"
+                                      )}
+                                    >
+                                      {isLive ? "Live" : "FT"}
+                                    </div>
                                   </div>
                                 ) : (
                                   <div className="text-xs font-bold text-gray-400">
@@ -574,21 +617,28 @@ export function TeamDetailModal({
                                 )}
                               </div>
 
-                              {/* Outcome badge */}
-                              <span
-                                className={cn(
-                                  "text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
-                                  fixture.result === "WIN"
-                                    ? "bg-emerald-100 text-emerald-800"
-                                    : fixture.result === "LOSS"
-                                    ? "bg-rose-100 text-rose-800"
-                                    : fixture.result === "DRAW"
-                                    ? "bg-amber-100 text-amber-800"
-                                    : "bg-gray-100 text-gray-600"
-                                )}
-                              >
-                                {fixture.result}
-                              </span>
+                              {/* Status / Outcome badge */}
+                              {isLive ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider bg-rose-500 text-white animate-pulse">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
+                                  LIVE
+                                </span>
+                              ) : (
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider",
+                                    fixture.result === "WIN"
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : fixture.result === "LOSS"
+                                      ? "bg-rose-100 text-rose-800"
+                                      : fixture.result === "DRAW"
+                                      ? "bg-amber-100 text-amber-800"
+                                      : "bg-gray-100 text-gray-600"
+                                  )}
+                                >
+                                  {fixture.result}
+                                </span>
+                              )}
 
                               {/* Match Link */}
                               <Link

@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { FantasyTeamModal } from "@/components/fantasy-team-modal";
+import { cn } from "@/lib/utils";
 
 export interface MatchSquadMember {
   id: string;
@@ -1084,24 +1085,56 @@ export function MatchDetailView({
                   {sisterMatches.map((sm) => {
                     const smHasScore =
                       sm.homeScore !== null && sm.awayScore !== null;
+                    const isSmLive =
+                      sm.status === "IN_PROGRESS" || sm.status === "LIVE";
+                    const isSmCompleted =
+                      sm.status === "COMPLETED" || sm.status === "FINALIZED";
                     return (
                       <Link
                         key={sm.id}
                         href={`/matches/${sm.id}`}
-                        className={`p-3.5 rounded-xl border flex items-center justify-between transition-all ${
+                        className={cn(
+                          "relative overflow-hidden p-3.5 rounded-xl border flex items-center justify-between transition-all",
                           sm.isCurrent
-                            ? "border-emerald-500 bg-emerald-50/30 ring-2 ring-emerald-500/20"
-                            : "border-gray-200/80 bg-gray-50/50 hover:bg-white hover:border-gray-300"
-                        }`}
+                            ? "border-emerald-500 bg-emerald-50/30 ring-2 ring-emerald-500/20 shadow-2xs"
+                            : isSmLive
+                            ? "border-rose-300/80 bg-rose-50/40 hover:border-rose-400 shadow-2xs"
+                            : isSmCompleted
+                            ? "border-gray-200/80 bg-white hover:border-gray-300 shadow-2xs"
+                            : "border-gray-200/60 bg-gray-50/50 hover:bg-white hover:border-gray-300"
+                        )}
                       >
-                        <div className="flex items-center gap-2 flex-1 truncate">
+                        {isSmLive && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500" />
+                        )}
+                        {isSmCompleted && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#00D06C]" />
+                        )}
+
+                        <div className="flex items-center gap-2 flex-1 truncate pl-1">
                           <span className="font-bold text-xs text-gray-900 truncate">
                             {sm.homeName}
                           </span>
                         </div>
 
-                        <div className="px-2.5 py-1 rounded bg-white border border-gray-200 text-xs font-black text-gray-900 mx-2 shrink-0">
-                          {smHasScore ? `${sm.homeScore} - ${sm.awayScore}` : "VS"}
+                        <div
+                          className={cn(
+                            "px-2.5 py-1 rounded text-xs font-black mx-2 shrink-0 flex items-center gap-1.5",
+                            isSmLive
+                              ? "bg-rose-100/90 text-rose-800 border border-rose-200/80"
+                              : isSmCompleted
+                              ? "bg-[#37003C] text-white shadow-2xs"
+                              : "bg-white border border-gray-200 text-gray-900"
+                          )}
+                        >
+                          {isSmLive && (
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-ping" />
+                          )}
+                          <span>
+                            {smHasScore
+                              ? `${Math.round(sm.homeScore!)} - ${Math.round(sm.awayScore!)}`
+                              : "VS"}
+                          </span>
                         </div>
 
                         <div className="flex items-center gap-2 flex-1 justify-end truncate">

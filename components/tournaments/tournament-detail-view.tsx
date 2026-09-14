@@ -43,6 +43,7 @@ import {
 } from "./team-detail-modal";
 
 export type { TeamDirectoryItem, TeamMemberItem, TeamFixtureItem };
+import { cn } from "@/lib/utils";
 
 export interface TeamStandingItem {
   rank: number;
@@ -588,17 +589,49 @@ export function TournamentDetailView({
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                       {rounds.map((r) => {
                         const isSelected = r.id === selectedRoundId;
+                        const isRoundLive = r.matches.some(
+                          (m) => m.status === "IN_PROGRESS" || m.status === "LIVE"
+                        );
+                        const isRoundComplete =
+                          r.matches.length > 0 &&
+                          r.matches.every(
+                            (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
+                          );
                         return (
                           <button
                             key={r.id}
                             onClick={() => setSelectedRoundId(r.id)}
-                            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                            className={cn(
+                              "px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5",
                               isSelected
                                 ? "bg-[#00D06C] text-white shadow-xs"
+                                : isRoundLive
+                                ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100/80"
                                 : "bg-gray-100/80 text-gray-600 hover:bg-gray-200/80"
-                            }`}
+                            )}
                           >
-                            {r.name || `Round ${r.roundNumber}`}
+                            {isRoundLive && (
+                              <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                <span
+                                  className={cn(
+                                    "relative inline-flex rounded-full h-1.5 w-1.5",
+                                    isSelected ? "bg-white" : "bg-rose-500"
+                                  )}
+                                ></span>
+                              </span>
+                            )}
+                            <span>{r.name || `Round ${r.roundNumber}`}</span>
+                            {isRoundComplete && (
+                              <span
+                                className={cn(
+                                  "text-[10px]",
+                                  isSelected ? "text-white/80" : "text-emerald-600 font-bold"
+                                )}
+                              >
+                                ✓
+                              </span>
+                            )}
                           </button>
                         );
                       })}
@@ -631,17 +664,55 @@ export function TournamentDetailView({
                     {/* Match Rows */}
                     <div className="space-y-2.5">
                       {selectedRound.matches.map((match) => {
-                        const hasScore =
-                          match.homeScore !== null && match.awayScore !== null;
+                        const isLive =
+                          match.status === "IN_PROGRESS" || match.status === "LIVE";
+                        const isCompleted =
+                          match.status === "COMPLETED" || match.status === "FINALIZED";
+                        const isScheduled = !isLive && !isCompleted;
+
+                        const homeScore =
+                          match.homeScore !== null ? Math.round(match.homeScore) : null;
+                        const awayScore =
+                          match.awayScore !== null ? Math.round(match.awayScore) : null;
+                        const hasScore = homeScore !== null && awayScore !== null;
+
+                        const homeWon = isCompleted && hasScore && homeScore > awayScore;
+                        const awayWon = isCompleted && hasScore && awayScore > homeScore;
+                        const isDraw = isCompleted && hasScore && homeScore === awayScore;
+
                         return (
                           <Link
                             key={match.id}
                             href={`/matches/${match.id}`}
-                            className="rounded-xl border border-gray-100 bg-[#FCFCFD] hover:bg-white hover:border-gray-300 hover:shadow-xs p-3.5 sm:p-4 flex items-center justify-between transition-all group cursor-pointer"
+                            className={cn(
+                              "relative rounded-xl border p-3.5 sm:p-4 flex items-center justify-between transition-all group cursor-pointer overflow-hidden",
+                              isLive
+                                ? "border-rose-300/90 bg-gradient-to-r from-rose-50/70 via-white to-rose-50/40 hover:border-rose-400 hover:shadow-md shadow-2xs"
+                                : isCompleted
+                                ? "border-gray-200/90 bg-white hover:border-[#37003C]/30 hover:shadow-xs"
+                                : "border-gray-100 bg-[#FCFCFD] hover:bg-white hover:border-gray-300 hover:shadow-xs"
+                            )}
                           >
+                            {/* Accent Bar on Left */}
+                            {isLive && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-rose-500" />
+                            )}
+                            {isCompleted && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#00D06C]" />
+                            )}
+
                             {/* Home Team */}
-                            <div className="flex items-center justify-end gap-2.5 flex-1 min-w-0">
-                              <span className="font-bold text-sm text-gray-900 truncate text-right group-hover:text-[#37003C] transition-colors">
+                            <div className="flex items-center justify-end gap-2.5 flex-1 min-w-0 pl-1.5 sm:pl-2">
+                              <span
+                                className={cn(
+                                  "text-sm truncate text-right transition-colors",
+                                  homeWon
+                                    ? "font-black text-gray-900 group-hover:text-[#37003C]"
+                                    : awayWon
+                                    ? "font-medium text-gray-500 group-hover:text-gray-700"
+                                    : "font-bold text-gray-900 group-hover:text-[#37003C]"
+                                )}
+                              >
                                 {match.homeTeam.name}
                               </span>
                               {match.homeTeam.logo ? (
@@ -657,21 +728,47 @@ export function TournamentDetailView({
                               )}
                             </div>
 
-                            {/* Score Box */}
-                            <div className="mx-3 px-3 sm:px-4 py-1.5 rounded-lg bg-gray-100/90 text-center shrink-0 min-w-[75px] sm:min-w-[84px] group-hover:bg-[#37003C] group-hover:text-white transition-colors">
-                              {hasScore ? (
-                                <span className="font-black text-sm text-gray-900 group-hover:text-white tracking-wider">
-                                  {match.homeScore} - {match.awayScore}
+                            {/* Score / Status Center Box */}
+                            {isLive ? (
+                              <div className="mx-2 sm:mx-3 flex flex-col items-center gap-1 shrink-0">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500 text-[10px] font-black tracking-wider text-white uppercase shadow-2xs animate-pulse">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
+                                  LIVE
                                 </span>
-                              ) : (
-                                <span className="text-xs font-extrabold text-gray-500 group-hover:text-white uppercase tracking-wider">
-                                  VS
+                                <div className="px-3 sm:px-4 py-1 rounded-lg bg-rose-100/90 border border-rose-200/80 text-center min-w-[75px] sm:min-w-[84px] group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                                  <span className="font-black text-sm text-rose-800 group-hover:text-white tracking-wider">
+                                    {homeScore ?? 0} - {awayScore ?? 0}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : isCompleted ? (
+                              <div className="mx-2 sm:mx-3 flex flex-col items-center gap-1 shrink-0">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-[10px] font-black tracking-wider text-emerald-700 uppercase">
+                                  <CheckCircle2 className="h-2.5 w-2.5 text-emerald-600" />
+                                  FT
                                 </span>
-                              )}
-                            </div>
+                                <div className="px-3 sm:px-4 py-1 rounded-lg bg-[#37003C] text-white text-center min-w-[75px] sm:min-w-[84px] shadow-2xs group-hover:bg-[#5A0A63] transition-colors">
+                                  <span className="font-black text-sm text-white tracking-wider">
+                                    {homeScore} - {awayScore}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="mx-2 sm:mx-3 flex flex-col items-center gap-1 shrink-0">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-[10px] font-bold tracking-wider text-gray-500 uppercase">
+                                  <Clock className="h-2.5 w-2.5 text-gray-400" />
+                                  UPCOMING
+                                </span>
+                                <div className="px-3 sm:px-4 py-1 rounded-lg bg-gray-100/90 text-center min-w-[75px] sm:min-w-[84px] group-hover:bg-[#37003C] group-hover:text-white transition-colors">
+                                  <span className="text-xs font-extrabold text-gray-500 group-hover:text-white uppercase tracking-wider">
+                                    VS
+                                  </span>
+                                </div>
+                              </div>
+                            )}
 
                             {/* Away Team */}
-                            <div className="flex items-center justify-start gap-2.5 flex-1 min-w-0">
+                            <div className="flex items-center justify-start gap-2.5 flex-1 min-w-0 pr-1.5 sm:pr-2">
                               {match.awayTeam.logo ? (
                                 <img
                                   src={match.awayTeam.logo}
@@ -683,13 +780,31 @@ export function TournamentDetailView({
                                   {match.awayTeam.name.slice(0, 2).toUpperCase()}
                                 </div>
                               )}
-                              <span className="font-bold text-sm text-gray-900 truncate text-left group-hover:text-[#37003C] transition-colors">
+                              <span
+                                className={cn(
+                                  "text-sm truncate text-left transition-colors",
+                                  awayWon
+                                    ? "font-black text-gray-900 group-hover:text-[#37003C]"
+                                    : homeWon
+                                    ? "font-medium text-gray-500 group-hover:text-gray-700"
+                                    : "font-bold text-gray-900 group-hover:text-[#37003C]"
+                                )}
+                              >
                                 {match.awayTeam.name}
                               </span>
                             </div>
 
                             {/* Right Arrow */}
-                            <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-[#37003C] group-hover:translate-x-0.5 transition-all ml-2 shrink-0" />
+                            <ChevronRight
+                              className={cn(
+                                "h-4 w-4 transition-all ml-1 sm:ml-2 shrink-0 group-hover:translate-x-0.5",
+                                isLive
+                                  ? "text-rose-400 group-hover:text-rose-600"
+                                  : isCompleted
+                                  ? "text-emerald-500/80 group-hover:text-[#37003C]"
+                                  : "text-gray-400 group-hover:text-[#37003C]"
+                              )}
+                            />
                           </Link>
                         );
                       })}
@@ -1175,17 +1290,49 @@ export function TournamentDetailView({
               <div className="py-4 overflow-x-auto no-scrollbar flex items-center gap-2 border-b border-gray-100">
                 {rounds.map((r) => {
                   const isSelected = r.id === selectedRoundId;
+                  const isRoundLive = r.matches.some(
+                    (m) => m.status === "IN_PROGRESS" || m.status === "LIVE"
+                  );
+                  const isRoundComplete =
+                    r.matches.length > 0 &&
+                    r.matches.every(
+                      (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
+                    );
                   return (
                     <button
                       key={r.id}
                       onClick={() => setSelectedRoundId(r.id)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                      className={cn(
+                        "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5",
                         isSelected
                           ? "bg-[#00D06C] text-white shadow-xs"
+                          : isRoundLive
+                          ? "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100"
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                      }`}
+                      )}
                     >
-                      {r.name || `Round ${r.roundNumber}`} (GW {r.gameweek})
+                      {isRoundLive && (
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                          <span
+                            className={cn(
+                              "relative inline-flex rounded-full h-2 w-2",
+                              isSelected ? "bg-white" : "bg-rose-500"
+                            )}
+                          ></span>
+                        </span>
+                      )}
+                      <span>{r.name || `Round ${r.roundNumber}`} (GW {r.gameweek})</span>
+                      {isRoundComplete && (
+                        <span
+                          className={cn(
+                            "text-[10px]",
+                            isSelected ? "text-white/80" : "text-emerald-600 font-bold"
+                          )}
+                        >
+                          ✓
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -1205,72 +1352,190 @@ export function TournamentDetailView({
 
                   <div className="space-y-4">
                     {selectedRound.matches.map((match) => {
-                      const hasScore =
-                        match.homeScore !== null && match.awayScore !== null;
+                      const isLive =
+                        match.status === "IN_PROGRESS" || match.status === "LIVE";
+                      const isCompleted =
+                        match.status === "COMPLETED" || match.status === "FINALIZED";
+                      const isScheduled = !isLive && !isCompleted;
+
+                      const homeScore =
+                        match.homeScore !== null ? Math.round(match.homeScore) : null;
+                      const awayScore =
+                        match.awayScore !== null ? Math.round(match.awayScore) : null;
+                      const hasScore = homeScore !== null && awayScore !== null;
+
+                      const homeWon = isCompleted && hasScore && homeScore > awayScore;
+                      const awayWon = isCompleted && hasScore && awayScore > homeScore;
+                      const isDraw = isCompleted && hasScore && homeScore === awayScore;
+
                       return (
                         <div
                           key={match.id}
-                          className="rounded-2xl border border-gray-200/90 bg-white p-5 shadow-xs space-y-3"
+                          className={cn(
+                            "relative overflow-hidden rounded-2xl border p-5 sm:p-6 shadow-xs space-y-3.5 transition-all",
+                            isLive
+                              ? "border-rose-300/90 bg-gradient-to-r from-rose-50/50 via-white to-rose-50/30 shadow-sm"
+                              : isCompleted
+                              ? "border-gray-200/90 bg-white hover:border-gray-300"
+                              : "border-gray-200/70 bg-[#FAFAFA]"
+                          )}
                         >
+                          {/* Accent Bar on Left */}
+                          {isLive && (
+                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-rose-500" />
+                          )}
+                          {isCompleted && (
+                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#00D06C]" />
+                          )}
+
                           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             {/* Home Side */}
-                            <div className="flex items-center gap-3 flex-1 justify-center sm:justify-start">
+                            <div className="flex items-center gap-3 flex-1 justify-center sm:justify-start min-w-0 pl-1.5 sm:pl-2">
                               {match.homeTeam.logo ? (
                                 <img
                                   src={match.homeTeam.logo}
                                   alt={match.homeTeam.name}
-                                  className="h-9 w-9 object-contain"
+                                  className="h-10 w-10 object-contain shrink-0"
                                 />
                               ) : (
-                                <div className="h-9 w-9 rounded-full bg-[#37003C] text-white font-bold text-xs flex items-center justify-center">
+                                <div className="h-10 w-10 rounded-full bg-[#37003C] text-white font-bold text-xs flex items-center justify-center shrink-0">
                                   {match.homeTeam.name.slice(0, 2).toUpperCase()}
                                 </div>
                               )}
-                              <span className="font-extrabold text-base text-gray-900">
-                                {match.homeTeam.name}
-                              </span>
+                              <div className="min-w-0 text-center sm:text-left">
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      "text-base leading-tight truncate block",
+                                      homeWon
+                                        ? "font-black text-gray-900"
+                                        : awayWon
+                                        ? "font-semibold text-gray-500"
+                                        : "font-extrabold text-gray-900"
+                                    )}
+                                  >
+                                    {match.homeTeam.name}
+                                  </span>
+                                  {homeWon && (
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md shrink-0">
+                                      WINNER
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
 
-                            {/* Score Display */}
-                            <div className="text-center px-4 py-1.5 rounded-xl bg-gray-100 min-w-[90px]">
-                              {hasScore ? (
-                                <span className="font-black text-lg text-gray-900 tracking-widest">
-                                  {match.homeScore} - {match.awayScore}
+                            {/* Center Score Display */}
+                            {isLive ? (
+                              <div className="flex flex-col items-center gap-1.5 shrink-0">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500 px-3 py-0.5 text-[10px] font-black uppercase tracking-wider text-white shadow-2xs animate-pulse">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
+                                  LIVE MATCH
                                 </span>
-                              ) : (
-                                <span className="font-black text-xs text-gray-500 uppercase tracking-widest">
+                                <div className="text-center px-5 py-2 rounded-xl bg-rose-100/90 border border-rose-200/80 min-w-[100px] shadow-2xs">
+                                  <span className="font-black text-xl text-rose-800 tracking-widest">
+                                    {homeScore ?? 0} - {awayScore ?? 0}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-bold text-rose-600">Provisional Score</span>
+                              </div>
+                            ) : isCompleted ? (
+                              <div className="flex flex-col items-center gap-1.5 shrink-0">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-700">
+                                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                  FULL TIME
+                                </span>
+                                <div className="text-center px-5 py-2 rounded-xl bg-[#37003C] text-white min-w-[100px] shadow-2xs">
+                                  <span className="font-black text-xl text-white tracking-widest">
+                                    {homeScore} - {awayScore}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-semibold text-gray-500">Official Result</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col items-center gap-1.5 shrink-0">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 border border-gray-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                                  <Clock className="h-3 w-3 text-gray-400" />
                                   SCHEDULED
                                 </span>
-                              )}
-                            </div>
+                                <div className="text-center px-5 py-2 rounded-xl bg-white border border-gray-200 text-gray-500 min-w-[100px]">
+                                  <span className="font-black text-xs uppercase tracking-widest text-gray-500">
+                                    VS
+                                  </span>
+                                </div>
+                              </div>
+                            )}
 
                             {/* Away Side */}
-                            <div className="flex items-center gap-3 flex-1 justify-center sm:justify-end">
-                              <span className="font-extrabold text-base text-gray-900">
-                                {match.awayTeam.name}
-                              </span>
+                            <div className="flex items-center gap-3 flex-1 justify-center sm:justify-end min-w-0 pr-1.5 sm:pr-2">
+                              <div className="min-w-0 text-center sm:text-right">
+                                <div className="flex items-center justify-center sm:justify-end gap-2">
+                                  {awayWon && (
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-md shrink-0">
+                                      WINNER
+                                    </span>
+                                  )}
+                                  <span
+                                    className={cn(
+                                      "text-base leading-tight truncate block",
+                                      awayWon
+                                        ? "font-black text-gray-900"
+                                        : homeWon
+                                        ? "font-semibold text-gray-500"
+                                        : "font-extrabold text-gray-900"
+                                    )}
+                                  >
+                                    {match.awayTeam.name}
+                                  </span>
+                                </div>
+                              </div>
                               {match.awayTeam.logo ? (
                                 <img
                                   src={match.awayTeam.logo}
                                   alt={match.awayTeam.name}
-                                  className="h-9 w-9 object-contain"
+                                  className="h-10 w-10 object-contain shrink-0"
                                 />
                               ) : (
-                                <div className="h-9 w-9 rounded-full bg-[#37003C] text-white font-bold text-xs flex items-center justify-center">
+                                <div className="h-10 w-10 rounded-full bg-[#37003C] text-white font-bold text-xs flex items-center justify-center shrink-0">
                                   {match.awayTeam.name.slice(0, 2).toUpperCase()}
                                 </div>
                               )}
                             </div>
                           </div>
 
-                          {/* Match Action Link */}
-                          <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                            <span className="text-gray-400 font-medium">
-                              Match #{match.matchNumber} · {match.status}
-                            </span>
+                          {/* Match Action Link & Footer */}
+                          <div
+                            className={cn(
+                              "pt-3 border-t flex items-center justify-between text-xs",
+                              isLive ? "border-rose-100" : "border-gray-100"
+                            )}
+                          >
+                            {isLive ? (
+                              <span className="inline-flex items-center gap-1.5 font-bold text-rose-600">
+                                <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+                                Match #{match.matchNumber} · Live in Progress
+                              </span>
+                            ) : isCompleted ? (
+                              <span className="inline-flex items-center gap-1.5 font-bold text-gray-600">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                                Match #{match.matchNumber} · {match.status === "FINALIZED" ? "Finalized Result" : "Completed"}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 font-medium">
+                                Match #{match.matchNumber} · Scheduled
+                              </span>
+                            )}
+
                             <Link
                               href={`/matches/${match.id}`}
-                              className="font-bold text-[#00A855] hover:text-[#008f49] inline-flex items-center gap-1 transition-colors"
+                              className={cn(
+                                "font-bold inline-flex items-center gap-1 transition-colors",
+                                isLive
+                                  ? "text-rose-600 hover:text-rose-700"
+                                  : isCompleted
+                                  ? "text-[#00A855] hover:text-[#008f49]"
+                                  : "text-gray-500 hover:text-gray-900"
+                              )}
                             >
                               <span>View Squad Breakdown</span>
                               <ChevronRight className="h-3.5 w-3.5" />
