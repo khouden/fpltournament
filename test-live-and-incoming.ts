@@ -3,6 +3,8 @@ import { prisma } from "./lib/db";
 import {
   calculateMatchScore,
   recalculateTournamentScores,
+  calculateLeagueStandings,
+  checkTournamentLiveStatus,
 } from "./lib/scoring";
 import {
   getGameweekStatus,
@@ -178,6 +180,63 @@ async function runLiveAndIncomingTests() {
   );
   console.log("✅ TEST 6 PASSED: Finalizing not-started rounds is strictly blocked!\n");
 
+  // 7. Test calculateLeagueStandings counts IN_PROGRESS matches
+  console.log("--- 7. Testing Live League Standings (Counts IN_PROGRESS matches) ---");
+  // Set match 1 status to IN_PROGRESS with known scores
+  await prisma.match.update({
+    where: { id: match1.id },
+    data: {
+      status: "IN_PROGRESS",
+      homeScore: 65,
+      awayScore: 50,
+      result: "HOME_WIN",
+    },
+  });
+
+  const liveStandings = await calculateLeagueStandings(testTournament.id);
+  console.log("Live Standings results:");
+  liveStandings.forEach((s) => {
+    console.log(`  Rank ${s.rank}: ${s.groupName} - Played: ${s.played}, Won: ${s.won}, PTS: ${s.leaguePoints}, PF: ${s.pointsFor}`);
+  });
+
+  const alpha = liveStandings.find((s) => s.groupName === "Team Alpha");
+  const beta = liveStandings.find((s) => s.groupName === "Team Beta");
+  assert(alpha && alpha.played === 1, "Team Alpha must have played 1 match from live round");
+  assert(alpha.won === 1 && alpha.leaguePoints === 3, "Team Alpha must have 1 win and 3 PTS from live win");
+  assert(alpha.pointsFor === 65, "Team Alpha must have 65 PF from live match");
+  assert(beta && beta.played === 1, "Team Beta must have played 1 match from live round");
+  assert(beta.lost === 1 && beta.leaguePoints === 0, "Team Beta must have 1 loss and 0 PTS from live loss");
+  console.log("✅ TEST 7 PASSED: League standings successfully compute in-progress live matches!\n");
+
+  // 8. Test checkTournamentLiveStatus detection
+  console.log("--- 8. Testing checkTournamentLiveStatus Detection ---");
+  const tournamentRounds = await prisma.round.findMany({
+    where: { tournamentId: testTournament.id },
+    include: { matches: true },
+  });
+
+  const liveStatus = await checkTournamentLiveStatus(tournamentRounds);
+  console.log("Tournament live status with IN_PROGRESS match:", liveStatus);
+  assert(liveStatus.isLive === true, "Tournament must be detected as LIVE when match is IN_PROGRESS");
+  assert(liveStatus.liveGameweek === 5, "Live gameweek should be 5");
+
+  // When all matches are completed and FPL is not live, isLive must be false
+  await prisma.match.update({
+    where: { id: match1.id },
+    data: { status: "COMPLETED" },
+  });
+  const updatedRounds = await prisma.round.findMany({
+    where: { tournamentId: testTournament.id },
+    include: { matches: true },
+  });
+  setSimulatedGameweekStatus(20, "UPCOMING");
+  setSimulatedGameweekStatus(35, "UPCOMING");
+  // Round 1 is completed, Rounds 2 & 3 are upcoming
+  const completedLiveStatus = await checkTournamentLiveStatus(updatedRounds);
+  console.log("Tournament live status when no round is active/live:", completedLiveStatus);
+  assert(completedLiveStatus.isLive === false, "Tournament must not be LIVE when no matches are IN_PROGRESS and gameweek is not live");
+  console.log("✅ TEST 8 PASSED: checkTournamentLiveStatus accurately detects live tournament state!\n");
+
   // Clean up
   clearSimulatedGameweekStatuses();
   await prisma.matchMemberScore.deleteMany({ where: { match: { round: { tournamentId: testTournament.id } } } });
@@ -188,7 +247,7 @@ async function runLiveAndIncomingTests() {
   await prisma.tournament.delete({ where: { id: testTournament.id } });
 
   console.log("==================================================");
-  console.log("ALL LIVE & INCOMING TESTS PASSED (6/6) 🎉");
+  console.log("ALL LIVE & INCOMING TESTS PASSED (8/8) 🎉");
   console.log("==================================================");
 }
 

@@ -125,6 +125,8 @@ export interface TournamentDetailViewProps {
   rounds: RoundItem[];
   teams: TeamDirectoryItem[];
   initialTab?: "overview" | "standings" | "fixtures" | "teams";
+  isLive?: boolean;
+  liveGameweek?: number;
 }
 
 export function TournamentDetailView({
@@ -133,6 +135,8 @@ export function TournamentDetailView({
   rounds,
   teams,
   initialTab = "overview",
+  isLive = false,
+  liveGameweek,
 }: TournamentDetailViewProps) {
   const [activeTab, setActiveTab] = useState<
     "overview" | "standings" | "fixtures" | "teams"
@@ -336,6 +340,12 @@ export function TournamentDetailView({
             >
               <Trophy className="h-4 w-4" />
               <span>Standings</span>
+              {isLive && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 border border-rose-200 px-1.5 py-0.5 text-[9px] font-black uppercase text-rose-600 shadow-2xs">
+                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  LIVE
+                </span>
+              )}
             </button>
 
             {/* Fixtures & Results Tab */}
@@ -384,11 +394,17 @@ export function TournamentDetailView({
               <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 sm:p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between pb-5 border-b border-gray-100">
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 flex-wrap">
                     <Trophy className="h-5 w-5 text-[#37003C]" />
                     <h2 className="text-lg sm:text-xl font-extrabold text-gray-900 tracking-tight">
                       League Standings
                     </h2>
+                    {isLive && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/90 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-rose-600 shadow-2xs">
+                        <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+                        LIVE
+                      </span>
+                    )}
                   </div>
                   <button
                     onClick={() => setActiveTab("standings")}
@@ -398,6 +414,18 @@ export function TournamentDetailView({
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                   </button>
                 </div>
+
+                {isLive && (
+                  <div className="mt-3.5 mb-2 px-3.5 py-2 rounded-xl bg-rose-50/80 border border-rose-200/80 flex items-center justify-between text-xs text-rose-900">
+                    <span className="inline-flex items-center gap-2 font-bold">
+                      <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                      <span>Live Standings · Calculated with current Gameweek {liveGameweek ? `${liveGameweek} ` : ""}scores</span>
+                    </span>
+                    <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider hidden sm:inline">
+                      Provisional Table
+                    </span>
+                  </div>
+                )}
 
                 {/* Standings Table */}
                 {standings.length === 0 ? (
@@ -1109,19 +1137,49 @@ export function TournamentDetailView({
           <div className="bg-white rounded-2xl border border-gray-200/90 shadow-xs p-5 sm:p-7 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100">
               <div>
-                <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">
-                  <Trophy className="h-6 w-6 text-[#FFD700]" />
-                  <span>Full League Standings</span>
-                </h2>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">
+                    <Trophy className="h-6 w-6 text-[#FFD700]" />
+                    <span>Full League Standings</span>
+                  </h2>
+                  {isLive && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 border border-rose-200/90 px-3 py-1 text-xs font-black uppercase tracking-wider text-rose-600 shadow-2xs">
+                      <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+                      LIVE
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 font-medium mt-1">
-                  Complete head-to-head table with points, goals difference, and recent form
+                  {isLive
+                    ? `Live table calculating active Gameweek ${liveGameweek ? `${liveGameweek} ` : ""}matches · Points, goal difference, and rankings update dynamically`
+                    : "Complete head-to-head table with points, goals difference, and recent form"}
                 </p>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>+3 Win · +1 Draw · 0 Loss</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {isLive && (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">
+                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                    <span>Live Matches Included</span>
+                  </div>
+                )}
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>+3 Win · +1 Draw · 0 Loss</span>
+                </div>
               </div>
             </div>
+
+            {isLive && (
+              <div className="px-4 py-2.5 rounded-xl bg-rose-50/70 border border-rose-200/80 flex items-center justify-between text-xs text-rose-900">
+                <span className="inline-flex items-center gap-2 font-bold">
+                  <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                  <span>Gameweek {liveGameweek ? `${liveGameweek} ` : ""}matches are currently in progress. Table rankings reflect live provisional scores.</span>
+                </span>
+                <span className="text-[11px] font-bold text-rose-600 uppercase tracking-wider hidden sm:inline">
+                  Live Updates
+                </span>
+              </div>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[750px]">

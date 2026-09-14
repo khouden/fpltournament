@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { calculateLeagueStandings } from "@/lib/scoring";
+import { calculateLeagueStandings, checkTournamentLiveStatus } from "@/lib/scoring";
 import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import { Header } from "@/components/navigation/header";
 import { Footer } from "@/components/layout/footer";
@@ -70,6 +70,9 @@ export default async function TournamentPage(
   const initialTab =
     (searchParams?.tab as "overview" | "standings" | "fixtures" | "teams") ||
     "overview";
+
+  // Calculate live tournament status (round matches not completed yet / FPL gameweek live)
+  const liveInfo = await checkTournamentLiveStatus(tournament.rounds);
 
   // Calculate live league standings (+3 Win, +1 Draw, 0 Loss)
   const standings = await calculateLeagueStandings(tournament.id);
@@ -423,6 +426,8 @@ export default async function TournamentPage(
           standings={formattedStandings}
           rounds={formattedRounds}
           teams={formattedTeams}
+          isLive={liveInfo.isLive}
+          liveGameweek={liveInfo.liveGameweek}
         />
       </main>
 

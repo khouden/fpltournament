@@ -751,11 +751,14 @@ export function computeStandingsFromData(
     });
   }
 
-  // Iterate chronologically through all completed or finalized matches
+  // Iterate chronologically through all completed, finalized, and live/in-progress matches
   for (const round of rounds) {
     for (const match of round.matches) {
       if (
-        (match.status === "COMPLETED" || match.status === "FINALIZED") &&
+        (match.status === "COMPLETED" ||
+          match.status === "FINALIZED" ||
+          match.status === "IN_PROGRESS" ||
+          match.status === "LIVE") &&
         match.homeGroupId &&
         match.awayGroupId &&
         match.homeScore !== null &&
@@ -776,21 +779,29 @@ export function computeStandingsFromData(
           away.pointsAgainst += match.homeScore;
           away.pointsDiff = away.pointsFor - away.pointsAgainst;
 
-          if (match.result === "HOME_WIN") {
+          const matchResult =
+            match.result ||
+            (match.homeScore > match.awayScore
+              ? "HOME_WIN"
+              : match.awayScore > match.homeScore
+              ? "AWAY_WIN"
+              : "DRAW");
+
+          if (matchResult === "HOME_WIN") {
             home.won += 1;
             home.leaguePoints += 3;
             home.form.push("W");
 
             away.lost += 1;
             away.form.push("L");
-          } else if (match.result === "AWAY_WIN") {
+          } else if (matchResult === "AWAY_WIN") {
             away.won += 1;
             away.leaguePoints += 3;
             away.form.push("W");
 
             home.lost += 1;
             home.form.push("L");
-          } else if (match.result === "DRAW") {
+          } else if (matchResult === "DRAW") {
             home.drawn += 1;
             home.leaguePoints += 1;
             home.form.push("D");
@@ -826,6 +837,76 @@ export function computeStandingsFromData(
     ...item,
     rank: index + 1,
   }));
+}
+
+/**
+ * Information describing whether a tournament currently has live matches or an active FPL round.
+ */
+export interface TournamentLiveInfo {
+  isLive: boolean;
+  liveRoundNumber?: number;
+  liveGameweek?: number;
+  liveRoundId?: string;
+  liveMatchCount?: number;
+}
+
+/**
+ * Evaluates whether a tournament is currently live:
+ * 1. Has matches explicitly marked IN_PROGRESS or LIVE.
+ * 2. Or the current round's Fantasy Premier League gameweek has started / is LIVE and matches are not yet all completed.
+ */
+export async function checkTournamentLiveStatus(
+  rounds: Array<{
+    id: string;
+    roundNumber: number;
+    gameweek: number;
+    matches: Array<{ status: string }>;
+  }>
+): Promise<TournamentLiveInfo> {
+  // 1. Check if any round currently has IN_PROGRESS or LIVE matches
+  for (const round of rounds) {
+    const liveMatches = round.matches.filter(
+      (m) => m.status === "IN_PROGRESS" || m.status === "LIVE"
+    );
+    if (liveMatches.length > 0) {
+      return {
+        isLive: true,
+        liveRoundNumber: round.roundNumber,
+        liveGameweek: round.gameweek,
+        liveRoundId: round.id,
+        liveMatchCount: liveMatches.length,
+      };
+    }
+  }
+
+  // 2. Check if there is an active round where FPL matches are not completed yet
+  // i.e., gameweek is LIVE in FPL and the round's matches are not all completed/finalized
+  for (const round of rounds) {
+    const allMatchesDone =
+      round.matches.length > 0 &&
+      round.matches.every(
+        (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
+      );
+
+    if (!allMatchesDone && round.matches.length > 0) {
+      try {
+        const gwStatus = await getGameweekStatus(round.gameweek);
+        if (gwStatus.status === "LIVE") {
+          return {
+            isLive: true,
+            liveRoundNumber: round.roundNumber,
+            liveGameweek: round.gameweek,
+            liveRoundId: round.id,
+            liveMatchCount: round.matches.length,
+          };
+        }
+      } catch {
+        // Continue fallback
+      }
+    }
+  }
+
+  return { isLive: false };
 }
 
 /**
