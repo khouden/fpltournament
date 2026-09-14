@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useTransition, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import {
   createRoundAction,
   deleteRoundAction,
@@ -114,12 +115,33 @@ export interface ScheduleBuilderProps {
   groups: Group[];
 }
 
+function subscribeToStorage(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", callback);
+  window.addEventListener("fpl_collapsed_rounds_change", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("fpl_collapsed_rounds_change", callback);
+  };
+}
+
 export function ScheduleBuilder({
   tournamentId,
   initialRounds,
   groups,
 }: ScheduleBuilderProps) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+
+  const [prevInitialRounds, setPrevInitialRounds] = useState(initialRounds);
   const [rounds, setRounds] = useState<Round[]>(initialRounds);
+
+  // Sync internal rounds when initialRounds prop changes from server refresh
+  if (initialRounds !== prevInitialRounds) {
+    setPrevInitialRounds(initialRounds);
+    setRounds(initialRounds);
+  }
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState<string | null>(null);
@@ -169,16 +191,65 @@ export function ScheduleBuilder({
     round: Round;
   } | null>(null);
 
-  // Collapsed rounds tracking
-  const [collapsedRounds, setCollapsedRounds] = useState<Record<string, boolean>>(
-    {}
+  // Collapsed rounds tracking - persisted per tournament in localStorage via useSyncExternalStore
+  const storageKey = `fpl_tournament_${tournamentId}_collapsed_rounds`;
+  const collapsedSnapshot = useSyncExternalStore(
+    subscribeToStorage,
+    () =>
+      typeof window !== "undefined"
+        ? localStorage.getItem(storageKey) || "{}"
+        : "{}",
+    () => "{}"
   );
 
+  const collapsedRounds = useMemo<Record<string, boolean>>(() => {
+    try {
+      const parsed = JSON.parse(collapsedSnapshot);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }, [collapsedSnapshot]);
+
+  const updateStoredCollapsed = (next: Record<string, boolean>) => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(next));
+      window.dispatchEvent(new Event("fpl_collapsed_rounds_change"));
+    } catch (e) {
+      console.error("Failed to save collapsed rounds to localStorage", e);
+    }
+  };
+
   const toggleRoundCollapse = (roundId: string) => {
-    setCollapsedRounds((prev) => ({
-      ...prev,
-      [roundId]: !prev[roundId],
-    }));
+    const isCurrentlyCollapsed = !!collapsedRounds[roundId];
+    if (isCurrentlyCollapsed) {
+      // Expanding this round: minimize all other rounds to focus on this one
+      const next: Record<string, boolean> = {};
+      rounds.forEach((r) => {
+        next[r.id] = true;
+      });
+      next[roundId] = false;
+      updateStoredCollapsed(next);
+    } else {
+      // Minimizing this round
+      const next = {
+        ...collapsedRounds,
+        [roundId]: true,
+      };
+      updateStoredCollapsed(next);
+    }
+  };
+
+  const collapseAllRounds = () => {
+    const next: Record<string, boolean> = {};
+    rounds.forEach((r) => {
+      next[r.id] = true;
+    });
+    updateStoredCollapsed(next);
+  };
+
+  const expandAllRounds = () => {
+    updateStoredCollapsed({});
   };
 
   const groupById = (id: string | null): Group | undefined => {
@@ -238,7 +309,10 @@ export function ScheduleBuilder({
     if (result.success) {
       showMsg(result.message || "Round-robin schedule generated successfully!");
       setShowAutoGenerate(false);
-      window.location.reload();
+      updateStoredCollapsed({});
+      startTransition(() => {
+        router.refresh();
+      });
     } else {
       setError(result.error || "Failed to generate schedule");
     }
@@ -267,11 +341,26 @@ export function ScheduleBuilder({
       nextRoundNumber
     );
     if (result.success && result.round) {
-      setRounds((prev) => [
-        ...prev,
-        { ...result.round!, matches: [] } as Round,
-      ]);
+      const newRound = { ...result.round!, matches: [] } as Round;
+      setRounds((prev) => [...prev, newRound]);
+
+      // Minimize other rounds by default to focus on the newly created round
+      const nextCollapsed: Record<string, boolean> = {};
+      rounds.forEach((r) => {
+        nextCollapsed[r.id] = true;
+      });
+      nextCollapsed[newRound.id] = false;
+      updateStoredCollapsed(nextCollapsed);
+
       showMsg(`${roundName} created successfully`);
+
+      // Smoothly scroll to the newly created round card
+      setTimeout(() => {
+        const el = document.getElementById(`round-${newRound.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 100);
     } else {
       setError(result.error || "Failed to create round");
     }
@@ -288,6 +377,9 @@ export function ScheduleBuilder({
     const result = await deleteRoundAction(id, tournamentId);
     if (result.success) {
       setRounds((prev) => prev.filter((r) => r.id !== id));
+      const next = { ...collapsedRounds };
+      delete next[id];
+      updateStoredCollapsed(next);
       showMsg("Round and fixtures deleted successfully");
     } else {
       setError(result.error || "Failed to delete round");
@@ -377,7 +469,9 @@ export function ScheduleBuilder({
     const result = await recalculateMatchAction(matchId, tournamentId);
     if (result.success) {
       showMsg("Match scores calculated from official FPL data!");
-      window.location.reload();
+      startTransition(() => {
+        router.refresh();
+      });
     } else {
       if (result.isDeadline) {
         setIsDeadlineActive(true);
@@ -396,7 +490,9 @@ export function ScheduleBuilder({
     const result = await finalizeMatchAction(matchId, tournamentId);
     if (result.success) {
       showMsg("Match result finalized and locked!");
-      window.location.reload();
+      startTransition(() => {
+        router.refresh();
+      });
     } else {
       setError(result.error || "Failed to finalize match");
     }
@@ -418,7 +514,9 @@ export function ScheduleBuilder({
     const result = await recalculateRoundScoresAction(roundId, tournamentId);
     if (result.success) {
       showMsg(`${roundName} scores recalculated from official FPL data!`);
-      window.location.reload();
+      startTransition(() => {
+        router.refresh();
+      });
     } else {
       if (result.isDeadline) {
         setIsDeadlineActive(true);
@@ -448,7 +546,9 @@ export function ScheduleBuilder({
           ? `${result.count} active match score(s) updated from official FPL data!`
           : "All eligible match scores recalculated successfully!"
       );
-      window.location.reload();
+      startTransition(() => {
+        router.refresh();
+      });
     } else {
       if (result.isDeadline) {
         setIsDeadlineActive(true);
@@ -828,16 +928,43 @@ export function ScheduleBuilder({
 
       {/* 6. Rounds & Fixtures List */}
       <section aria-label="Rounds & Fixtures" className="space-y-4 sm:space-y-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Layers className="h-5 w-5 text-[#37003C]" />
             <h2 className="text-lg sm:text-xl font-extrabold text-[#1F1F1F] tracking-tight">
               Rounds &amp; Fixtures
             </h2>
           </div>
-          <span className="text-xs font-semibold text-[#777777]">
-            {rounds.length} {rounds.length === 1 ? "Round" : "Rounds"}
-          </span>
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs font-semibold text-[#777777]">
+              {rounds.length} {rounds.length === 1 ? "Round" : "Rounds"}
+            </span>
+            {rounds.length > 1 && (
+              <div className="flex items-center gap-1 pl-2 border-l border-gray-200">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={collapseAllRounds}
+                  className="h-7 px-2 text-[11px] font-semibold text-[#555555] hover:text-[#37003C] hover:bg-[#37003C]/5 rounded-[6px] cursor-pointer"
+                  title="Minimize all round cards"
+                >
+                  Collapse All
+                </Button>
+                <span className="text-gray-300 text-xs">·</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={expandAllRounds}
+                  className="h-7 px-2 text-[11px] font-semibold text-[#555555] hover:text-[#37003C] hover:bg-[#37003C]/5 rounded-[6px] cursor-pointer"
+                  title="Expand all round cards"
+                >
+                  Expand All
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
         {rounds.length === 0 ? (
@@ -886,15 +1013,20 @@ export function ScheduleBuilder({
               return (
                 <Card
                   key={round.id}
-                  className="border border-[#E5E5E5] bg-white shadow-fpl-sm overflow-hidden rounded-[14px]"
+                  id={`round-${round.id}`}
+                  className="border border-[#E5E5E5] bg-white shadow-fpl-sm overflow-hidden rounded-[14px] scroll-mt-20"
                 >
                   {/* Round Header */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E5E5E5] bg-[#FBFBFB] px-4 py-3 sm:px-5 sm:py-3.5">
+                  <div
+                    className={`flex flex-wrap items-center justify-between gap-3 bg-[#FBFBFB] px-4 py-3 sm:px-5 sm:py-3.5 transition-colors ${
+                      isCollapsed ? "" : "border-b border-[#E5E5E5]"
+                    }`}
+                  >
                     <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                       <button
                         type="button"
                         onClick={() => toggleRoundCollapse(round.id)}
-                        className="text-[#777777] hover:text-[#1F1F1F] p-0.5 rounded transition-colors"
+                        className="text-[#777777] hover:text-[#1F1F1F] p-1 rounded hover:bg-gray-200/60 transition-colors cursor-pointer"
                         aria-label={
                           isCollapsed
                             ? `Expand ${round.name || `Round ${round.roundNumber}`}`
@@ -908,9 +1040,13 @@ export function ScheduleBuilder({
                         )}
                       </button>
 
-                      <div className="space-y-0.5">
+                      <div
+                        className="space-y-0.5 cursor-pointer select-none"
+                        onClick={() => toggleRoundCollapse(round.id)}
+                        title={isCollapsed ? "Click to expand round" : "Click to minimize round"}
+                      >
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-extrabold text-[#1F1F1F] text-sm sm:text-base leading-tight">
+                          <h3 className="font-extrabold text-[#1F1F1F] text-sm sm:text-base leading-tight hover:text-[#37003C] transition-colors">
                             {round.name || `Round ${round.roundNumber}`}
                           </h3>
                           <span className="inline-flex items-center text-[10px] font-extrabold px-2 py-0.5 rounded-[4px] bg-[#37003C]/10 text-[#37003C]">
@@ -1693,7 +1829,9 @@ export function ScheduleBuilder({
           }
           onScoresSaved={() => {
             showMsg("Scores saved successfully!");
-            window.location.reload();
+            startTransition(() => {
+              router.refresh();
+            });
           }}
         />
       )}
