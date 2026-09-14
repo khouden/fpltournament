@@ -21,6 +21,7 @@ import {
   type MatchGroupData,
   type MatchScoreData,
 } from "./manual-match-score-modal";
+import { SearchableTeamSelect } from "@/components/searchable-team-select";
 import {
   Zap,
   CheckCircle2,
@@ -1122,32 +1123,21 @@ export function ScheduleBuilder({
 
                                       {/* Dropdown selector for unplayed or display with logo */}
                                       <div className="w-full max-w-[240px]">
-                                        <select
+                                        <SearchableTeamSelect
                                           value={match.homeGroupId || ""}
-                                          onChange={(e) =>
+                                          onChange={(val) =>
                                             handleUpdateMatch(
                                               match.id,
                                               "home",
-                                              e.target.value
+                                              val
                                             )
                                           }
+                                          groups={groups}
                                           disabled={isFinalized}
-                                          className={`w-full rounded-[8px] border px-3 py-1.5 text-xs sm:text-sm font-semibold text-[#1F1F1F] bg-white transition-colors focus:outline-none focus:ring-1 focus:ring-[#37003C] ${
-                                            isFinalized
-                                              ? "border-transparent bg-transparent cursor-default font-bold"
-                                              : "border-[#E5E5E5] hover:border-[#37003C]/40"
-                                          }`}
-                                          aria-label={`Select home group for match ${match.matchNumber}`}
-                                        >
-                                          <option value="">
-                                            Select Home Group...
-                                          </option>
-                                          {groups.map((g) => (
-                                            <option key={g.id} value={g.id}>
-                                              {g.name}
-                                            </option>
-                                          ))}
-                                        </select>
+                                          placeholder="Select Home Group..."
+                                          ariaLabel={`Select home group for match ${match.matchNumber}`}
+                                          align="right"
+                                        />
                                       </div>
 
                                       {homeGroup?.logo ? (
@@ -1236,32 +1226,21 @@ export function ScheduleBuilder({
                                       )}
 
                                       <div className="w-full max-w-[240px]">
-                                        <select
+                                        <SearchableTeamSelect
                                           value={match.awayGroupId || ""}
-                                          onChange={(e) =>
+                                          onChange={(val) =>
                                             handleUpdateMatch(
                                               match.id,
                                               "away",
-                                              e.target.value
+                                              val
                                             )
                                           }
+                                          groups={groups}
                                           disabled={isFinalized}
-                                          className={`w-full rounded-[8px] border px-3 py-1.5 text-xs sm:text-sm font-semibold text-[#1F1F1F] bg-white transition-colors focus:outline-none focus:ring-1 focus:ring-[#37003C] ${
-                                            isFinalized
-                                              ? "border-transparent bg-transparent cursor-default font-bold"
-                                              : "border-[#E5E5E5] hover:border-[#37003C]/40"
-                                          }`}
-                                          aria-label={`Select away group for match ${match.matchNumber}`}
-                                        >
-                                          <option value="">
-                                            Select Away Group...
-                                          </option>
-                                          {groups.map((g) => (
-                                            <option key={g.id} value={g.id}>
-                                              {g.name}
-                                            </option>
-                                          ))}
-                                        </select>
+                                          placeholder="Select Away Group..."
+                                          ariaLabel={`Select away group for match ${match.matchNumber}`}
+                                          align="left"
+                                        />
                                       </div>
 
                                       {match.awayGroupId && (
@@ -1290,27 +1269,22 @@ export function ScheduleBuilder({
                                             className="h-6 w-6 object-contain shrink-0"
                                           />
                                         )}
-                                        <select
-                                          value={match.homeGroupId || ""}
-                                          onChange={(e) =>
-                                            handleUpdateMatch(
-                                              match.id,
-                                              "home",
-                                              e.target.value
-                                            )
-                                          }
-                                          disabled={isFinalized}
-                                          className="w-full rounded-[8px] border border-[#E5E5E5] bg-white px-3 py-1.5 text-xs font-semibold text-[#1F1F1F]"
-                                        >
-                                          <option value="">
-                                            Select Home Group...
-                                          </option>
-                                          {groups.map((g) => (
-                                            <option key={g.id} value={g.id}>
-                                              {g.name}
-                                            </option>
-                                          ))}
-                                        </select>
+                                        <div className="w-full">
+                                          <SearchableTeamSelect
+                                            value={match.homeGroupId || ""}
+                                            onChange={(val) =>
+                                              handleUpdateMatch(
+                                                match.id,
+                                                "home",
+                                                val
+                                              )
+                                            }
+                                            groups={groups}
+                                            disabled={isFinalized}
+                                            placeholder="Select Home Group..."
+                                            ariaLabel={`Select home group for match ${match.matchNumber}`}
+                                          />
+                                        </div>
                                       </div>
                                     </div>
 
@@ -1364,27 +1338,22 @@ export function ScheduleBuilder({
                                             className="h-6 w-6 object-contain shrink-0"
                                           />
                                         )}
-                                        <select
-                                          value={match.awayGroupId || ""}
-                                          onChange={(e) =>
-                                            handleUpdateMatch(
-                                              match.id,
-                                              "away",
-                                              e.target.value
-                                            )
-                                          }
-                                          disabled={isFinalized}
-                                          className="w-full rounded-[8px] border border-[#E5E5E5] bg-white px-3 py-1.5 text-xs font-semibold text-[#1F1F1F]"
-                                        >
-                                          <option value="">
-                                            Select Away Group...
-                                          </option>
-                                          {groups.map((g) => (
-                                            <option key={g.id} value={g.id}>
-                                              {g.name}
-                                            </option>
-                                          ))}
-                                        </select>
+                                        <div className="w-full">
+                                          <SearchableTeamSelect
+                                            value={match.awayGroupId || ""}
+                                            onChange={(val) =>
+                                              handleUpdateMatch(
+                                                match.id,
+                                                "away",
+                                                val
+                                              )
+                                            }
+                                            groups={groups}
+                                            disabled={isFinalized}
+                                            placeholder="Select Away Group..."
+                                            ariaLabel={`Select away group for match ${match.matchNumber}`}
+                                          />
+                                        </div>
                                       </div>
                                     </div>
                                   </div>

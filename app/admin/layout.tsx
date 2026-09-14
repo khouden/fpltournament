@@ -18,7 +18,10 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1F1F1F] font-sans antialiased selection:bg-[#37003C] selection:text-[#00FF87]">
+    <div
+      className="min-h-screen bg-[#F8F9FA] text-[#1F1F1F] font-sans antialiased selection:bg-[#37003C] selection:text-[#00FF87]"
+      suppressHydrationWarning
+    >
       {/* Premier League Stadium Admin Header */}
       <header className="sticky top-0 z-50 bg-[#170020] border-b border-white/10 shadow-lg text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2.5 sm:px-6 lg:px-8">

@@ -10,16 +10,16 @@ export function ExtensionCleaner() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const attributesToClean = ["bis_skin_checked", "bis_register"];
+
     const observer = new MutationObserver((mutations) => {
       for (let i = 0; i < mutations.length; i++) {
         const m = mutations[i];
-        if (m.type === "attributes" && m.target instanceof Element) {
-          if (m.attributeName === "bis_skin_checked") {
-            m.target.removeAttribute("bis_skin_checked");
-          } else if (m.attributeName && m.attributeName.startsWith("__processed_")) {
-            m.target.removeAttribute(m.attributeName);
-          } else if (m.attributeName === "bis_register") {
-            m.target.removeAttribute("bis_register");
+        if (m.type === "attributes" && m.target instanceof Element && m.attributeName) {
+          if (attributesToClean.includes(m.attributeName)) {
+            if (m.target.hasAttribute(m.attributeName)) {
+              m.target.removeAttribute(m.attributeName);
+            }
           }
         }
       }
@@ -27,6 +27,7 @@ export function ExtensionCleaner() {
 
     observer.observe(document.documentElement, {
       attributes: true,
+      attributeFilter: attributesToClean,
       subtree: true,
     });
 
