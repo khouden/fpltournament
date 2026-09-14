@@ -978,7 +978,7 @@ export function ScheduleBuilder({
                         size="sm"
                         onClick={() => handleAddMatch(round.id)}
                         disabled={loading === `add-match-${round.id}`}
-                        className="h-8 px-3 text-xs font-semibold text-[#37003C] border-[#37003C]/25 bg-white hover:bg-[#37003C]/5 rounded-[6px] gap-1.5 shadow-2xs"
+                        className="h-8 px-3 text-xs font-semibold text-[#37003C] border-[#37003C]/25 bg-white hover:bg-[#37003C]/5 rounded-[6px] gap-1.5 shadow-2xs cursor-pointer"
                       >
                         {loading === `add-match-${round.id}` ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1019,15 +1019,21 @@ export function ScheduleBuilder({
                             variant="outline"
                             size="sm"
                             onClick={() => handleAddMatch(round.id)}
-                            className="mt-3 h-8 px-3 text-xs font-semibold text-[#37003C] border-[#E5E5E5] hover:bg-[#F7F7F7] gap-1.5"
+                            disabled={loading === `add-match-${round.id}`}
+                            className="mt-3 h-8 px-3 text-xs font-semibold text-[#37003C] border-[#E5E5E5] hover:bg-[#F7F7F7] gap-1.5 cursor-pointer"
                           >
-                            <Plus className="h-3.5 w-3.5" />
+                            {loading === `add-match-${round.id}` ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-[#37003C]" />
+                            ) : (
+                              <Plus className="h-3.5 w-3.5" />
+                            )}
                             <span>Add Match</span>
                           </Button>
                         </div>
                       ) : (
-                        round.matches
-                          .sort((a, b) => a.matchNumber - b.matchNumber)
+                        <>
+                          {round.matches
+                            .sort((a, b) => a.matchNumber - b.matchNumber)
                           .map((match) => {
                             const isFinalized = match.status === "FINALIZED";
                             const isCompleted = match.status === "COMPLETED";
@@ -1486,13 +1492,58 @@ export function ScheduleBuilder({
                                 </div>
                               </article>
                             );
-                          })
+                          })}
+
+                          {/* Bottom Action Bar: Add Match */}
+                          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[#EEEEEE]">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleAddMatch(round.id)}
+                              disabled={loading === `add-match-${round.id}`}
+                              className="h-9 px-4 text-xs font-bold text-[#37003C] border-dashed border-[#37003C]/30 bg-[#37003C]/5 hover:bg-[#37003C]/10 hover:border-[#37003C]/50 rounded-[8px] gap-2 shadow-2xs transition-all cursor-pointer"
+                            >
+                              {loading === `add-match-${round.id}` ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-[#37003C]" />
+                              ) : (
+                                <Plus className="h-3.5 w-3.5 text-[#37003C]" />
+                              )}
+                              <span>Add Match</span>
+                            </Button>
+
+                            <span className="text-[11px] text-[#888888] font-medium hidden sm:inline">
+                              Add another fixture to {round.name || `Round ${round.roundNumber}`}
+                            </span>
+                          </div>
+                        </>
                       )}
                     </div>
                   )}
                 </Card>
               );
             })
+        )}
+
+        {/* Bottom Action Bar: Add Round */}
+        {rounds.length > 0 && (
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[#E5E5E5]/80">
+            <Button
+              variant="outline"
+              onClick={handleAddRound}
+              disabled={loading === "add-round"}
+              className="h-10 px-5 text-xs sm:text-sm font-bold text-[#37003C] border-dashed border-2 border-[#37003C]/30 bg-white hover:bg-[#37003C]/5 hover:border-[#37003C]/50 rounded-[10px] gap-2 shadow-2xs transition-all cursor-pointer"
+            >
+              {loading === "add-round" ? (
+                <Loader2 className="h-4 w-4 animate-spin text-[#37003C]" />
+              ) : (
+                <Plus className="h-4 w-4 text-[#37003C]" />
+              )}
+              <span>Add Round</span>
+            </Button>
+            <span className="text-xs text-[#777777] font-medium hidden sm:inline">
+              Create another round for the next Gameweek
+            </span>
+          </div>
         )}
       </section>
 
