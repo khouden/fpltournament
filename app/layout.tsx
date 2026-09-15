@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ExtensionCleaner } from "@/components/extension-cleaner";
+import { NavigationProgressBar } from "@/components/navigation/navigation-progress-bar";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "FPL Tournaments — Custom Fantasy Premier League Knockout Tournaments",
@@ -23,6 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Suspense fallback={null}>
+          <NavigationProgressBar />
+        </Suspense>
         <ExtensionCleaner />
         {children}
       </body>

@@ -1,7 +1,9 @@
+"use client";
+
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Shield, Calendar, ArrowRight, Trophy } from "lucide-react";
+import { Shield, Calendar, ArrowRight, Trophy, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface FeaturedTournamentItem {
@@ -26,6 +28,7 @@ export function FeaturedTournamentCard({
   item: FeaturedTournamentItem;
   className?: string;
 }) {
+  const [isNavigating, setIsNavigating] = React.useState(false);
   const isLive = item.status === "LIVE";
   const isCompleted = item.status === "COMPLETED" || item.status === "FINISHED";
 
@@ -184,18 +187,38 @@ export function FeaturedTournamentCard({
           {item.buttonVariant === "outline" ? (
             <Link
               href={item.href}
+              onClick={() => setIsNavigating(true)}
               className="flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-full border border-[#CBD5E1] bg-white text-[#0B081E] font-extrabold text-sm tracking-tight transition-all duration-200 hover:bg-[#F8F9FD] hover:border-[#94A3B8]"
             >
-              <span>View tournament</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {isNavigating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-[#0B081E]" />
+                  <span>Opening tournament...</span>
+                </>
+              ) : (
+                <>
+                  <span>View tournament</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </>
+              )}
             </Link>
           ) : (
             <Link
               href={item.href}
+              onClick={() => setIsNavigating(true)}
               className="flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-full bg-[#160B33] text-white font-extrabold text-sm tracking-tight transition-all duration-200 hover:bg-[#251352] shadow-sm"
             >
-              <span>View tournament</span>
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              {isNavigating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-[#00FFA3]" />
+                  <span className="text-[#00FFA3]">Opening tournament...</span>
+                </>
+              ) : (
+                <>
+                  <span>View tournament</span>
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </>
+              )}
             </Link>
           )}
         </div>

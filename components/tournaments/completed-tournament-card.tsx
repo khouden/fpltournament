@@ -1,7 +1,9 @@
+"use client";
+
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import type { TournamentCardItem } from "@/lib/tournaments-data";
 
 interface CompletedTournamentCardProps {
@@ -9,6 +11,7 @@ interface CompletedTournamentCardProps {
 }
 
 export function CompletedTournamentCard({ tournament }: CompletedTournamentCardProps) {
+  const [isNavigating, setIsNavigating] = React.useState(false);
   return (
     <article className="group relative flex flex-col justify-between rounded-[20px] border border-[#E8ECF2] bg-white overflow-hidden shadow-[0_2px_10px_rgba(11,8,30,0.03)] hover:shadow-[0_8px_24px_rgba(11,8,30,0.07)] hover:-translate-y-0.5 transition-all duration-200">
       {/* Top Banner */}
@@ -96,10 +99,20 @@ export function CompletedTournamentCard({ tournament }: CompletedTournamentCardP
         <div className="mt-4 pt-2.5 border-t border-gray-100">
           <Link
             href={`/tournaments/${tournament.id}`}
-            className="inline-flex items-center gap-1 text-xs font-bold text-[#00A86B] hover:text-[#008F5B] transition-colors"
+            onClick={() => setIsNavigating(true)}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00A86B] hover:text-[#008F5B] transition-colors"
           >
-            <span>View results</span>
-            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+            {isNavigating ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin text-[#00A86B]" />
+                <span>Opening...</span>
+              </>
+            ) : (
+              <>
+                <span>View results</span>
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+              </>
+            )}
           </Link>
         </div>
       </div>

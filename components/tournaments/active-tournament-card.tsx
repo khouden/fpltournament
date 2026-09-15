@@ -1,7 +1,9 @@
+"use client";
+
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Calendar, Clock, Users } from "lucide-react";
+import { ArrowRight, Calendar, Clock, Users, Loader2 } from "lucide-react";
 import type { TournamentCardItem } from "@/lib/tournaments-data";
 
 interface ActiveTournamentCardProps {
@@ -9,6 +11,7 @@ interface ActiveTournamentCardProps {
 }
 
 export function ActiveTournamentCard({ tournament }: ActiveTournamentCardProps) {
+  const [isNavigating, setIsNavigating] = React.useState(false);
   return (
     <article className="group relative flex flex-col justify-between rounded-[20px] border border-[#E8ECF2] bg-white overflow-hidden shadow-[0_2px_12px_rgba(11,8,30,0.03)] hover:shadow-[0_12px_32px_rgba(11,8,30,0.08)] hover:-translate-y-1 transition-all duration-200">
       {/* Top Banner Area */}
@@ -176,10 +179,20 @@ export function ActiveTournamentCard({ tournament }: ActiveTournamentCardProps) 
         <div className="mt-5 pt-2">
           <Link
             href={`/tournaments/${tournament.id}`}
-            className="w-full flex items-center justify-center gap-2 bg-[#2D0036] hover:bg-[#3E004B] text-white py-2.5 px-4 rounded-xl text-xs font-black tracking-wide shadow-xs transition-colors duration-150 group"
+            onClick={() => setIsNavigating(true)}
+            className="w-full flex items-center justify-center gap-2 bg-[#2D0036] hover:bg-[#3E004B] text-white py-2.5 px-4 rounded-xl text-xs font-black tracking-wide shadow-xs transition-all duration-150 group"
           >
-            <span>View tournament</span>
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            {isNavigating ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-[#00FFA3]" />
+                <span className="text-[#00FFA3]">Opening...</span>
+              </>
+            ) : (
+              <>
+                <span>View tournament</span>
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+              </>
+            )}
           </Link>
         </div>
       </div>
