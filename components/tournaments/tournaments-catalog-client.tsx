@@ -17,7 +17,13 @@ export function TournamentsCatalogClient({
   completedTournaments,
 }: TournamentsCatalogClientProps) {
   const [selectedTab, setSelectedTab] = React.useState<"active" | "completed">("active");
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("q") || params.get("search") || "";
+    }
+    return "";
+  });
 
   // Smooth scroll to target section when tab is clicked
   const handleTabClick = (tab: "active" | "completed") => {
