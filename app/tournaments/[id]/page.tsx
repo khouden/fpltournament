@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { calculateLeagueStandings, checkTournamentLiveStatus } from "@/lib/scoring";
+import { triggerTournamentScoreSync } from "@/lib/live-sync";
 import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import { Header } from "@/components/navigation/header";
 import { Footer } from "@/components/layout/footer";
@@ -65,6 +67,15 @@ export default async function TournamentPage(
   if (!tournament || tournament.status === "DRAFT") {
     notFound();
   }
+
+  // Automated background live score synchronization with 5-minute cooldown (non-blocking)
+  after(async () => {
+    try {
+      await triggerTournamentScoreSync(tournament.id);
+    } catch (err) {
+      console.error(`[live-sync] Background sync error for tournament ${tournament.id}:`, err);
+    }
+  });
 
   const searchParams = await props.searchParams;
   const initialTab =
@@ -428,6 +439,7 @@ export default async function TournamentPage(
           teams={formattedTeams}
           isLive={liveInfo.isLive}
           liveGameweek={liveInfo.liveGameweek}
+          lastSyncedAt={tournament.lastScoreSyncAt ? tournament.lastScoreSyncAt.toISOString() : null}
         />
       </main>
 

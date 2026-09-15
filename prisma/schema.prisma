@@ -16,6 +16,7 @@ model Tournament {
   allowBenchBoost     Boolean  @default(true) // Whether Bench Boost points on bench are counted
   allowTripleCaptain  Boolean  @default(true) // Whether Triple Captain 3x multiplier is counted or reduced to 2x
   status              String   @default("DRAFT") // DRAFT, PUBLISHED, FINISHED
+  lastScoreSyncAt     DateTime? // Timestamp of last background score synchronization
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 

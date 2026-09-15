@@ -134,6 +134,7 @@ export interface TournamentDetailViewProps {
   initialTab?: "overview" | "standings" | "fixtures" | "teams";
   isLive?: boolean;
   liveGameweek?: number;
+  lastSyncedAt?: string | null;
 }
 
 export function TournamentDetailView({
@@ -144,6 +145,7 @@ export function TournamentDetailView({
   initialTab = "overview",
   isLive = false,
   liveGameweek,
+  lastSyncedAt,
 }: TournamentDetailViewProps) {
   const [activeTab, setActiveTab] = useState<
     "overview" | "standings" | "fixtures" | "teams"
@@ -260,7 +262,7 @@ export function TournamentDetailView({
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
           <div className="max-w-2xl space-y-4">
             {/* Active Status Badge */}
-            <div className="inline-flex">
+            <div className="inline-flex flex-wrap items-center gap-2">
               {tournament.isActive ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#00FF87] px-3.5 py-1 text-[11px] font-black uppercase tracking-wider text-[#063319] shadow-md">
                   <span className="h-2 w-2 rounded-full bg-[#063319] animate-pulse" />
@@ -269,6 +271,12 @@ export function TournamentDetailView({
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 backdrop-blur-md px-3.5 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white/90">
                   FINISHED
+                </span>
+              )}
+              {isLive && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FF2882]/90 backdrop-blur-md px-3 py-1 text-[11px] font-bold tracking-wide text-white shadow-xs">
+                  <span className="h-2 w-2 rounded-full bg-white animate-ping" />
+                  LIVE{liveGameweek ? ` GW${liveGameweek}` : ""} • AUTO-SYNC
                 </span>
               )}
             </div>
