@@ -120,6 +120,7 @@ export function GroupManager({
   // Delete confirmation
   const [groupToDelete, setGroupToDelete] = useState<string | null>(null);
   const [deletingGroup, setDeletingGroup] = useState(false);
+  const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null);
 
   // Delete Schedule confirmation when group has scheduled matches
   const [scheduleDeleteModalGroup, setScheduleDeleteModalGroup] = useState<{
@@ -328,36 +329,44 @@ export function GroupManager({
   };
 
   const handleDelete = async (groupId: string) => {
+    setDeletingGroupId(groupId);
     setDeletingGroup(true);
     setError("");
-    const result = await deleteGroupAction(groupId, tournamentId);
-    if (result.success) {
-      const deleted = groups.find((g) => g.id === groupId);
-      setGroups((prev) => prev.filter((g) => g.id !== groupId));
-      if (deleted?.fplLeagueId) {
-        setLeagues((prev) =>
-          prev.map((l) =>
-            l.id === deleted.fplLeagueId ? { ...l, isAlreadyImported: false } : l
-          )
-        );
-      }
-      showToast(`Team "${deleted?.name || ""}" deleted`);
-      setGroupToDelete(null);
-    } else {
-      if (result.isScheduled) {
+    try {
+      const result = await deleteGroupAction(groupId, tournamentId);
+      if (result.success) {
         const deleted = groups.find((g) => g.id === groupId);
+        setGroups((prev) => prev.filter((g) => g.id !== groupId));
+        if (deleted) {
+          setLeagues((prev) =>
+            prev.map((l) =>
+              (deleted.fplLeagueId && l.id === deleted.fplLeagueId) ||
+              l.name.toLowerCase() === deleted.name.toLowerCase()
+                ? { ...l, isAlreadyImported: false }
+                : l
+            )
+          );
+        }
+        showToast(`Team "${deleted?.name || ""}" deleted`);
         setGroupToDelete(null);
-        setScheduleDeleteModalGroup({
-          id: groupId,
-          name: deleted?.name || "Team",
-          matchesCount: result.matchesCount || 1,
-        });
       } else {
-        setError(result.error || "Failed to delete team");
-        setGroupToDelete(null);
+        if (result.isScheduled) {
+          const deleted = groups.find((g) => g.id === groupId);
+          setGroupToDelete(null);
+          setScheduleDeleteModalGroup({
+            id: groupId,
+            name: deleted?.name || "Team",
+            matchesCount: result.matchesCount || 1,
+          });
+        } else {
+          setError(result.error || "Failed to delete team");
+          setGroupToDelete(null);
+        }
       }
+    } finally {
+      setDeletingGroup(false);
+      setDeletingGroupId(null);
     }
-    setDeletingGroup(false);
   };
 
   const handleDeleteWithSchedule = async (groupId: string, groupName: string) => {
@@ -373,10 +382,13 @@ export function GroupManager({
           .filter((g) => g.id !== groupId)
           .map((g) => ({ ...g, matchesCount: 0 }))
       );
-      if (deleted?.fplLeagueId) {
+      if (deleted) {
         setLeagues((prev) =>
           prev.map((l) =>
-            l.id === deleted.fplLeagueId ? { ...l, isAlreadyImported: false } : l
+            (deleted.fplLeagueId && l.id === deleted.fplLeagueId) ||
+            l.name.toLowerCase() === deleted.name.toLowerCase()
+              ? { ...l, isAlreadyImported: false }
+              : l
           )
         );
       }
@@ -759,22 +771,52 @@ export function GroupManager({
                 <div className="space-y-2.5">
                   {filteredLeagues.map((league) => {
                     const currentChosenLogo = importLogos[league.id];
+                    const matchingGroup = groups.find(
+                      (g) =>
+                        g.fplLeagueId === league.id ||
+                        (!g.fplLeagueId &&
+                          g.name.toLowerCase() === league.name.toLowerCase())
+                    );
+                    const isImported =
+                      Boolean(matchingGroup) || league.isAlreadyImported;
+                    const isDeletingThisGroup =
+                      deletingGroupId === matchingGroup?.id;
 
                     return (
                       <div
                         key={`${league.adminFplId || "admin"}_${league.id}`}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5 rounded-[12px] bg-white p-3.5 sm:p-4 border border-[#E5E5E5] shadow-xs transition hover:border-[#37003C]/30"
+                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5 rounded-[12px] p-3.5 sm:p-4 border shadow-xs transition ${
+                          isImported
+                            ? "bg-[#37003C]/[0.02] border-[#37003C]/20 hover:border-[#37003C]/40"
+                            : "bg-white border-[#E5E5E5] hover:border-[#37003C]/30"
+                        }`}
                       >
                         <div className="flex items-center gap-3.5 min-w-0">
                           {/* Logo selector thumbnail button */}
                           <button
                             type="button"
-                            onClick={() => setActivePickerLeague(league)}
-                            disabled={league.isAlreadyImported || Boolean(importingLeagueIds[league.id])}
+                            onClick={() => {
+                              if (isImported && matchingGroup) {
+                                setActivePickerGroup(matchingGroup);
+                              } else {
+                                setActivePickerLeague(league);
+                              }
+                            }}
+                            disabled={Boolean(importingLeagueIds[league.id])}
                             className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#E5E5E5] bg-[#F7F7F7] p-1 hover:border-[#37003C] hover:bg-[#37003C]/5 transition cursor-pointer disabled:opacity-60 shadow-2xs"
-                            title="Click to choose club crest"
+                            title={
+                              isImported
+                                ? "Click to change team crest"
+                                : "Click to choose club crest"
+                            }
                           >
-                            {currentChosenLogo ? (
+                            {isImported && matchingGroup?.logo ? (
+                              <img
+                                src={matchingGroup.logo}
+                                alt={matchingGroup.name}
+                                className="h-9 w-9 object-contain"
+                              />
+                            ) : currentChosenLogo ? (
                               <img
                                 src={currentChosenLogo}
                                 alt={league.name}
@@ -782,7 +824,7 @@ export function GroupManager({
                               />
                             ) : (
                               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#37003C] text-white font-extrabold text-xs">
-                                {getMonogram(league.name)}
+                                {getMonogram(matchingGroup?.name || league.name)}
                               </div>
                             )}
                             <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#37003C] text-[9px] font-bold text-white shadow-xs">
@@ -793,8 +835,14 @@ export function GroupManager({
                           <div className="min-w-0 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <h4 className="font-bold text-[#1F1F1F] text-sm sm:text-base leading-snug truncate">
-                                {league.name}
+                                {matchingGroup?.name || league.name}
                               </h4>
+                              {isImported && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/30">
+                                  <Check className="h-2.5 w-2.5 text-emerald-600" />
+                                  <span>Imported</span>
+                                </span>
+                              )}
                               {league.isPrivate && (
                                 <span className="inline-flex items-center px-2 py-0.2 rounded text-[10px] font-bold bg-[#37003C]/5 text-[#37003C] border border-[#37003C]/10">
                                   Mini-League
@@ -813,11 +861,21 @@ export function GroupManager({
                               <span className="text-[#CCCCCC]">·</span>
                               <button
                                 type="button"
-                                onClick={() => setActivePickerLeague(league)}
-                                disabled={league.isAlreadyImported || Boolean(importingLeagueIds[league.id])}
+                                onClick={() => {
+                                  if (isImported && matchingGroup) {
+                                    setActivePickerGroup(matchingGroup);
+                                  } else {
+                                    setActivePickerLeague(league);
+                                  }
+                                }}
+                                disabled={Boolean(importingLeagueIds[league.id])}
                                 className="text-[11px] font-semibold text-[#37003C] hover:underline cursor-pointer disabled:pointer-events-none"
                               >
-                                {currentChosenLogo ? "Change Crest" : "Choose Crest"}
+                                {isImported
+                                  ? "Change Crest"
+                                  : currentChosenLogo
+                                  ? "Change Crest"
+                                  : "Choose Crest"}
                               </button>
                             </div>
                           </div>
@@ -829,19 +887,65 @@ export function GroupManager({
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => setActivePickerLeague(league)}
-                            disabled={league.isAlreadyImported || Boolean(importingLeagueIds[league.id])}
-                            className="h-8 px-3 text-xs font-semibold border-[#E5E5E5] text-[#555555] hover:text-[#1F1F1F] gap-1.5"
+                            onClick={() => {
+                              if (isImported && matchingGroup) {
+                                setActivePickerGroup(matchingGroup);
+                              } else {
+                                setActivePickerLeague(league);
+                              }
+                            }}
+                            disabled={Boolean(importingLeagueIds[league.id])}
+                            className="h-8 px-3 text-xs font-semibold border-[#E5E5E5] text-[#555555] hover:text-[#1F1F1F] gap-1.5 cursor-pointer"
                           >
                             <ImageIcon className="h-3.5 w-3.5 text-[#37003C]" />
                             <span>Crest</span>
                           </Button>
 
-                          {league.isAlreadyImported ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-emerald-500/10 text-emerald-700 border border-emerald-500/30 text-xs font-bold">
-                              <Check className="h-3.5 w-3.5 text-emerald-600" />
-                              <span>Imported</span>
-                            </span>
+                          {isImported ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const target =
+                                  matchingGroup ||
+                                  groups.find(
+                                    (g) =>
+                                      g.fplLeagueId === league.id ||
+                                      g.name.toLowerCase() ===
+                                        league.name.toLowerCase()
+                                  );
+                                if (target) {
+                                  if (
+                                    target.matchesCount &&
+                                    target.matchesCount > 0
+                                  ) {
+                                    setScheduleDeleteModalGroup({
+                                      id: target.id,
+                                      name: target.name,
+                                      matchesCount: target.matchesCount,
+                                    });
+                                  } else {
+                                    handleDelete(target.id);
+                                  }
+                                }
+                              }}
+                              disabled={isDeletingThisGroup || deletingGroup}
+                              className="h-8 px-3.5 text-xs font-bold rounded-[8px] gap-1.5 border-[#E9007F]/40 text-[#E9007F] hover:bg-[#E9007F]/10 hover:border-[#E9007F] hover:text-[#d00072] shadow-2xs transition-colors cursor-pointer"
+                              title={`Delete ${matchingGroup?.name || league.name} from tournament`}
+                            >
+                              {isDeletingThisGroup ? (
+                                <>
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-[#E9007F]" />
+                                  <span>Deleting...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="h-3.5 w-3.5 text-[#E9007F]" />
+                                  <span>Delete Team</span>
+                                </>
+                              )}
+                            </Button>
                           ) : (
                             <Button
                               size="sm"
@@ -852,7 +956,7 @@ export function GroupManager({
                                   ? "Cannot import teams during an active FPL Gameweek deadline"
                                   : undefined
                               }
-                              className={`h-8 px-3.5 text-xs font-bold rounded-[8px] gap-1.5 shadow-2xs ${
+                              className={`h-8 px-3.5 text-xs font-bold rounded-[8px] gap-1.5 shadow-2xs cursor-pointer ${
                                 isDeadlineActive
                                   ? "bg-amber-600/70 cursor-not-allowed text-white"
                                   : "bg-[#37003C] hover:bg-[#5A0A63] text-white"
@@ -1067,6 +1171,7 @@ export function GroupManager({
                         <Button
                           variant="ghost"
                           size="sm"
+                          disabled={deletingGroupId === group.id}
                           onClick={() => {
                             if (group.matchesCount && group.matchesCount > 0) {
                               setScheduleDeleteModalGroup({
@@ -1075,14 +1180,23 @@ export function GroupManager({
                                 matchesCount: group.matchesCount,
                               });
                             } else {
-                              setGroupToDelete(group.id);
+                              handleDelete(group.id);
                             }
                           }}
-                          className="h-8 px-2.5 text-xs font-semibold text-[#E9007F] hover:text-[#d00072] hover:bg-[#E9007F]/10 gap-1 cursor-pointer"
+                          className="h-8 px-2.5 text-xs font-semibold text-[#E9007F] hover:text-[#d00072] hover:bg-[#E9007F]/10 gap-1 cursor-pointer disabled:opacity-60"
                           title="Delete team"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span>Delete</span>
+                          {deletingGroupId === group.id ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              <span>Deleting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>Delete</span>
+                            </>
+                          )}
                         </Button>
                       </div>
                     )}
