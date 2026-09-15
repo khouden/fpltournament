@@ -825,9 +825,15 @@ export async function validateScheduleAction(
     }
 
     for (const match of round.matches) {
-      if (!match.homeGroupId || !match.awayGroupId) {
+      if (!match.homeGroupId && !match.homeWinnerOfMatchId) {
         issues.push(
-          `Match ${match.matchNumber} in Round ${round.roundNumber} is missing ${!match.homeGroupId ? "home" : "away"} team`
+          `Match ${match.matchNumber} in Round ${round.roundNumber} is missing home team`
+        );
+      }
+
+      if (!match.awayGroupId && !match.awayWinnerOfMatchId) {
+        issues.push(
+          `Match ${match.matchNumber} in Round ${round.roundNumber} is missing away team`
         );
       }
 
@@ -890,6 +896,467 @@ export async function clearScheduleAction(tournamentId: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to clear schedule",
+    };
+  }
+}
+
+export interface GenerateKnockoutOptions {
+  startingGameweek: number;
+  format?: "SINGLE_ELIMINATION" | "TWO_LEGGED";
+  selectedGroupIds?: string[];
+  seeding?: "SEEDED" | "RANDOM";
+  replaceExisting?: boolean;
+}
+
+/**
+ * Generate a complete Knockout Cup schedule (Single Elimination or Two-Legged)
+ * for 4, 8, or 16 teams with automated winner progression references.
+ */
+export async function generateKnockoutScheduleAction(
+  tournamentId: string,
+  options: GenerateKnockoutOptions
+) {
+  try {
+    await requireAdminSession();
+    const {
+      startingGameweek,
+      format = "SINGLE_ELIMINATION",
+      selectedGroupIds,
+      seeding = "SEEDED",
+      replaceExisting = true,
+    } = options;
+
+    if (startingGameweek < 1 || startingGameweek > 38) {
+      return { success: false, error: "Starting Gameweek must be between 1 and 38" };
+    }
+
+    const tournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: {
+        groups: { orderBy: { createdAt: "asc" } },
+      },
+    });
+
+    if (!tournament) {
+      return { success: false, error: "Tournament not found" };
+    }
+
+    // Determine participating groups
+    let participatingGroups = tournament.groups;
+    if (selectedGroupIds && selectedGroupIds.length > 0) {
+      participatingGroups = tournament.groups.filter((g) =>
+        selectedGroupIds.includes(g.id)
+      );
+    }
+
+    const count = participatingGroups.length;
+    if (count < 4) {
+      return {
+        success: false,
+        error: `Knockout bracket requires at least 4 participating groups (currently ${count})`,
+      };
+    }
+
+    // Bracket size: 4, 8, or 16
+    let bracketSize = 4;
+    if (count >= 16) bracketSize = 16;
+    else if (count >= 8) bracketSize = 8;
+    else bracketSize = 4;
+
+    const seededTeams = participatingGroups.slice(0, bracketSize);
+
+    // Seeding order
+    let orderedTeams = [...seededTeams];
+    if (seeding === "RANDOM") {
+      for (let i = orderedTeams.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [orderedTeams[i], orderedTeams[j]] = [orderedTeams[j], orderedTeams[i]];
+      }
+    } else {
+      // Standard tournament bracket seeding:
+      if (bracketSize === 4) {
+        orderedTeams = [seededTeams[0], seededTeams[3], seededTeams[1], seededTeams[2]];
+      } else if (bracketSize === 8) {
+        orderedTeams = [
+          seededTeams[0], seededTeams[7], // QF 1
+          seededTeams[3], seededTeams[4], // QF 2
+          seededTeams[1], seededTeams[6], // QF 3
+          seededTeams[2], seededTeams[5], // QF 4
+        ];
+      } else if (bracketSize === 16) {
+        orderedTeams = [
+          seededTeams[0], seededTeams[15],
+          seededTeams[7], seededTeams[8],
+          seededTeams[3], seededTeams[12],
+          seededTeams[4], seededTeams[11],
+          seededTeams[1], seededTeams[14],
+          seededTeams[6], seededTeams[9],
+          seededTeams[2], seededTeams[13],
+          seededTeams[5], seededTeams[10],
+        ];
+      }
+    }
+
+    // Determine stages
+    const stageNames: string[] = [];
+    if (bracketSize === 16) {
+      stageNames.push("Round of 16", "Quarterfinals", "Semifinals", "Final");
+    } else if (bracketSize === 8) {
+      stageNames.push("Quarterfinals", "Semifinals", "Final");
+    } else {
+      stageNames.push("Semifinals", "Final");
+    }
+
+    // Calculate required gameweeks
+    let totalGWsNeeded = 0;
+    if (format === "TWO_LEGGED") {
+      totalGWsNeeded = (stageNames.length - 1) * 2 + 1;
+    } else {
+      totalGWsNeeded = stageNames.length;
+    }
+
+    if (startingGameweek + totalGWsNeeded - 1 > 38) {
+      return {
+        success: false,
+        error: `Knockout bracket requires ${totalGWsNeeded} Gameweeks, which exceeds GW 38 (max available from GW${startingGameweek} is ${39 - startingGameweek})`,
+      };
+    }
+
+    // 1. Clear existing if replaceExisting is true
+    if (replaceExisting) {
+      const existingRounds = await prisma.round.findMany({
+        where: { tournamentId },
+        select: { id: true },
+      });
+      const roundIds = existingRounds.map((r) => r.id);
+      if (roundIds.length > 0) {
+        await prisma.matchMemberScore.deleteMany({
+          where: { match: { roundId: { in: roundIds } } },
+        });
+        await prisma.match.deleteMany({
+          where: { roundId: { in: roundIds } },
+        });
+        await prisma.round.deleteMany({
+          where: { tournamentId },
+        });
+      }
+    }
+
+    await prisma.$transaction(
+      async (tx) => {
+        let currentGW = startingGameweek;
+        let roundCounter =
+          replaceExisting
+            ? 1
+            : ((await tx.round.count({ where: { tournamentId } })) || 0) + 1;
+        let matchCounter =
+          replaceExisting
+            ? 1
+            : ((await tx.match.count({ where: { round: { tournamentId } } })) || 0) + 1;
+
+        // Keep track of match IDs from previous stage to wire winners
+        let prevStageMatchIds: string[] = [];
+
+        for (let s = 0; s < stageNames.length; s++) {
+          const stageName = stageNames[s];
+          const isFinal = s === stageNames.length - 1;
+          const matchesInStage = bracketSize / Math.pow(2, s + 1);
+
+          if (format === "TWO_LEGGED" && !isFinal) {
+            // --- Two-Legged Stage: Leg 1 ---
+            const roundLeg1 = await tx.round.create({
+              data: {
+                tournamentId,
+                roundNumber: roundCounter++,
+                gameweek: currentGW++,
+                name: `${stageName} (Leg 1)`,
+              },
+            });
+
+            const leg1Matches: any[] = [];
+            for (let m = 0; m < matchesInStage; m++) {
+              const isFirstStage = s === 0;
+              const homeGroupId = isFirstStage ? orderedTeams[m * 2]?.id || null : null;
+              const awayGroupId = isFirstStage ? orderedTeams[m * 2 + 1]?.id || null : null;
+
+              const homeWinnerOfMatchId = isFirstStage ? null : prevStageMatchIds[m * 2] || null;
+              const awayWinnerOfMatchId = isFirstStage ? null : prevStageMatchIds[m * 2 + 1] || null;
+
+              const match = await tx.match.create({
+                data: {
+                  roundId: roundLeg1.id,
+                  matchNumber: matchCounter++,
+                  status: "SCHEDULED",
+                  homeGroupId,
+                  awayGroupId,
+                  homeWinnerOfMatchId,
+                  awayWinnerOfMatchId,
+                },
+              });
+              leg1Matches.push(match);
+            }
+
+            // --- Two-Legged Stage: Leg 2 (Home & Away Inverted) ---
+            const roundLeg2 = await tx.round.create({
+              data: {
+                tournamentId,
+                roundNumber: roundCounter++,
+                gameweek: currentGW++,
+                name: `${stageName} (Leg 2)`,
+              },
+            });
+
+            const leg2Matches: any[] = [];
+            for (let m = 0; m < matchesInStage; m++) {
+              const leg1 = leg1Matches[m];
+              const match = await tx.match.create({
+                data: {
+                  roundId: roundLeg2.id,
+                  matchNumber: matchCounter++,
+                  status: "SCHEDULED",
+                  homeGroupId: leg1.awayGroupId,
+                  awayGroupId: leg1.homeGroupId,
+                  homeWinnerOfMatchId: leg1.awayWinnerOfMatchId,
+                  awayWinnerOfMatchId: leg1.homeWinnerOfMatchId,
+                },
+              });
+              leg2Matches.push(match);
+            }
+
+            // Next stage tracks winners of Leg 2 matches
+            prevStageMatchIds = leg2Matches.map((m) => m.id);
+          } else {
+            // --- Single Elimination Stage (or Single Match Final) ---
+            const round = await tx.round.create({
+              data: {
+                tournamentId,
+                roundNumber: roundCounter++,
+                gameweek: currentGW++,
+                name: stageName,
+              },
+            });
+
+            const stageMatches: any[] = [];
+            for (let m = 0; m < matchesInStage; m++) {
+              const isFirstStage = s === 0;
+              const homeGroupId = isFirstStage ? orderedTeams[m * 2]?.id || null : null;
+              const awayGroupId = isFirstStage ? orderedTeams[m * 2 + 1]?.id || null : null;
+
+              const homeWinnerOfMatchId = isFirstStage ? null : prevStageMatchIds[m * 2] || null;
+              const awayWinnerOfMatchId = isFirstStage ? null : prevStageMatchIds[m * 2 + 1] || null;
+
+              const match = await tx.match.create({
+                data: {
+                  roundId: round.id,
+                  matchNumber: matchCounter++,
+                  status: "SCHEDULED",
+                  homeGroupId,
+                  awayGroupId,
+                  homeWinnerOfMatchId,
+                  awayWinnerOfMatchId,
+                },
+              });
+              stageMatches.push(match);
+            }
+
+            prevStageMatchIds = stageMatches.map((m) => m.id);
+          }
+        }
+      },
+      {
+        maxWait: 15000,
+        timeout: 60000,
+      }
+    );
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return {
+      success: true,
+      message: `Generated ${bracketSize}-team ${format === "TWO_LEGGED" ? "two-legged" : "single-elimination"} knockout bracket from GW ${startingGameweek} to GW ${startingGameweek + totalGWsNeeded - 1}!`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to generate knockout bracket",
+    };
+  }
+}
+
+/**
+ * Batch create multiple matches in a round from parsed team pairings (Quick-Text Matchmaker)
+ */
+export async function createBatchMatchesFromTextAction(
+  roundId: string,
+  tournamentId: string,
+  pairings: Array<{ homeGroupId: string; awayGroupId: string }>
+) {
+  try {
+    await requireAdminSession();
+    if (!pairings || pairings.length === 0) {
+      return { success: false, error: "No pairings provided" };
+    }
+
+    const round = await prisma.round.findUnique({
+      where: { id: roundId },
+    });
+
+    if (!round) {
+      return { success: false, error: "Round not found" };
+    }
+
+    for (const p of pairings) {
+      if (!p.homeGroupId || !p.awayGroupId) {
+        return { success: false, error: "Each match requires both a home and away team" };
+      }
+      if (p.homeGroupId === p.awayGroupId) {
+        return { success: false, error: "Home and away teams cannot be the same group" };
+      }
+    }
+
+    const createdMatches: any[] = [];
+    await prisma.$transaction(
+      async (tx) => {
+        let currentMatchCount = await tx.match.count({
+          where: { round: { tournamentId } },
+        });
+
+        for (const p of pairings) {
+          currentMatchCount++;
+          const match = await tx.match.create({
+            data: {
+              roundId,
+              matchNumber: currentMatchCount,
+              status: "SCHEDULED",
+              homeGroupId: p.homeGroupId,
+              awayGroupId: p.awayGroupId,
+            },
+          });
+          createdMatches.push(match);
+        }
+      },
+      { maxWait: 15000, timeout: 60000 }
+    );
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return {
+      success: true,
+      count: createdMatches.length,
+      message: `Successfully created ${createdMatches.length} fixtures in ${round.name || `Round ${round.roundNumber}`}!`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to create batch fixtures",
+    };
+  }
+}
+
+/**
+ * Batch create multiple rounds with Gameweek progression in 1 click
+ */
+export async function createBatchRoundsAction(
+  tournamentId: string,
+  options: {
+    roundCount: number;
+    startingGameweek: number;
+    emptyMatchesPerRound?: number;
+  }
+) {
+  try {
+    await requireAdminSession();
+    const { roundCount, startingGameweek, emptyMatchesPerRound = 0 } = options;
+
+    if (roundCount < 1 || roundCount > 38) {
+      return { success: false, error: "Round count must be between 1 and 38" };
+    }
+
+    if (startingGameweek < 1 || startingGameweek > 38) {
+      return { success: false, error: "Starting Gameweek must be between 1 and 38" };
+    }
+
+    if (startingGameweek + roundCount - 1 > 38) {
+      return {
+        success: false,
+        error: `Creating ${roundCount} rounds from GW ${startingGameweek} exceeds GW 38 (max allowed is ${39 - startingGameweek})`,
+      };
+    }
+
+    const existingRounds = await prisma.round.findMany({
+      where: { tournamentId },
+      orderBy: { roundNumber: "asc" },
+    });
+
+    const startRoundNumber =
+      existingRounds.length > 0
+        ? Math.max(...existingRounds.map((r) => r.roundNumber)) + 1
+        : 1;
+
+    let createdCount = 0;
+    await prisma.$transaction(
+      async (tx) => {
+        let currentMatchCount = await tx.match.count({
+          where: { round: { tournamentId } },
+        });
+
+        for (let r = 0; r < roundCount; r++) {
+          const roundNum = startRoundNumber + r;
+          const gw = startingGameweek + r;
+
+          const round = await tx.round.create({
+            data: {
+              tournamentId,
+              roundNumber: roundNum,
+              gameweek: gw,
+              name: `Round ${roundNum}`,
+            },
+          });
+          createdCount++;
+
+          if (emptyMatchesPerRound > 0) {
+            for (let m = 0; m < emptyMatchesPerRound; m++) {
+              currentMatchCount++;
+              await tx.match.create({
+                data: {
+                  roundId: round.id,
+                  matchNumber: currentMatchCount,
+                  status: "SCHEDULED",
+                },
+              });
+            }
+          }
+        }
+      },
+      { maxWait: 15000, timeout: 60000 }
+    );
+
+    safeRevalidate(`/admin/tournaments/${tournamentId}`);
+    safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
+    safeRevalidate(`/tournaments/${tournamentId}`);
+
+    return {
+      success: true,
+      count: createdCount,
+      message: `Created ${createdCount} rounds (GW ${startingGameweek} to GW ${startingGameweek + roundCount - 1}) successfully!`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to create batch rounds",
     };
   }
 }

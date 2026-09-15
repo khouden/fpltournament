@@ -280,8 +280,37 @@ export async function calculateMatchScore(
     };
   }
 
-  const resolvedHomeGroupId = match.homeGroupId;
-  const resolvedAwayGroupId = match.awayGroupId;
+  let resolvedHomeGroupId = match.homeGroupId;
+  let resolvedAwayGroupId = match.awayGroupId;
+
+  // Auto-resolve participant from previous winner if not yet resolved
+  if (!resolvedHomeGroupId && match.homeWinnerOfMatchId) {
+    const upstream = await prisma.match.findUnique({
+      where: { id: match.homeWinnerOfMatchId },
+      select: { winnerId: true },
+    });
+    if (upstream?.winnerId) {
+      resolvedHomeGroupId = upstream.winnerId;
+      await prisma.match.update({
+        where: { id: match.id },
+        data: { homeGroupId: resolvedHomeGroupId },
+      });
+    }
+  }
+
+  if (!resolvedAwayGroupId && match.awayWinnerOfMatchId) {
+    const upstream = await prisma.match.findUnique({
+      where: { id: match.awayWinnerOfMatchId },
+      select: { winnerId: true },
+    });
+    if (upstream?.winnerId) {
+      resolvedAwayGroupId = upstream.winnerId;
+      await prisma.match.update({
+        where: { id: match.id },
+        data: { awayGroupId: resolvedAwayGroupId },
+      });
+    }
+  }
 
   // If either participant is missing, we cannot calculate match score yet
   if (!resolvedHomeGroupId || !resolvedAwayGroupId) {

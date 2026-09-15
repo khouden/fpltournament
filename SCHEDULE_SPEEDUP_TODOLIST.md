@@ -52,58 +52,58 @@ This document outlines the UX improvements and automated tools designed to elimi
 
 ---
 
-## Phase 3: Knockout & Cup Bracket Wizard (Zero Files Needed)
+## Phase 3: Knockout & Cup Bracket Wizard (Zero Files Needed) (Completed ✅)
 
 ### 3.1 Knockout Generator Engine
-- [ ] Implement `generateKnockoutScheduleAction(tournamentId, options)` in `lib/schedule-actions.ts`:
+- [x] Implement `generateKnockoutScheduleAction(tournamentId, options)` in `lib/schedule-actions.ts`:
   - Support 4, 8, 16 groups.
   - Structure: Quarterfinals ➔ Semifinals ➔ Final (+ optional 3rd place playoff).
   - Support **Single Elimination** (1 GW per stage) and **Two-Leg Ties** (Home & Away across 2 consecutive GWs).
   - Setup winner progression references (`homeWinnerOfMatchId`, `awayWinnerOfMatchId`).
 
 ### 3.2 Knockout Wizard UI Modal
-- [ ] Create `KnockoutWizardModal` accessible from the top toolbar next to "Auto-Generate Round-Robin".
-- [ ] Form controls:
+- [x] Create `KnockoutWizardModal` accessible from the top toolbar next to "Auto-Generate Round-Robin".
+- [x] Form controls:
   - Format selector: Single Elimination vs Two-Legged Knockout.
   - Participating groups picker (select all or pick top seeded).
   - Starting Gameweek input.
   - Pairing style: Random draw vs Seeded (1 vs 8, 2 vs 7, etc.).
-- [ ] Live preview diagram of the bracket before committing.
-- [ ] Batch generation in a single database transaction.
+- [x] Live preview diagram of the bracket before committing.
+- [x] Batch generation in a single database transaction.
 
 ---
 
-## Phase 4: Smart Quick-Text Matchmaker (Copy/Paste Without Files)
+## Phase 4: Smart Quick-Text Matchmaker (Copy/Paste Without Files) (Completed ✅)
 
 ### 4.1 Fuzzy Matcher Engine
-- [ ] Build a text parser that accepts plain text lines:
+- [x] Build a text parser that accepts plain text lines:
   ```text
   Arsenal vs Chelsea
   Liverpool vs Man City
   Aston Villa vs Spurs
   ```
-- [ ] Match lines against the tournament's existing group names using case-insensitive substring and Levenshtein distance.
-- [ ] Detect conflicts (e.g. team listed twice in the same round, or unresolvable name).
+- [x] Match lines against the tournament's existing group names using case-insensitive substring and normalization.
+- [x] Detect conflicts (e.g. team listed twice in the same round, or unresolvable name).
 
 ### 4.2 Quick-Text Modal Component
-- [ ] Add "Quick Text Matcher" button in the round action bar.
-- [ ] Modal contains a multi-line textarea and a live validation table:
+- [x] Add "Quick Text Matcher" button in the round action bar.
+- [x] Modal contains a multi-line textarea and a live validation table:
   - Column 1: Detected Home Team (with status indicator).
   - Column 2: Detected Away Team (with status indicator).
-- [ ] One-click "Create X Fixtures" button to insert all parsed matches in a single batch.
+- [x] One-click "Create X Fixtures" button to insert all parsed matches in a single batch.
 
 ---
 
-## Phase 5: Multi-Round Batch Creator
+## Phase 5: Multi-Round Batch Creator (Completed ✅)
 
 ### 5.1 Batch Round Action
-- [ ] Implement `createBatchRoundsAction(tournamentId, { roundCount, startingGameweek, emptyMatchesPerRound })` in `lib/schedule-actions.ts`.
-- [ ] Validate that `startingGameweek + roundCount - 1 <= 38`.
-- [ ] Create all rounds and placeholder match cards in a single database query.
+- [x] Implement `createBatchRoundsAction(tournamentId, { roundCount, startingGameweek, emptyMatchesPerRound })` in `lib/schedule-actions.ts`.
+- [x] Validate that `startingGameweek + roundCount - 1 <= 38`.
+- [x] Create all rounds and placeholder match cards in a single database query.
 
 ### 5.2 UI Dialog
-- [ ] Add "Batch Add Rounds" button next to "Add Round".
-- [ ] Small popover/modal specifying number of rounds and start GW.
+- [x] Add "Batch Add Rounds" button next to "Add Round".
+- [x] Small popover/modal specifying number of rounds, start GW, and empty match slots.
 
 ---
 
@@ -116,6 +116,6 @@ This document outlines the UX improvements and automated tools designed to elimi
 | Auto-Pair Remaining Button | Phase 1 | ✅ Completed | `components/schedule-builder.tsx`, `lib/schedule-actions.ts` |
 | Swap Home/Away (⇄) Button | Phase 1 | ✅ Completed | `components/schedule-builder.tsx`, `lib/schedule-actions.ts` |
 | Duplicate Round as Reverse | Phase 2 | ✅ Completed | `components/schedule-builder.tsx`, `lib/schedule-actions.ts` |
-| Knockout Bracket Wizard | Phase 3 | ⏳ Next Up | `components/schedule-builder.tsx`, `lib/schedule-actions.ts` |
-| Smart Quick-Text Matchmaker | Phase 4 | ⏳ Planned | `components/quick-text-fixture-modal.tsx` |
-| Multi-Round Batch Creator | Phase 5 | ⏳ Planned | `components/schedule-builder.tsx`, `lib/schedule-actions.ts` |
+| Knockout Bracket Wizard | Phase 3 | ✅ Completed | `components/knockout-wizard-modal.tsx`, `lib/schedule-actions.ts` |
+| Smart Quick-Text Matchmaker | Phase 4 | ✅ Completed | `components/quick-text-fixture-modal.tsx`, `lib/schedule-actions.ts` |
+| Multi-Round Batch Creator | Phase 5 | ✅ Completed | `components/schedule-builder.tsx`, `lib/schedule-actions.ts` |

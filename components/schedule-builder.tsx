@@ -14,6 +14,7 @@ import {
   autoPairRemainingAction,
   duplicateRoundAsReverseAction,
   fillRoundWithEmptyMatchesAction,
+  createBatchRoundsAction,
 } from "@/lib/schedule-actions";
 import {
   recalculateMatchAction,
@@ -26,6 +27,8 @@ import {
   type MatchGroupData,
   type MatchScoreData,
 } from "./manual-match-score-modal";
+import { KnockoutWizardModal } from "./knockout-wizard-modal";
+import { QuickTextFixtureModal } from "./quick-text-fixture-modal";
 import { SearchableTeamSelect } from "@/components/searchable-team-select";
 import {
   Zap,
@@ -49,6 +52,7 @@ import {
   ArrowLeftRight,
   Copy,
   Sparkles,
+  FileText,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -101,6 +105,8 @@ export interface Match {
   status: string;
   homeGroupId: string | null;
   awayGroupId: string | null;
+  homeWinnerOfMatchId?: string | null;
+  awayWinnerOfMatchId?: string | null;
   homeScore: number | null;
   awayScore: number | null;
   result: string | null;
@@ -212,6 +218,21 @@ export function ScheduleBuilder({
   } | null>(null);
   const [duplicateTargetGW, setDuplicateTargetGW] = useState<number>(1);
 
+  // Knockout Wizard Modal state
+  const [showKnockoutWizard, setShowKnockoutWizard] = useState(false);
+
+  // Quick-text fixtures modal state
+  const [activeQuickTextRound, setActiveQuickTextRound] = useState<{
+    roundId: string;
+    roundName: string;
+  } | null>(null);
+
+  // Batch Add Rounds state
+  const [showBatchRoundsDialog, setShowBatchRoundsDialog] = useState(false);
+  const [batchRoundCount, setBatchRoundCount] = useState(3);
+  const [batchStartGW, setBatchStartGW] = useState(1);
+  const [batchEmptyMatches, setBatchEmptyMatches] = useState(0);
+
   // Collapsed rounds tracking - persisted per tournament in localStorage via useSyncExternalStore
   const storageKey = `fpl_tournament_${tournamentId}_collapsed_rounds`;
   const collapsedSnapshot = useSyncExternalStore(
@@ -281,6 +302,17 @@ export function ScheduleBuilder({
   const groupNameById = (id: string | null): string => {
     if (!id) return "TBD";
     return groupById(id)?.name || "Unknown";
+  };
+
+  const getUpstreamMatchLabel = (upstreamMatchId?: string | null): string => {
+    if (!upstreamMatchId) return "Winner of Match";
+    for (const r of rounds) {
+      const found = r.matches.find((m) => m.id === upstreamMatchId);
+      if (found) {
+        return `Winner of M${found.matchNumber} (${r.name || `GW ${r.gameweek}`})`;
+      }
+    }
+    return "Winner of Match";
   };
 
   const showMsg = (msg: string) => {
@@ -624,6 +656,39 @@ export function ScheduleBuilder({
     setLoading(null);
   };
 
+  const handleOpenBatchRounds = () => {
+    const nextGW =
+      rounds.length > 0
+        ? Math.min(38, Math.max(...rounds.map((r) => r.gameweek)) + 1)
+        : 1;
+    setBatchStartGW(nextGW);
+    setBatchRoundCount(3);
+    setBatchEmptyMatches(0);
+    setShowBatchRoundsDialog(true);
+  };
+
+  const handleExecuteBatchRounds = async () => {
+    setShowBatchRoundsDialog(false);
+    setLoading("batch-rounds");
+    setError("");
+
+    const result = await createBatchRoundsAction(tournamentId, {
+      roundCount: batchRoundCount,
+      startingGameweek: batchStartGW,
+      emptyMatchesPerRound: batchEmptyMatches,
+    });
+
+    if (result.success) {
+      showMsg(result.message || `Created ${batchRoundCount} rounds successfully!`);
+      startTransition(() => {
+        router.refresh();
+      });
+    } else {
+      setError(result.error || "Failed to create batch rounds");
+    }
+    setLoading(null);
+  };
+
   // ---- Scoring Actions ----
   const handleRecalculate = async (matchId: string) => {
     if (isDeadlineActive) {
@@ -819,7 +884,7 @@ export function ScheduleBuilder({
             <Button
               onClick={() => setShowAutoGenerate((prev) => !prev)}
               disabled={groups.length < 2}
-              className="h-10 px-4 text-xs sm:text-sm font-bold bg-[#37003C] text-white hover:bg-[#5A0A63] shadow-xs rounded-[8px] transition-colors gap-2"
+              className="h-10 px-4 text-xs sm:text-sm font-bold bg-[#37003C] text-white hover:bg-[#5A0A63] shadow-xs rounded-[8px] transition-colors gap-2 cursor-pointer"
               title={
                 groups.length < 2
                   ? "At least 2 groups required to auto-generate"
@@ -827,12 +892,28 @@ export function ScheduleBuilder({
               }
             >
               <Zap className="h-4 w-4 text-[#00FF87] fill-[#00FF87]" />
-              <span>Auto-Generate Round-Robin</span>
+              <span>Round-Robin</span>
               {showAutoGenerate ? (
                 <ChevronUp className="h-3.5 w-3.5 ml-1 opacity-70" />
               ) : (
                 <ChevronDown className="h-3.5 w-3.5 ml-1 opacity-70" />
               )}
+            </Button>
+
+            {/* Knockout Bracket Wizard Button */}
+            <Button
+              variant="outline"
+              onClick={() => setShowKnockoutWizard(true)}
+              disabled={groups.length < 4}
+              className="h-10 px-3.5 text-xs sm:text-sm font-bold text-[#37003C] border-[#37003C]/30 bg-[#37003C]/5 hover:bg-[#37003C]/10 rounded-[8px] transition-colors gap-2 shadow-2xs cursor-pointer"
+              title={
+                groups.length < 4
+                  ? "At least 4 groups required to generate a knockout bracket"
+                  : "Generate Cup / Knockout bracket"
+              }
+            >
+              <Trophy className="h-4 w-4 text-[#37003C]" />
+              <span>Knockout Bracket</span>
             </Button>
 
             {/* Action: Add Round */}
@@ -848,6 +929,18 @@ export function ScheduleBuilder({
                 <Plus className="h-4 w-4 text-[#37003C]" />
               )}
               <span>{loading === "add-round" ? "Adding..." : "Add Round"}</span>
+            </Button>
+
+            {/* Action: Batch Add Rounds */}
+            <Button
+              variant="outline"
+              onClick={handleOpenBatchRounds}
+              disabled={loading === "batch-rounds"}
+              className="h-10 px-3.5 text-xs sm:text-sm font-semibold text-gray-700 border-[#E5E5E5] bg-white hover:bg-[#F7F7F7] hover:text-[#1F1F1F] rounded-[8px] transition-colors gap-1.5 shadow-2xs cursor-pointer"
+              title="Add multiple consecutive rounds at once"
+            >
+              <Layers className="h-4 w-4 text-[#37003C]" />
+              <span>Batch Add</span>
             </Button>
 
             {/* Validation Action */}
@@ -1302,6 +1395,25 @@ export function ScheduleBuilder({
                         </Button>
                       )}
 
+                      {/* Paste Plain Text Matchmaker Button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setActiveQuickTextRound({
+                            roundId: round.id,
+                            roundName:
+                              round.name || `Round ${round.roundNumber}`,
+                          })
+                        }
+                        className="h-8 px-2.5 sm:px-3 text-xs font-semibold text-gray-700 border-[#E5E5E5] bg-white hover:bg-gray-50 hover:text-[#37003C] rounded-[6px] gap-1.5 shadow-2xs cursor-pointer"
+                        title="Paste plain text fixtures like 'Team A vs Team B'"
+                      >
+                        <FileText className="h-3.5 w-3.5 text-[#37003C]" />
+                        <span className="hidden sm:inline">Paste Text</span>
+                        <span className="sm:hidden">Paste</span>
+                      </Button>
+
                       <Button
                         variant="outline"
                         size="sm"
@@ -1474,6 +1586,22 @@ export function ScheduleBuilder({
                               <Button
                                 variant="outline"
                                 size="sm"
+                                onClick={() =>
+                                  setActiveQuickTextRound({
+                                    roundId: round.id,
+                                    roundName:
+                                      round.name || `Round ${round.roundNumber}`,
+                                  })
+                                }
+                                className="h-8 px-3 text-xs font-semibold text-gray-700 border-[#E5E5E5] hover:bg-gray-50 gap-1.5 cursor-pointer"
+                                title="Paste plain text fixtures like 'Team A vs Team B'"
+                              >
+                                <FileText className="h-3.5 w-3.5 text-[#37003C]" />
+                                <span>Paste Text</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => handleFillEmptyMatches(round.id)}
                                 disabled={loading === `fill-round-${round.id}`}
                                 className="h-8 px-3 text-xs font-semibold text-gray-700 border-[#E5E5E5] hover:bg-gray-50 gap-1.5 cursor-pointer"
@@ -1601,21 +1729,33 @@ export function ScheduleBuilder({
 
                                       {/* Dropdown selector for unplayed or display with logo */}
                                       <div className="w-full max-w-[240px]">
-                                        <SearchableTeamSelect
-                                          value={match.homeGroupId || ""}
-                                          onChange={(val) =>
-                                            handleUpdateMatch(
-                                              match.id,
-                                              "home",
-                                              val
-                                            )
-                                          }
-                                          groups={groups}
-                                          disabled={isFinalized}
-                                          placeholder="Select Home Group..."
-                                          ariaLabel={`Select home group for match ${match.matchNumber}`}
-                                          align="right"
-                                        />
+                                        {!match.homeGroupId && match.homeWinnerOfMatchId ? (
+                                          <div
+                                            className="inline-flex items-center justify-end gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30 text-xs font-bold w-full"
+                                            title="Will automatically populate when upstream fixture is finalized"
+                                          >
+                                            <Trophy className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                            <span className="truncate">
+                                              {getUpstreamMatchLabel(match.homeWinnerOfMatchId)}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <SearchableTeamSelect
+                                            value={match.homeGroupId || ""}
+                                            onChange={(val) =>
+                                              handleUpdateMatch(
+                                                match.id,
+                                                "home",
+                                                val
+                                              )
+                                            }
+                                            groups={groups}
+                                            disabled={isFinalized}
+                                            placeholder="Select Home Group..."
+                                            ariaLabel={`Select home group for match ${match.matchNumber}`}
+                                            align="right"
+                                          />
+                                        )}
                                       </div>
 
                                       {homeGroup?.logo ? (
@@ -1724,21 +1864,33 @@ export function ScheduleBuilder({
                                       )}
 
                                       <div className="w-full max-w-[240px]">
-                                        <SearchableTeamSelect
-                                          value={match.awayGroupId || ""}
-                                          onChange={(val) =>
-                                            handleUpdateMatch(
-                                              match.id,
-                                              "away",
-                                              val
-                                            )
-                                          }
-                                          groups={groups}
-                                          disabled={isFinalized}
-                                          placeholder="Select Away Group..."
-                                          ariaLabel={`Select away group for match ${match.matchNumber}`}
-                                          align="left"
-                                        />
+                                        {!match.awayGroupId && match.awayWinnerOfMatchId ? (
+                                          <div
+                                            className="inline-flex items-center justify-start gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30 text-xs font-bold w-full"
+                                            title="Will automatically populate when upstream fixture is finalized"
+                                          >
+                                            <Trophy className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                            <span className="truncate">
+                                              {getUpstreamMatchLabel(match.awayWinnerOfMatchId)}
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <SearchableTeamSelect
+                                            value={match.awayGroupId || ""}
+                                            onChange={(val) =>
+                                              handleUpdateMatch(
+                                                match.id,
+                                                "away",
+                                                val
+                                              )
+                                            }
+                                            groups={groups}
+                                            disabled={isFinalized}
+                                            placeholder="Select Away Group..."
+                                            ariaLabel={`Select away group for match ${match.matchNumber}`}
+                                            align="left"
+                                          />
+                                        )}
                                       </div>
 
                                       {match.awayGroupId && (
@@ -1768,20 +1920,32 @@ export function ScheduleBuilder({
                                           />
                                         )}
                                         <div className="w-full">
-                                          <SearchableTeamSelect
-                                            value={match.homeGroupId || ""}
-                                            onChange={(val) =>
-                                              handleUpdateMatch(
-                                                match.id,
-                                                "home",
-                                                val
-                                              )
-                                            }
-                                            groups={groups}
-                                            disabled={isFinalized}
-                                            placeholder="Select Home Group..."
-                                            ariaLabel={`Select home group for match ${match.matchNumber}`}
-                                          />
+                                          {!match.homeGroupId && match.homeWinnerOfMatchId ? (
+                                            <div
+                                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30 text-xs font-bold w-full"
+                                              title="Will automatically populate when upstream fixture is finalized"
+                                            >
+                                              <Trophy className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                              <span className="truncate">
+                                                {getUpstreamMatchLabel(match.homeWinnerOfMatchId)}
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <SearchableTeamSelect
+                                              value={match.homeGroupId || ""}
+                                              onChange={(val) =>
+                                                handleUpdateMatch(
+                                                  match.id,
+                                                  "home",
+                                                  val
+                                                )
+                                              }
+                                              groups={groups}
+                                              disabled={isFinalized}
+                                              placeholder="Select Home Group..."
+                                              ariaLabel={`Select home group for match ${match.matchNumber}`}
+                                            />
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -1856,20 +2020,32 @@ export function ScheduleBuilder({
                                           />
                                         )}
                                         <div className="w-full">
-                                          <SearchableTeamSelect
-                                            value={match.awayGroupId || ""}
-                                            onChange={(val) =>
-                                              handleUpdateMatch(
-                                                match.id,
-                                                "away",
-                                                val
-                                              )
-                                            }
-                                            groups={groups}
-                                            disabled={isFinalized}
-                                            placeholder="Select Away Group..."
-                                            ariaLabel={`Select away group for match ${match.matchNumber}`}
-                                          />
+                                          {!match.awayGroupId && match.awayWinnerOfMatchId ? (
+                                            <div
+                                              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-900 border border-amber-500/30 text-xs font-bold w-full"
+                                              title="Will automatically populate when upstream fixture is finalized"
+                                            >
+                                              <Trophy className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                                              <span className="truncate">
+                                                {getUpstreamMatchLabel(match.awayWinnerOfMatchId)}
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <SearchableTeamSelect
+                                              value={match.awayGroupId || ""}
+                                              onChange={(val) =>
+                                                handleUpdateMatch(
+                                                  match.id,
+                                                  "away",
+                                                  val
+                                                )
+                                              }
+                                              groups={groups}
+                                              disabled={isFinalized}
+                                              placeholder="Select Away Group..."
+                                              ariaLabel={`Select away group for match ${match.matchNumber}`}
+                                            />
+                                          )}
                                         </div>
                                       </div>
                                     </div>
@@ -2273,6 +2449,145 @@ export function ScheduleBuilder({
           }}
         />
       )}
+
+      {/* Knockout / Cup Bracket Wizard Modal */}
+      <KnockoutWizardModal
+        isOpen={showKnockoutWizard}
+        onClose={() => setShowKnockoutWizard(false)}
+        tournamentId={tournamentId}
+        groups={groups}
+        existingRoundsCount={rounds.length}
+        onSuccess={(msg) => {
+          showMsg(msg);
+          startTransition(() => {
+            router.refresh();
+          });
+        }}
+      />
+
+      {/* Quick-Text Matchmaker Modal */}
+      {activeQuickTextRound && (
+        <QuickTextFixtureModal
+          isOpen={true}
+          onClose={() => setActiveQuickTextRound(null)}
+          roundId={activeQuickTextRound.roundId}
+          roundName={activeQuickTextRound.roundName}
+          tournamentId={tournamentId}
+          groups={groups}
+          onSuccess={(count) => {
+            showMsg(`Added ${count} fixtures from text!`);
+            startTransition(() => {
+              router.refresh();
+            });
+          }}
+        />
+      )}
+
+      {/* Batch Add Rounds Modal */}
+      <AlertDialog
+        open={showBatchRoundsDialog}
+        onOpenChange={(open) => !open && setShowBatchRoundsDialog(false)}
+      >
+        <AlertDialogContent className="rounded-[14px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-extrabold text-[#1F1F1F] flex items-center gap-2">
+              <Layers className="h-5 w-5 text-[#37003C]" />
+              <span>Batch Add Rounds</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs sm:text-sm text-[#555555]">
+              Quickly generate multiple consecutive rounds with sequential Gameweek numbers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="py-3 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="batchRounds" className="text-xs font-bold text-[#1F1F1F]">
+                  Number of Rounds:
+                </Label>
+                <Input
+                  id="batchRounds"
+                  type="number"
+                  min={1}
+                  max={Math.max(1, 39 - batchStartGW)}
+                  value={batchRoundCount}
+                  onChange={(e) =>
+                    setBatchRoundCount(
+                      Math.max(1, Math.min(39 - batchStartGW, parseInt(e.target.value) || 1))
+                    )
+                  }
+                  className="font-bold text-center h-9 bg-white"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="batchStartGW" className="text-xs font-bold text-[#1F1F1F]">
+                  Start Gameweek:
+                </Label>
+                <Input
+                  id="batchStartGW"
+                  type="number"
+                  min={1}
+                  max={38}
+                  value={batchStartGW}
+                  onChange={(e) => {
+                    const val = Math.max(1, Math.min(38, parseInt(e.target.value) || 1));
+                    setBatchStartGW(val);
+                    if (val + batchRoundCount - 1 > 38) {
+                      setBatchRoundCount(Math.max(1, 39 - val));
+                    }
+                  }}
+                  className="font-bold text-center h-9 bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="batchEmpty" className="text-xs font-bold text-[#1F1F1F]">
+                Empty Match Slots Per Round:
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="batchEmpty"
+                  type="number"
+                  min={0}
+                  max={Math.floor(groups.length / 2) || 10}
+                  value={batchEmptyMatches}
+                  onChange={(e) =>
+                    setBatchEmptyMatches(
+                      Math.max(0, parseInt(e.target.value) || 0)
+                    )
+                  }
+                  className="w-28 font-bold text-center h-9 bg-white"
+                />
+                <span className="text-xs text-gray-500">
+                  {batchEmptyMatches === 0
+                    ? "(Empty rounds, add matches later)"
+                    : `(${batchEmptyMatches} empty match cards per round)`}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-[#37003C]/5 border border-[#37003C]/10 rounded-lg p-2.5 text-xs text-[#37003C]">
+              Will create <strong>{batchRoundCount} rounds</strong> spanning from{" "}
+              <strong>GW {batchStartGW}</strong> to{" "}
+              <strong>GW {Math.min(38, batchStartGW + batchRoundCount - 1)}</strong>.
+            </div>
+          </div>
+
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-[8px] text-xs font-semibold">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleExecuteBatchRounds}
+              className="bg-[#37003C] hover:bg-[#5A0A63] text-white rounded-[8px] text-xs font-bold"
+            >
+              Create {batchRoundCount} Rounds
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
