@@ -867,12 +867,21 @@ export function MatchDetailView({
                   <Flame className="h-4 w-4 text-amber-500" />
                 </div>
                 {stats.topScorer ? (
-                  <div className="mt-3 space-y-1">
-                    <div className="text-xl font-black text-gray-900 truncate">
-                      {stats.topScorer.fplName}
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="relative h-14 w-14 shrink-0 flex items-center justify-center">
+                      <img
+                        src="/images/players/mvp of the match.png"
+                        alt={stats.topScorer.fplName}
+                        className="h-full w-full object-contain drop-shadow-sm"
+                      />
                     </div>
-                    <div className="text-xs font-semibold text-[#00A855]">
-                      {stats.topScorer.gameweekPoints} pts ({stats.topScorer.teamName})
+                    <div className="min-w-0 space-y-0.5">
+                      <div className="text-lg font-black text-gray-900 truncate">
+                        {stats.topScorer.fplName}
+                      </div>
+                      <div className="text-xs font-semibold text-[#00A855] truncate">
+                        {stats.topScorer.gameweekPoints} pts ({stats.topScorer.teamName})
+                      </div>
                     </div>
                   </div>
                 ) : (

@@ -48,13 +48,13 @@ export function RoundPerformersBanner({
       )}
     >
       {/* =================================================================== */}
-      {/* CARD 1: MVP OF THE ROUND (SQUARE CARD WITH PLAYER PLACEHOLDER)      */}
+      {/* CARD 1: MVP OF THE ROUND                                            */}
       {/* =================================================================== */}
       {mvp ? (
         <div
           onClick={() => onSelectPlayer?.(mvp)}
           className={cn(
-            "relative aspect-square rounded-2xl border p-3 sm:p-4 flex flex-col justify-between items-center text-center transition-all group overflow-hidden select-none",
+            "relative aspect-[4/5] sm:aspect-square rounded-2xl border p-3 sm:p-4 flex flex-col justify-between items-center text-center transition-all group overflow-hidden select-none",
             onSelectPlayer ? "cursor-pointer hover:shadow-md hover:border-amber-400 hover:-translate-y-0.5" : "",
             isLive
               ? "bg-gradient-to-b from-rose-50/70 via-white to-amber-50/40 border-rose-200/90 shadow-2xs"
@@ -79,16 +79,19 @@ export function RoundPerformersBanner({
             </span>
           </div>
 
-          {/* Center: Player Silhouette Image with Team Crest Overlay */}
+          {/* Center: MVP Illustration (No border, no background, bigger size) */}
           <div className="relative my-auto flex items-center justify-center">
-            <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-gradient-to-b from-[#37003C]/5 via-[#37003C]/10 to-[#37003C]/15 border border-[#37003C]/15 p-2 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+            <div className="relative group-hover:scale-105 transition-transform duration-200">
               <img
-                src="/images/players/player-placeholder.svg"
+                src="/images/players/mvp of the match.png"
                 alt={mvp.fplName}
-                className="h-full w-full object-contain drop-shadow-sm"
+                className="h-28 w-28 sm:h-32 sm:w-32 object-contain drop-shadow-md"
+                onError={(e) => {
+                  e.currentTarget.src = "/images/players/player-placeholder.svg";
+                }}
               />
               {mvp.tournamentTeamLogo && (
-                <div className="absolute -bottom-1 -right-1 h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-white p-0.5 border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden">
+                <div className="absolute -bottom-1 -right-1 h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-white p-0.5 border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden z-10">
                   <img
                     src={mvp.tournamentTeamLogo}
                     alt={mvp.tournamentTeamName}
@@ -118,13 +121,13 @@ export function RoundPerformersBanner({
       ) : null}
 
       {/* =================================================================== */}
-      {/* CARD 2: BEST TEAM IN THE ROUND (SQUARE CARD WITH TEAM CREST)        */}
+      {/* CARD 2: BEST TEAM IN THE ROUND                                      */}
       {/* =================================================================== */}
       {bestTeam ? (
         <div
           onClick={() => onSelectTeam?.(bestTeam.teamId)}
           className={cn(
-            "relative aspect-square rounded-2xl border p-3 sm:p-4 flex flex-col justify-between items-center text-center transition-all group overflow-hidden select-none",
+            "relative aspect-[4/5] sm:aspect-square rounded-2xl border p-3 sm:p-4 flex flex-col justify-between items-center text-center transition-all group overflow-hidden select-none",
             onSelectTeam ? "cursor-pointer hover:shadow-md hover:border-emerald-400 hover:-translate-y-0.5" : "",
             isLive
               ? "bg-gradient-to-b from-rose-50/70 via-white to-emerald-50/40 border-rose-200/90 shadow-2xs"
@@ -149,18 +152,26 @@ export function RoundPerformersBanner({
             </span>
           </div>
 
-          {/* Center: Team Crest */}
+          {/* Center: Best Team Illustration (No border, no background, bigger size) */}
           <div className="relative my-auto flex items-center justify-center">
-            <div className="relative h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-white border border-gray-100 p-2.5 flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
-              {bestTeam.teamLogo ? (
-                <img
-                  src={bestTeam.teamLogo}
-                  alt={bestTeam.teamName}
-                  className="h-full w-full object-contain drop-shadow-sm"
-                />
-              ) : (
-                <div className="h-full w-full rounded-xl bg-[#37003C] text-[#00FF87] font-black text-sm sm:text-base flex items-center justify-center">
-                  {bestTeam.teamName.slice(0, 2).toUpperCase()}
+            <div className="relative group-hover:scale-105 transition-transform duration-200">
+              <img
+                src="/images/players/mvp team.png"
+                alt={bestTeam.teamName}
+                className="h-28 w-28 sm:h-32 sm:w-32 object-contain drop-shadow-md"
+                onError={(e) => {
+                  if (bestTeam.teamLogo) {
+                    e.currentTarget.src = bestTeam.teamLogo;
+                  }
+                }}
+              />
+              {bestTeam.teamLogo && (
+                <div className="absolute -bottom-1 -right-1 h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-white p-0.5 border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden z-10">
+                  <img
+                    src={bestTeam.teamLogo}
+                    alt={bestTeam.teamName}
+                    className="h-full w-full object-contain"
+                  />
                 </div>
               )}
             </div>
