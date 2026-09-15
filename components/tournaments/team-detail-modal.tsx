@@ -23,7 +23,7 @@ import {
 import { FantasyTeamModal } from "@/components/fantasy-team-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 
 export interface TeamMemberItem {
   id: string;
@@ -268,11 +268,11 @@ export function TeamDetailModal({
                 <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
                   Points For / Against
                 </div>
-                <div className="text-xl font-black text-gray-900 mt-0.5">
-                  <span>{team.pointsFor?.toLocaleString() ?? 0}</span>
+                <div className="text-xl font-black text-gray-900 mt-0.5" suppressHydrationWarning>
+                  <span>{formatNumber(team.pointsFor)}</span>
                   <span className="text-gray-400 text-xs font-bold mx-1">/</span>
                   <span className="text-gray-500 text-sm font-semibold">
-                    {team.pointsAgainst?.toLocaleString() ?? 0}
+                    {formatNumber(team.pointsAgainst)}
                   </span>
                 </div>
               </div>

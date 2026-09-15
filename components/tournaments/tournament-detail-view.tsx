@@ -50,7 +50,7 @@ import {
 import { FantasyTeamModal } from "@/components/fantasy-team-modal";
 
 export type { TeamDirectoryItem, TeamMemberItem, TeamFixtureItem };
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 
 export interface TeamStandingItem {
   rank: number;
@@ -534,8 +534,8 @@ export function TournamentDetailView({
                               </td>
 
                               {/* Total Points */}
-                              <td className="py-3 px-3 text-right font-black text-gray-900">
-                                {team.totalPoints.toLocaleString()}
+                              <td className="py-3 px-3 text-right font-black text-gray-900" suppressHydrationWarning>
+                                {formatNumber(team.totalPoints)}
                               </td>
                             </tr>
                           );
@@ -600,8 +600,8 @@ export function TournamentDetailView({
                               <td className="py-3 px-3 text-center font-bold text-gray-700 text-xs">
                                 {team.gwPoints > 0 ? team.gwPoints : "—"}
                               </td>
-                              <td className="py-3 px-3 text-right font-black text-gray-900">
-                                {team.totalPoints.toLocaleString()}
+                              <td className="py-3 px-3 text-right font-black text-gray-900" suppressHydrationWarning>
+                                {formatNumber(team.totalPoints)}
                               </td>
                             </tr>
                           ))}
@@ -1047,8 +1047,8 @@ export function TournamentDetailView({
                               {team.groupName}
                             </span>
                           </div>
-                          <span className="text-xs font-black text-gray-700 shrink-0">
-                            {team.totalPoints.toLocaleString()} pts
+                          <span className="text-xs font-black text-gray-700 shrink-0" suppressHydrationWarning>
+                            {formatNumber(team.totalPoints)} pts
                           </span>
                         </div>
                       );
@@ -1309,11 +1309,11 @@ export function TournamentDetailView({
                         <td className="py-3.5 px-2 text-center font-semibold text-rose-700 text-xs">
                           {team.lost}
                         </td>
-                        <td className="py-3.5 px-2 text-center text-gray-700 text-xs font-medium">
-                          {team.pointsFor.toLocaleString()}
+                        <td className="py-3.5 px-2 text-center text-gray-700 text-xs font-medium" suppressHydrationWarning>
+                          {formatNumber(team.pointsFor)}
                         </td>
-                        <td className="py-3.5 px-2 text-center text-gray-700 text-xs font-medium">
-                          {team.pointsAgainst.toLocaleString()}
+                        <td className="py-3.5 px-2 text-center text-gray-700 text-xs font-medium" suppressHydrationWarning>
+                          {formatNumber(team.pointsAgainst)}
                         </td>
                         <td className="py-3.5 px-2 text-center font-bold text-xs">
                           {team.pointsDiff > 0 ? (

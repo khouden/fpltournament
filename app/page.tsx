@@ -14,7 +14,7 @@ import {
 } from "@/components/home/featured-tournament-card";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "FPL Tournaments — Compete. Strategize. Win.",
@@ -92,7 +92,7 @@ export default async function Home() {
   }
 
   const activeCount = activeTournaments.length;
-  const teamsCount = totalTeamsCount > 0 ? totalTeamsCount.toLocaleString() : "0";
+  const teamsCount = totalTeamsCount > 0 ? formatNumber(totalTeamsCount) : "0";
   const matchesCount = completedMatchesCount;
 
   // Crest types to cycle through for visual variety

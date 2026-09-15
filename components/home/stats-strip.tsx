@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Trophy, Shield, Calendar } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 
 interface StatsStripProps {
   activeTournaments?: number;
@@ -44,8 +44,8 @@ export function StatsStrip({
               <Shield className="h-6 w-6 stroke-[2.2]" />
             </div>
             <div className="flex flex-col">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-[#0B081E] leading-none">
-                {typeof displayTeams === "number" ? displayTeams.toLocaleString() : displayTeams}
+              <span className="text-2xl sm:text-3xl font-black tracking-tight text-[#0B081E] leading-none" suppressHydrationWarning>
+                {formatNumber(displayTeams)}
               </span>
               <span className="mt-1 text-xs sm:text-sm font-semibold text-[#64748B]">
                 Teams

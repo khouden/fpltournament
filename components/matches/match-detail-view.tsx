@@ -27,7 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { FantasyTeamModal } from "@/components/fantasy-team-modal";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 
 export interface MatchSquadMember {
   id: string;
@@ -1057,8 +1057,8 @@ export function MatchDetailView({
                           <td className="py-3 px-2 text-center text-xs text-rose-700">
                             {team.lost}
                           </td>
-                          <td className="py-3 px-3 text-center text-xs">
-                            {team.pointsFor.toLocaleString()}
+                          <td className="py-3 px-3 text-center text-xs" suppressHydrationWarning>
+                            {formatNumber(team.pointsFor)}
                           </td>
                           <td className="py-3 px-3 text-center text-xs">
                             {team.pointsDiff > 0 ? `+${team.pointsDiff}` : team.pointsDiff}
