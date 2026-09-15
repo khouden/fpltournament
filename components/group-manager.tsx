@@ -109,7 +109,7 @@ export function GroupManager({
   const [leagueSearchQuery, setLeagueSearchQuery] = useState("");
   const [showImport, setShowImport] = useState(false);
   const [loadingLeagues, setLoadingLeagues] = useState(false);
-  const [importing, setImporting] = useState<number | null>(null);
+  const [importingLeagueIds, setImportingLeagueIds] = useState<Record<number, boolean>>({});
 
   // Rename / Edit state
   const [renamingGroup, setRenamingGroup] = useState<string | null>(null);
@@ -232,34 +232,61 @@ export function GroupManager({
       );
       return;
     }
-    setImporting(leagueId);
+    if (importingLeagueIds[leagueId]) {
+      return;
+    }
+    setImportingLeagueIds((prev) => ({ ...prev, [leagueId]: true }));
     setError("");
     const chosenLogo = importLogos[leagueId] || null;
-    const result = await importLeagueAsGroupAction(
-      tournamentId,
-      leagueId,
-      undefined,
-      chosenLogo,
-      adminFplId
-    );
-    if (result.success && result.group) {
-      const newGroup = result.group as Group;
-      setGroups((prev) => [...prev, newGroup]);
-      setLeagues((prev) =>
-        prev.map((l) =>
-          l.id === leagueId ? { ...l, isAlreadyImported: true } : l
-        )
+    try {
+      const result = await importLeagueAsGroupAction(
+        tournamentId,
+        leagueId,
+        undefined,
+        chosenLogo,
+        adminFplId
       );
-      // Auto-expand the newly imported group
-      setExpandedMembers((prev) => ({ ...prev, [newGroup.id]: true }));
-      showToast(`Imported "${newGroup.name}" as an official tournament team!`);
-    } else {
-      if (result.isDeadline) {
-        setIsDeadlineActive(true);
+      if (result.success && result.group) {
+        const newGroup = result.group as Group;
+        setGroups((prev) => {
+          if (
+            prev.some(
+              (g) =>
+                g.id === newGroup.id ||
+                (newGroup.fplLeagueId && g.fplLeagueId === newGroup.fplLeagueId)
+            )
+          ) {
+            return prev;
+          }
+          return [...prev, newGroup];
+        });
+        setLeagues((prev) =>
+          prev.map((l) =>
+            l.id === leagueId ? { ...l, isAlreadyImported: true } : l
+          )
+        );
+        // Auto-expand the newly imported group
+        setExpandedMembers((prev) => ({ ...prev, [newGroup.id]: true }));
+        showToast(`Imported "${newGroup.name}" as an official tournament team!`);
+      } else {
+        if (result.isDeadline) {
+          setIsDeadlineActive(true);
+        }
+        setError(result.error || "Failed to import group");
       }
-      setError(result.error || "Failed to import group");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to import group. Please try again.";
+      setError(errorMessage);
+    } finally {
+      setImportingLeagueIds((prev) => {
+        const next = { ...prev };
+        delete next[leagueId];
+        return next;
+      });
     }
-    setImporting(null);
   };
 
   const handleUpdateGroup = async (groupId: string) => {
@@ -441,6 +468,11 @@ export function GroupManager({
   const targetGroupToDelete = useMemo(() => {
     return groups.find((g) => g.id === groupToDelete);
   }, [groups, groupToDelete]);
+
+  const importingCount = useMemo(
+    () => Object.keys(importingLeagueIds).length,
+    [importingLeagueIds]
+  );
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -678,6 +710,14 @@ export function GroupManager({
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                  {importingCount > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#37003C]/10 text-[#37003C] text-xs font-semibold animate-pulse">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>
+                        Importing {importingCount} {importingCount === 1 ? "team" : "teams"}...
+                      </span>
+                    </span>
+                  )}
                   <span className="text-xs text-[#777777] font-medium">
                     {filteredLeagues.length} of {leagues.length} leagues
                   </span>
@@ -730,7 +770,7 @@ export function GroupManager({
                           <button
                             type="button"
                             onClick={() => setActivePickerLeague(league)}
-                            disabled={league.isAlreadyImported}
+                            disabled={league.isAlreadyImported || Boolean(importingLeagueIds[league.id])}
                             className="group relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#E5E5E5] bg-[#F7F7F7] p-1 hover:border-[#37003C] hover:bg-[#37003C]/5 transition cursor-pointer disabled:opacity-60 shadow-2xs"
                             title="Click to choose club crest"
                           >
@@ -774,7 +814,7 @@ export function GroupManager({
                               <button
                                 type="button"
                                 onClick={() => setActivePickerLeague(league)}
-                                disabled={league.isAlreadyImported}
+                                disabled={league.isAlreadyImported || Boolean(importingLeagueIds[league.id])}
                                 className="text-[11px] font-semibold text-[#37003C] hover:underline cursor-pointer disabled:pointer-events-none"
                               >
                                 {currentChosenLogo ? "Change Crest" : "Choose Crest"}
@@ -790,7 +830,7 @@ export function GroupManager({
                             variant="outline"
                             size="sm"
                             onClick={() => setActivePickerLeague(league)}
-                            disabled={league.isAlreadyImported}
+                            disabled={league.isAlreadyImported || Boolean(importingLeagueIds[league.id])}
                             className="h-8 px-3 text-xs font-semibold border-[#E5E5E5] text-[#555555] hover:text-[#1F1F1F] gap-1.5"
                           >
                             <ImageIcon className="h-3.5 w-3.5 text-[#37003C]" />
@@ -806,7 +846,7 @@ export function GroupManager({
                             <Button
                               size="sm"
                               onClick={() => handleImport(league.id, league.adminFplId)}
-                              disabled={importing === league.id || isDeadlineActive}
+                              disabled={Boolean(importingLeagueIds[league.id]) || isDeadlineActive}
                               title={
                                 isDeadlineActive
                                   ? "Cannot import teams during an active FPL Gameweek deadline"
@@ -818,7 +858,7 @@ export function GroupManager({
                                   : "bg-[#37003C] hover:bg-[#5A0A63] text-white"
                               }`}
                             >
-                              {importing === league.id ? (
+                              {importingLeagueIds[league.id] ? (
                                 <>
                                   <Loader2 className="h-3.5 w-3.5 animate-spin text-current" />
                                   <span>Importing...</span>
