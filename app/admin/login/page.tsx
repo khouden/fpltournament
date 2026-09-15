@@ -17,13 +17,13 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import {
   AlertCircle,
   Loader2,
-  Trophy,
   ShieldCheck,
   Eye,
   EyeOff,
   Sparkles,
   Lock,
 } from "lucide-react";
+import { FplLogoIcon } from "@/components/brand/fpl-logo";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -93,10 +93,10 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-[420px] flex flex-col items-center relative z-10 my-auto">
         {/* Brand Header */}
         <header className="flex flex-col items-center text-center mb-5 animate-fpl-fade-in">
-          {/* Trophy Brand Icon */}
+          {/* Brand Logo Icon */}
           <div className="relative mb-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#37003C] text-[#00FF87] shadow-xl shadow-[#00FF87]/15 border border-[#00FF87]/30 transition-transform duration-200 hover:scale-105">
-              <Trophy className="h-6 w-6" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.06] shadow-xl shadow-[#00FF87]/15 border border-[#00FF87]/30 p-2 transition-transform duration-200 hover:scale-105 backdrop-blur-sm">
+              <FplLogoIcon size={56} className="w-full h-full" priority />
             </div>
             {/* Live indicator dot */}
             <span

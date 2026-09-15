@@ -9,17 +9,23 @@ const globalForPrisma = global as unknown as {
 
 function createPool(): pg.Pool {
   const connectionString = process.env.DATABASE_URL;
-  return new pg.Pool({
+  const pool = new pg.Pool({
     connectionString,
     ssl: {
       rejectUnauthorized: false,
     },
-    max: 10,
-    idleTimeoutMillis: 60000,
-    connectionTimeoutMillis: 30000,
+    max: 5,
+    idleTimeoutMillis: 10000,
+    connectionTimeoutMillis: 15000,
     keepAlive: true,
-    keepAliveInitialDelayMillis: 10000,
+    keepAliveInitialDelayMillis: 5000,
   });
+
+  pool.on("error", (err) => {
+    console.warn("[pg-pool] Background client error:", err.message);
+  });
+
+  return pool;
 }
 
 function createPrismaClient(): PrismaClient {
@@ -41,77 +47,147 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = clientInstance;
 }
 
-export function resetPrismaClient(): PrismaClient {
-  try {
-    clientInstance.$disconnect().catch(() => {});
-  } catch {
-    // Ignore disconnect errors during reset
-  }
-  try {
-    if (globalForPrisma.pgPool) {
-      globalForPrisma.pgPool.end().catch(() => {});
-      globalForPrisma.pgPool = undefined;
+let reconnectPromise: Promise<PrismaClient> | null = null;
+
+export async function resetPrismaClient(): Promise<PrismaClient> {
+  if (reconnectPromise) return reconnectPromise;
+
+  reconnectPromise = (async () => {
+    try {
+      if (clientInstance) {
+        await clientInstance.$disconnect().catch(() => {});
+      }
+    } catch {
+      // Ignore disconnect errors during reset
     }
-  } catch {
-    // Ignore pool end errors
+    try {
+      if (globalForPrisma.pgPool) {
+        await globalForPrisma.pgPool.end().catch(() => {});
+        globalForPrisma.pgPool = undefined;
+      }
+    } catch {
+      // Ignore pool end errors
+    }
+    clientInstance = createPrismaClient();
+    if (process.env.NODE_ENV !== "production") {
+      globalForPrisma.prisma = clientInstance;
+    }
+    return clientInstance;
+  })();
+
+  try {
+    return await reconnectPromise;
+  } finally {
+    reconnectPromise = null;
   }
-  clientInstance = createPrismaClient();
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = clientInstance;
-  }
-  return clientInstance;
 }
 
 function isConnectionError(err: unknown): boolean {
   if (!err) return false;
-  const msg = err instanceof Error ? err.message : String(err);
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  const code = String((err as any)?.code || "");
+  const name = String((err as any)?.name || "");
+
+  const connectionCodes = [
+    "P1001",
+    "P1002",
+    "P1008",
+    "P1017",
+    "P2024",
+    "P2010",
+    "P2037",
+    "ECONNRESET",
+    "ETIMEDOUT",
+    "ECONNREFUSED",
+    "EPIPE",
+    "EHOSTUNREACH",
+    "ENOTFOUND",
+    "57P01",
+    "57P02",
+    "57P03",
+    "08000",
+    "08003",
+    "08006",
+    "08001",
+    "08004",
+    "08007",
+  ];
+
+  if (connectionCodes.includes(code)) return true;
+  if (
+    name === "PrismaClientInitializationError" ||
+    name === "PrismaClientRustPanicError"
+  ) {
+    return true;
+  }
+
   return (
-    msg.includes("Can't reach database server") ||
+    msg.includes("closed the connection") ||
     msg.includes("connection closed") ||
-    msg.includes("Connection closed") ||
-    msg.includes("Connection reset") ||
-    msg.includes("Connection terminated") ||
+    msg.includes("connection reset") ||
+    msg.includes("connection terminated") ||
     msg.includes("connection timeout") ||
+    msg.includes("connection lost") ||
     msg.includes("timed out") ||
-    msg.includes("Connection pool timeout") ||
-    msg.includes("PrismaClientInitializationError") ||
+    msg.includes("timeout") ||
+    msg.includes("cant reach database") ||
+    msg.includes("can't reach database") ||
     msg.includes("socket has been ended") ||
-    msg.includes("ETIMEDOUT") ||
-    msg.includes("ECONNRESET") ||
-    msg.includes("ECONNREFUSED")
+    msg.includes("socket closed") ||
+    msg.includes("broken pipe") ||
+    msg.includes("not usable") ||
+    msg.includes("client has been closed") ||
+    msg.includes("terminating connection") ||
+    msg.includes("connection pool timeout") ||
+    msg.includes("ssl connection has been closed") ||
+    msg.includes("econnreset") ||
+    msg.includes("econnrefused") ||
+    msg.includes("etimedout")
   );
 }
 
 /**
- * Resilient Prisma proxy that automatically recovers and retries once
+ * Resilient Prisma proxy that automatically recovers and retries with backoff
  * if a cloud connection is dropped or idle socket closed (e.g. db.prisma.io:5432).
  */
 export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
-  get(_target, prop, receiver) {
+  get(_target, prop) {
     const current = clientInstance;
-    const value = Reflect.get(current, prop, receiver);
+    const value = Reflect.get(current, prop);
 
     // Proxy model delegates (e.g. prisma.tournament.findMany)
     if (typeof value === "object" && value !== null) {
       return new Proxy(value, {
-        get(modelTarget, modelProp, modelReceiver) {
-          const modelMethod = Reflect.get(modelTarget, modelProp, modelReceiver);
+        get(modelTarget, modelProp) {
+          const modelMethod = Reflect.get(modelTarget, modelProp);
           if (typeof modelMethod === "function") {
             return async function (...args: unknown[]) {
-              try {
-                return await modelMethod.apply(modelTarget, args);
-              } catch (err: unknown) {
-                if (isConnectionError(err)) {
-                  console.warn(
-                    `[prisma] Database connection dropped on ${String(prop)}.${String(modelProp)}. Reconnecting...`
-                  );
-                  const freshClient = resetPrismaClient();
-                  const freshModel = Reflect.get(freshClient, prop);
-                  const freshMethod = Reflect.get(freshModel, modelProp);
-                  return await freshMethod.apply(freshModel, args);
+              const maxAttempts = 3;
+              let lastErr: unknown;
+              for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+                try {
+                  const activeClient = clientInstance;
+                  const activeModel =
+                    Reflect.get(activeClient, prop) ?? modelTarget;
+                  const activeMethod =
+                    Reflect.get(activeModel, modelProp) ?? modelMethod;
+                  return await activeMethod.apply(activeModel, args);
+                } catch (err: unknown) {
+                  lastErr = err;
+                  if (isConnectionError(err) && attempt < maxAttempts) {
+                    console.warn(
+                      `[prisma] Database connection issue on ${String(prop)}.${String(modelProp)} (attempt ${attempt}/${maxAttempts}). Reconnecting...`
+                    );
+                    await resetPrismaClient();
+                    await new Promise((resolve) =>
+                      setTimeout(resolve, attempt * 150)
+                    );
+                    continue;
+                  }
+                  throw err;
                 }
-                throw err;
               }
+              throw lastErr;
             };
           }
           return modelMethod;
@@ -122,22 +198,33 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
     // Proxy root functions (e.g. prisma.$transaction, prisma.$queryRaw)
     if (typeof value === "function") {
       return async function (...args: unknown[]) {
-        try {
-          return await value.apply(current, args);
-        } catch (err: unknown) {
-          if (isConnectionError(err)) {
-            console.warn(
-              `[prisma] Database connection dropped on root ${String(prop)}. Reconnecting...`
-            );
-            const freshClient = resetPrismaClient();
-            const freshMethod = Reflect.get(freshClient, prop);
-            return await freshMethod.apply(freshClient, args);
+        const maxAttempts = 3;
+        let lastErr: unknown;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            const activeClient = clientInstance;
+            const activeMethod = Reflect.get(activeClient, prop) ?? value;
+            return await activeMethod.apply(activeClient, args);
+          } catch (err: unknown) {
+            lastErr = err;
+            if (isConnectionError(err) && attempt < maxAttempts) {
+              console.warn(
+                `[prisma] Database connection issue on root ${String(prop)} (attempt ${attempt}/${maxAttempts}). Reconnecting...`
+              );
+              await resetPrismaClient();
+              await new Promise((resolve) =>
+                setTimeout(resolve, attempt * 150)
+              );
+              continue;
+            }
+            throw err;
           }
-          throw err;
         }
+        throw lastErr;
       };
     }
 
     return value;
   },
 });
+

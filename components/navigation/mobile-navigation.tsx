@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Trophy, ArrowRight, BookOpen, LayoutGrid, PlusCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { FplLogo } from "@/components/brand/fpl-logo";
 import { cn } from "@/lib/utils";
 
 interface MobileNavigationProps {
@@ -28,18 +29,9 @@ export function MobileNavigation({ isOpen, onClose }: MobileNavigationProps) {
       <SheetContent side="left" className="bg-[#240027] text-white border-r border-[#37003C] p-6 flex flex-col justify-between">
         <div>
           <SheetHeader className="text-left pb-6 border-b border-[#37003C]">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[#00FF87] text-[#37003C]">
-                <Trophy className="h-5 w-5" />
-              </div>
-              <div>
-                <SheetTitle className="text-lg font-black tracking-tight text-white leading-none">
-                  FPL <span className="text-[#00FF87]">TOURNAMENTS</span>
-                </SheetTitle>
-                <div className="text-[10px] font-bold text-gray-400 mt-1 uppercase tracking-wider">
-                  Fantasy Premier League
-                </div>
-              </div>
+            <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+            <div onClick={onClose}>
+              <FplLogo size="md" href="/" />
             </div>
           </SheetHeader>
 

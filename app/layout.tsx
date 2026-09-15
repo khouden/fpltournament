@@ -7,6 +7,11 @@ import { Suspense } from "react";
 export const metadata: Metadata = {
   title: "FPL Tournaments — Custom Fantasy Premier League Knockout Tournaments",
   description: "Automated Gameweek score calculations, strict Admin points exclusion, and live knockout progression tracking.",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

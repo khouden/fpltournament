@@ -76,7 +76,7 @@ export async function getTournamentsPageData(): Promise<{
       orderBy: { createdAt: "desc" },
     });
   } catch (dbError) {
-    console.error("[tournaments-data] Error fetching tournaments from database:", dbError);
+    console.warn("[tournaments-data] Error fetching tournaments from database:", dbError);
     return { active: [], completed: [] };
   }
 

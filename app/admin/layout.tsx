@@ -1,8 +1,9 @@
 import { logoutAction } from "@/lib/actions";
-import { Trophy, LogOut, ExternalLink, Plus, LayoutDashboard, Shield } from "lucide-react";
+import { LogOut, ExternalLink, Plus, LayoutDashboard, Shield } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getAdminSessionServer } from "@/lib/auth-server";
+import { FplLogoIcon } from "@/components/brand/fpl-logo";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +33,8 @@ export default async function AdminLayout({
               className="flex items-center gap-2.5 group transition-opacity hover:opacity-95"
               aria-label="Fantasy Leagues Admin Home"
             >
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#37003C] text-[#00FF87] border border-[#00FF87]/30 shadow-xs shrink-0 group-hover:scale-105 transition-transform">
-                <Trophy className="h-5 w-5" />
+              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06] border border-[#00FF87]/30 shadow-xs shrink-0 group-hover:scale-105 transition-transform p-1">
+                <FplLogoIcon size={36} className="w-full h-full" priority />
               </div>
               <div className="flex items-center gap-2 leading-none">
                 <span className="text-base sm:text-lg font-black tracking-tight text-white">
