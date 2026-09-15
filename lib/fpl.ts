@@ -745,9 +745,52 @@ export async function getBootstrapStaticEvents(bypassCache = false): Promise<FPL
   }
 }
 
+export interface FPLFixture {
+  id: number;
+  code: number;
+  event: number;
+  finished: boolean;
+  finished_provisional: boolean;
+  started: boolean;
+  minutes: number;
+  kickoff_time: string;
+}
+
+/**
+ * Check if all official Fantasy Premier League matches for a given gameweek have finished.
+ * Returns true if fixtures exist for that gameweek and 100% of them have reached full time
+ * (either finished: true or finished_provisional: true).
+ */
+export async function areAllGameweekFixturesFinished(gameweek: number): Promise<boolean> {
+  const cacheKey = `fpl::fixtures_gw_${gameweek}`;
+  const cached = getFromCache<boolean>(cacheKey);
+  if (cached !== null) return cached;
+
+  try {
+    const fixtures = await fetchFPL<FPLFixture[]>(
+      `/fixtures/?event=${gameweek}`,
+      2,
+      false,
+      60 * 1000 // 1-minute cache
+    );
+    if (Array.isArray(fixtures) && fixtures.length > 0) {
+      const allDone = fixtures.every(
+        (f) => f.finished === true || f.finished_provisional === true
+      );
+      // Cache for 60s if live/in-progress, or 1 hour if all completed
+      setInCache(cacheKey, allDone, allDone ? 60 * 60 * 1000 : 60 * 1000);
+      return allDone;
+    }
+  } catch {
+    // Fallback if fixtures cannot be fetched
+  }
+
+  return false;
+}
+
 /**
  * Determine the status of a specific Gameweek:
- * - "FINISHED": Official matches & bonus finished and locked
+ * - "FINISHED": Official matches & bonus finished and locked (or all fixtures finished)
  * - "LIVE": Gameweek is in progress (kickoff passed / is_current, not finished)
  * - "UPCOMING": Gameweek has not kicked off yet
  */
@@ -768,7 +811,20 @@ export async function getGameweekStatus(gameweek: number): Promise<GameweekStatu
     const events = await getBootstrapStaticEvents();
     const event = events.find((e) => e.id === gameweek);
     if (event) {
-      if (event.finished) {
+      // If FPL officially marked the event finished, data checked, or it's a previous gameweek
+      if (event.finished || event.data_checked || event.is_previous) {
+        return {
+          gameweek,
+          status: "FINISHED",
+          isCurrent: false,
+          isFinished: true,
+          deadlineTime: event.deadline_time,
+        };
+      }
+
+      // If all official Premier League fixtures of this gameweek have reached full time
+      const allFixturesFinished = await areAllGameweekFixturesFinished(gameweek);
+      if (allFixturesFinished) {
         return {
           gameweek,
           status: "FINISHED",
@@ -782,6 +838,7 @@ export async function getGameweekStatus(gameweek: number): Promise<GameweekStatu
       const deadlineMs = event.deadline_time ? new Date(event.deadline_time).getTime() : 0;
       const hasPassedDeadline = deadlineMs > 0 && now >= deadlineMs;
 
+      // If gameweek has kicked off / is current and matches are still in progress
       if (event.is_current || hasPassedDeadline) {
         return {
           gameweek,
@@ -804,7 +861,7 @@ export async function getGameweekStatus(gameweek: number): Promise<GameweekStatu
     // Continue to fallback
   }
 
-  // 4. Date comparison fallback using scheduled deadlines
+  // 3. Date comparison fallback using scheduled deadlines
   const scheduled = DEFAULT_SCHEDULED_DEADLINES.find((d) => d.gameweek === gameweek);
   if (scheduled) {
     const deadlineMs = new Date(scheduled.deadlineTime).getTime();
@@ -818,7 +875,19 @@ export async function getGameweekStatus(gameweek: number): Promise<GameweekStatu
         deadlineTime: scheduled.deadlineTime,
       };
     }
-    if (now - deadlineMs < 48 * 60 * 60 * 1000) {
+
+    // Gameweek round fixtures typically conclude within ~50 hours of deadline
+    if (now - deadlineMs < 50 * 60 * 60 * 1000) {
+      const allFixturesFinished = await areAllGameweekFixturesFinished(gameweek);
+      if (allFixturesFinished) {
+        return {
+          gameweek,
+          status: "FINISHED",
+          isCurrent: false,
+          isFinished: true,
+          deadlineTime: scheduled.deadlineTime,
+        };
+      }
       return {
         gameweek,
         status: "LIVE",

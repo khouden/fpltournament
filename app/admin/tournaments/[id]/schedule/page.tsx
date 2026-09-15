@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ScheduleBuilder } from "@/components/schedule-builder";
 import { TournamentWizardStepper } from "@/components/tournament-wizard-stepper";
+import { checkTournamentLiveStatus } from "@/lib/scoring";
 import { ArrowLeft, ArrowRight, AlertTriangle, ChevronRight, Crown, Shield, Rocket, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -38,6 +39,9 @@ export default async function SchedulePage(
   if (!tournament) {
     notFound();
   }
+
+  // Auto-heal matches in completed rounds and evaluate live status
+  await checkTournamentLiveStatus(tournament.rounds);
 
   const totalMatches = tournament.rounds.reduce(
     (acc, r) => acc + r.matches.length,

@@ -252,4 +252,8 @@ export function PageSkeleton() {
   );
 }
 
+export function PlayerCardSkeleton({ className }: { className?: string }) {
+  return <CardSkeleton className={className} />;
+}
+
 export { Skeleton };

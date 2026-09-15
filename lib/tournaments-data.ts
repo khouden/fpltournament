@@ -45,21 +45,40 @@ export async function getTournamentsPageData(): Promise<{
   active: TournamentCardItem[];
   completed: TournamentCardItem[];
 }> {
-  const tournaments = await prisma.tournament.findMany({
-    where: {
-      status: { in: ["PUBLISHED", "FINISHED"] },
-    },
-    include: {
-      groups: true,
-      rounds: {
-        include: {
-          matches: true,
-        },
-        orderBy: { roundNumber: "asc" },
+  let tournaments: Array<
+    Awaited<ReturnType<typeof prisma.tournament.findMany<{
+      include: {
+        groups: true;
+        rounds: {
+          include: {
+            matches: true;
+          };
+          orderBy: { roundNumber: "asc" };
+        };
+      };
+    }>>>[0]
+  > = [];
+
+  try {
+    tournaments = await prisma.tournament.findMany({
+      where: {
+        status: { in: ["PUBLISHED", "FINISHED"] },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      include: {
+        groups: true,
+        rounds: {
+          include: {
+            matches: true,
+          },
+          orderBy: { roundNumber: "asc" },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (dbError) {
+    console.error("[tournaments-data] Error fetching tournaments from database:", dbError);
+    return { active: [], completed: [] };
+  }
 
   const activeList: TournamentCardItem[] = [];
   const completedList: TournamentCardItem[] = [];

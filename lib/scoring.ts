@@ -427,13 +427,15 @@ export async function calculateMatchScore(
         ? resolvedAwayGroupId
         : null;
 
-  // Determine target status: FINALIZED (if locked), IN_PROGRESS (if gameweek is live / not completed), or COMPLETED
+  // Determine target status: FINALIZED (if locked), COMPLETED (if gameweek is finished), or IN_PROGRESS (if gameweek is live)
   const isFinalized = match.status === "FINALIZED" && !forceRecalculate;
   const matchStatus = isFinalized
     ? "FINALIZED"
-    : gwInfo.status === "LIVE"
-      ? "IN_PROGRESS"
-      : "COMPLETED";
+    : gwInfo.isFinished || gwInfo.status === "FINISHED"
+      ? "COMPLETED"
+      : gwInfo.status === "LIVE"
+        ? "IN_PROGRESS"
+        : "COMPLETED";
 
   // Persist Member Scores and Match in atomic batch transaction (no interactive timeout)
   const allScoresData = [
@@ -905,58 +907,79 @@ export interface TournamentLiveInfo {
 }
 
 /**
- * Evaluates whether a tournament is currently live:
- * 1. Has matches explicitly marked IN_PROGRESS or LIVE.
- * 2. Or the current round's Fantasy Premier League gameweek has started / is LIVE and matches are not yet all completed.
+ * Evaluates whether a tournament currently has active live matches or an in-progress FPL round.
+ * If a round's Gameweek is FINISHED, any lingering IN_PROGRESS matches are auto-healed to COMPLETED
+ * so that live league styles and live badges cleanly disappear.
  */
 export async function checkTournamentLiveStatus(
   rounds: Array<{
     id: string;
     roundNumber: number;
     gameweek: number;
-    matches: Array<{ status: string }>;
+    matches: Array<{ id?: string; status: string }>;
   }>
 ): Promise<TournamentLiveInfo> {
-  // 1. Check if any round currently has IN_PROGRESS or LIVE matches
+  // Check each round against official FPL Gameweek status
   for (const round of rounds) {
-    const liveMatches = round.matches.filter(
-      (m) => m.status === "IN_PROGRESS" || m.status === "LIVE"
+    if (!round.matches || round.matches.length === 0) continue;
+
+    const allMatchesDone = round.matches.every(
+      (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
     );
-    if (liveMatches.length > 0) {
+
+    let gwStatus: { status: string; isFinished: boolean };
+    try {
+      gwStatus = await getGameweekStatus(round.gameweek);
+    } catch {
+      gwStatus = {
+        status: allMatchesDone ? "FINISHED" : "UPCOMING",
+        isFinished: allMatchesDone,
+      };
+    }
+
+    // If the gameweek is FINISHED, any in-progress matches are obsolete!
+    // Auto-heal them to COMPLETED so live league styles disappear cleanly.
+    if (gwStatus.isFinished || gwStatus.status === "FINISHED") {
+      const inProgressMatches = round.matches.filter(
+        (m) => m.status === "IN_PROGRESS" || m.status === "LIVE"
+      );
+      if (inProgressMatches.length > 0) {
+        for (const m of inProgressMatches) {
+          m.status = "COMPLETED";
+        }
+        try {
+          await prisma.match.updateMany({
+            where: {
+              roundId: round.id,
+              status: { in: ["IN_PROGRESS", "LIVE"] },
+            },
+            data: {
+              status: "COMPLETED",
+            },
+          });
+        } catch (dbErr) {
+          console.error(
+            `[scoring] Error updating finished round ${round.id} matches to COMPLETED:`,
+            dbErr
+          );
+        }
+      }
+      continue;
+    }
+
+    // If gameweek is actively LIVE in FPL:
+    if (gwStatus.status === "LIVE") {
+      const liveMatches = round.matches.filter(
+        (m) => m.status === "IN_PROGRESS" || m.status === "LIVE"
+      );
       return {
         isLive: true,
         liveRoundNumber: round.roundNumber,
         liveGameweek: round.gameweek,
         liveRoundId: round.id,
-        liveMatchCount: liveMatches.length,
+        liveMatchCount:
+          liveMatches.length > 0 ? liveMatches.length : round.matches.length,
       };
-    }
-  }
-
-  // 2. Check if there is an active round where FPL matches are not completed yet
-  // i.e., gameweek is LIVE in FPL and the round's matches are not all completed/finalized
-  for (const round of rounds) {
-    const allMatchesDone =
-      round.matches.length > 0 &&
-      round.matches.every(
-        (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
-      );
-
-    if (!allMatchesDone && round.matches.length > 0) {
-      try {
-        const gwStatus = await getGameweekStatus(round.gameweek);
-        if (gwStatus.status === "LIVE") {
-          return {
-            isLive: true,
-            liveRoundNumber: round.roundNumber,
-            liveGameweek: round.gameweek,
-            liveRoundId: round.id,
-            liveMatchCount: round.matches.length,
-          };
-        }
-      } catch {
-        // Continue fallback
-      }
     }
   }
 

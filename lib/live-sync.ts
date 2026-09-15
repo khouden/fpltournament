@@ -101,9 +101,9 @@ export async function triggerTournamentScoreSync(
       // A. Gameweek is actively LIVE (matches currently playing)
       const isLive = gwInfo.status === "LIVE";
 
-      // B. Gameweek recently FINISHED, but round still has matches marked SCHEDULED or IN_PROGRESS
+      // B. Gameweek recently FINISHED, but round still has matches marked SCHEDULED, IN_PROGRESS, or LIVE
       const hasPendingMatches = round.matches.some(
-        (m) => m.status === "SCHEDULED" || m.status === "IN_PROGRESS"
+        (m) => m.status === "SCHEDULED" || m.status === "IN_PROGRESS" || m.status === "LIVE"
       );
       const isRecentlyFinished = gwInfo.isFinished && hasPendingMatches;
 

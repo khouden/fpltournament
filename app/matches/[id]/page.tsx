@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { after } from "next/server";
 import { calculateLeagueStandings } from "@/lib/scoring";
 import { triggerTournamentScoreSync } from "@/lib/live-sync";
+import { getGameweekStatus } from "@/lib/fpl";
 import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import { Header } from "@/components/navigation/header";
 import { Footer } from "@/components/layout/footer";
@@ -165,19 +166,47 @@ export default async function MatchPage(
     leaguePoints: awayStanding?.leaguePoints,
   };
 
+  // Check if round's gameweek is finished: if so, live styling should disappear
+  let resolvedStatus = match.status;
+  try {
+    const gwStatus = await getGameweekStatus(match.round.gameweek);
+    if (gwStatus.isFinished || gwStatus.status === "FINISHED") {
+      if (match.status === "IN_PROGRESS" || match.status === "LIVE") {
+        resolvedStatus = "COMPLETED";
+      }
+      // Auto-heal any obsolete in-progress matches in this finished round
+      prisma.match.updateMany({
+        where: {
+          roundId: match.round.id,
+          status: { in: ["IN_PROGRESS", "LIVE"] },
+        },
+        data: { status: "COMPLETED" },
+      }).catch(() => {});
+    }
+  } catch {
+    // Ignore fallback
+  }
+
   // Sister matches in the same round
-  const sisterMatches: SisterMatchSummary[] = match.round.matches.map((m) => ({
-    id: m.id,
-    matchNumber: m.matchNumber,
-    status: m.status,
-    homeName: m.homeGroup?.name || "TBD",
-    homeLogo: m.homeGroup?.logo || null,
-    homeScore: m.homeScore,
-    awayName: m.awayGroup?.name || "TBD",
-    awayLogo: m.awayGroup?.logo || null,
-    awayScore: m.awayScore,
-    isCurrent: m.id === match.id,
-  }));
+  const isRoundFinished = resolvedStatus === "COMPLETED" || resolvedStatus === "FINALIZED";
+  const sisterMatches: SisterMatchSummary[] = match.round.matches.map((m) => {
+    let smStatus = m.status;
+    if (isRoundFinished && (m.status === "IN_PROGRESS" || m.status === "LIVE")) {
+      smStatus = "COMPLETED";
+    }
+    return {
+      id: m.id,
+      matchNumber: m.matchNumber,
+      status: smStatus,
+      homeName: m.homeGroup?.name || "TBD",
+      homeLogo: m.homeGroup?.logo || null,
+      homeScore: m.homeScore,
+      awayName: m.awayGroup?.name || "TBD",
+      awayLogo: m.awayGroup?.logo || null,
+      awayScore: m.awayScore,
+      isCurrent: m.id === match.id,
+    };
+  });
 
   // Standings snapshot
   const standingsSnapshot: TournamentStandingSnapshot[] = rawStandings.map(
@@ -211,7 +240,7 @@ export default async function MatchPage(
           match={{
             id: match.id,
             matchNumber: match.matchNumber,
-            status: match.status,
+            status: resolvedStatus,
             result: match.result,
             roundNumber: match.round.roundNumber,
             roundName: match.round.name || `Round ${match.round.roundNumber}`,
