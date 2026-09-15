@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FPLVerifier } from "./fpl-verifier";
@@ -25,6 +25,7 @@ import {
   Upload,
   Link as LinkIcon,
   Sparkles,
+  Calendar,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,13 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardHeader,
@@ -57,6 +65,28 @@ export interface AdminItem {
   isPrimary: boolean;
 }
 
+function getCurrentSeasonStartYear(): number {
+  const now = new Date();
+  const year = now.getFullYear();
+  return now.getMonth() >= 6 ? year : year - 1;
+}
+
+function getSeasonOptions(currentStartYear: number, initialYear?: number) {
+  const years = new Set<number>();
+  for (let y = currentStartYear + 2; y >= 2020; y--) {
+    years.add(y);
+  }
+  if (initialYear && initialYear >= 2000 && initialYear <= 2100) {
+    years.add(initialYear);
+  }
+  const sortedYears = Array.from(years).sort((a, b) => b - a);
+  return sortedYears.map((y) => ({
+    year: y,
+    label: `${y}/${y + 1}`,
+    isCurrent: y === currentStartYear,
+  }));
+}
+
 interface TournamentFormProps {
   initialData?: {
     id?: string;
@@ -79,10 +109,55 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
   const router = useRouter();
   const isEdit = !!initialData?.id;
 
+  const currentSeasonYear = getCurrentSeasonStartYear();
+  const defaultSeasonYear = initialData?.season || currentSeasonYear;
+
   const [name, setName] = useState(initialData?.name || "");
-  const [season, setSeason] = useState(
-    initialData?.season || new Date().getFullYear()
+  const [season, setSeason] = useState<number>(defaultSeasonYear);
+  const [isCustomSeason, setIsCustomSeason] = useState(false);
+  const [customSeasonInput, setCustomSeasonInput] = useState(
+    `${defaultSeasonYear}/${defaultSeasonYear + 1}`
   );
+  const [seasonInputError, setSeasonInputError] = useState("");
+
+  const seasonOptions = useMemo(
+    () => getSeasonOptions(currentSeasonYear, initialData?.season),
+    [currentSeasonYear, initialData?.season]
+  );
+
+  const handleCustomSeasonChange = (val: string) => {
+    setCustomSeasonInput(val);
+    const trimmed = val.trim();
+    if (!trimmed) {
+      setSeasonInputError("Season is required");
+      return;
+    }
+
+    const match = trimmed.match(/^(\d{4})\s*[/\\-]\s*(\d{4})$/);
+    if (!match) {
+      setSeasonInputError("Format must contain two years, e.g., 2026/2027 or 2025/2026");
+      return;
+    }
+
+    const startYear = parseInt(match[1], 10);
+    const endYear = parseInt(match[2], 10);
+
+    if (endYear !== startYear + 1) {
+      setSeasonInputError(
+        `Consecutive years required (e.g., ${startYear}/${startYear + 1})`
+      );
+      return;
+    }
+
+    if (startYear < 2020 || startYear > 2100) {
+      setSeasonInputError("Season year must be between 2020 and 2100");
+      return;
+    }
+
+    setSeason(startYear);
+    setSeasonInputError("");
+  };
+
   const [banner, setBanner] = useState(initialData?.banner || getDefaultBanner().path);
   const [bannerTab, setBannerTab] = useState<"preset" | "upload" | "url">("preset");
   const [customUrlInput, setCustomUrlInput] = useState(initialData?.banner || "");
@@ -236,7 +311,11 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
   const coAdmins = admins.filter((a) => a.fplId !== primaryAdmin?.fplId);
 
   // Step state derivation
-  const step1Complete = name.trim().length > 0 && season >= 2020 && season <= 2100;
+  const step1Complete =
+    name.trim().length > 0 &&
+    season >= 2020 &&
+    season <= 2100 &&
+    (!isCustomSeason || !seasonInputError);
   const step2Complete = true; // Always configured
   const step3Complete = admins.length > 0;
 
@@ -358,23 +437,112 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
               </div>
 
               <div className="space-y-2 sm:col-span-1">
-                <Label
-                  htmlFor="season"
-                  className="text-sm font-semibold text-[#1F1F1F]"
-                >
-                  Season *
-                </Label>
-                <Input
-                  type="number"
-                  id="season"
-                  value={season}
-                  onChange={(e) => setSeason(parseInt(e.target.value))}
-                  disabled={loading}
-                  min={2020}
-                  max={2100}
-                  required
-                  className="h-11 focus-visible:ring-[#37003C] border-[#E5E5E5]"
-                />
+                <div className="flex items-center justify-between">
+                  <Label
+                    htmlFor="season"
+                    className="text-sm font-semibold text-[#1F1F1F] flex items-center gap-1.5"
+                  >
+                    <Calendar className="h-3.5 w-3.5 text-[#37003C]" />
+                    <span>Season *</span>
+                  </Label>
+                  {!isCustomSeason ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomSeason(true);
+                        setCustomSeasonInput(`${season}/${season + 1}`);
+                        setSeasonInputError("");
+                      }}
+                      className="text-[11px] font-semibold text-[#37003C] hover:underline"
+                    >
+                      Custom
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomSeason(false);
+                        setSeasonInputError("");
+                      }}
+                      className="text-[11px] font-semibold text-[#37003C] hover:underline"
+                    >
+                      Choose from list
+                    </button>
+                  )}
+                </div>
+
+                {!isCustomSeason ? (
+                  <Select
+                    value={String(season)}
+                    onValueChange={(val) => {
+                      if (val === "custom") {
+                        setIsCustomSeason(true);
+                        setCustomSeasonInput(`${season}/${season + 1}`);
+                        setSeasonInputError("");
+                      } else {
+                        const parsed = parseInt(val, 10);
+                        setSeason(parsed);
+                        setCustomSeasonInput(`${parsed}/${parsed + 1}`);
+                        setSeasonInputError("");
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    <SelectTrigger
+                      id="season"
+                      className="h-11 border-[#E5E5E5] bg-white text-[#1F1F1F] font-semibold focus:ring-[#37003C] focus:border-[#37003C]"
+                    >
+                      <SelectValue placeholder="e.g., 2026/2027">
+                        {season ? `${season}/${season + 1}` : "Select Season"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72 bg-white border border-[#E5E5E5] shadow-lg rounded-xl z-50">
+                      {seasonOptions.map((opt) => (
+                        <SelectItem
+                          key={opt.year}
+                          value={String(opt.year)}
+                          className="cursor-pointer py-2.5 font-medium text-[#1F1F1F] hover:bg-[#F5F5F5] focus:bg-[#F5F5F5] focus:text-[#1F1F1F] data-[highlighted]:bg-[#F5F5F5] data-[highlighted]:text-[#1F1F1F]"
+                        >
+                          <div className="flex items-center justify-between w-full gap-3">
+                            <span className="font-semibold text-[#1F1F1F]">{opt.label}</span>
+                            {opt.isCurrent && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00FF87]/20 text-[#008744] border border-[#00FF87]/40">
+                                Current
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                      <SelectItem
+                        value="custom"
+                        className="cursor-pointer py-2 text-xs text-[#37003C] font-semibold border-t border-gray-100 hover:bg-[#F5F5F5] focus:bg-[#F5F5F5] focus:text-[#37003C] data-[highlighted]:bg-[#F5F5F5] data-[highlighted]:text-[#37003C]"
+                      >
+                        ✏️ Custom Season (enter manually)...
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="space-y-1">
+                    <Input
+                      type="text"
+                      id="season"
+                      value={customSeasonInput}
+                      onChange={(e) => handleCustomSeasonChange(e.target.value)}
+                      disabled={loading}
+                      placeholder="e.g., 2026/2027"
+                      required
+                      className="h-11 focus-visible:ring-[#37003C] border-[#E5E5E5] font-semibold"
+                    />
+                    {seasonInputError && (
+                      <p className="text-[11px] text-rose-600 font-medium">
+                        {seasonInputError}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <p className="text-[11px] text-[#777777]">
+                  Two-year format (e.g., 2026/2027 or 2025/2026)
+                </p>
               </div>
             </div>
 
@@ -636,7 +804,7 @@ export function TournamentForm({ initialData }: TournamentFormProps) {
                         </h4>
                       </div>
                       <span className="text-xs font-bold text-white/90 bg-black/40 px-2.5 py-1 rounded-md backdrop-blur-xs border border-white/20">
-                        {season ? `Season ${season}` : "Season"}
+                        {season ? `Season ${season}/${season + 1}` : "Season"}
                       </span>
                     </div>
                   </div>

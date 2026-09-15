@@ -142,7 +142,7 @@ export default async function TournamentManagementPage({
 
                 <span className="inline-flex items-center gap-1 rounded-full bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1 text-xs font-semibold text-white/90">
                   <Calendar className="h-3.5 w-3.5 text-[#00D9FF]" />
-                  <span>Season {tournament.season}</span>
+                  <span>Season {tournament.season}/{tournament.season + 1}</span>
                 </span>
 
                 {tournament.admins.length > 0 && (
@@ -290,7 +290,7 @@ export default async function TournamentManagementPage({
               </div>
             </div>
             <p className="mt-2 text-2xl sm:text-3xl font-black text-[#1F1F1F] tracking-tight">
-              {tournament.season}
+              {tournament.season}/{tournament.season + 1}
             </p>
           </div>
           <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">

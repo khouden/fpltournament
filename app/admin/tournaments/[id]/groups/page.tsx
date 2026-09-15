@@ -146,7 +146,7 @@ export default async function GroupsPage(
                 {tournament.name}
               </h2>
               <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-[#37003C]/5 text-[#37003C] border border-[#37003C]/10">
-                Season {tournament.season}
+                Season {tournament.season}/{tournament.season + 1}
               </span>
             </div>
 

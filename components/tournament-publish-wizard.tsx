@@ -344,7 +344,7 @@ export function TournamentPublishWizard({
                 {tournament.name}
               </h3>
               <p className="text-xs text-[#666666]">
-                Season {tournament.season} · Primary: {primaryAdmin?.name || `#${tournament.adminFplId}`} ({tournament.admins.length} Admin{tournament.admins.length > 1 ? "s" : ""})
+                Season {tournament.season}/{tournament.season + 1} · Primary: {primaryAdmin?.name || `#${tournament.adminFplId}`} ({tournament.admins.length} Admin{tournament.admins.length > 1 ? "s" : ""})
               </p>
               <div className="flex items-center gap-2 pt-1">
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#F4F4F5] text-[#555555]">

@@ -50,9 +50,9 @@ export function TournamentCard({
     0
   );
 
-  // Format season notation: e.g. 2024 -> 2024/25
+  // Format season notation: e.g. 2026 -> 2026/2027 or 2025/2026
   const seasonFormatted = tournament.season
-    ? `${tournament.season}/${String(tournament.season + 1).slice(-2)}`
+    ? `${tournament.season}/${tournament.season + 1}`
     : "";
 
   const allowBB = tournament.allowBenchBoost ?? true;

@@ -275,7 +275,7 @@ export default async function AdminDashboard() {
                           {tournament.name}
                         </Link>
                         <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 font-medium">
-                          <span>Season {tournament.season}</span>
+                          <span>Season {tournament.season}/{tournament.season + 1}</span>
                           <span>·</span>
                           <span>{tournament.groups.length} Groups</span>
                           <span>·</span>

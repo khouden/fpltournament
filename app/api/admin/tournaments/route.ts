@@ -13,9 +13,19 @@ interface AdminInput {
   isPrimary?: boolean;
 }
 
+export function parseSeason(val: unknown): number {
+  if (typeof val === "number" && !isNaN(val)) return Math.floor(val);
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    const match = trimmed.match(/^(\d{4})/);
+    if (match) return parseInt(match[1], 10);
+  }
+  return NaN;
+}
+
 async function validateTournament(data: {
   name: string;
-  season: number;
+  season: number | string;
   adminFplId?: number;
   admins?: AdminInput[];
 }) {
@@ -23,8 +33,9 @@ async function validateTournament(data: {
     throw new Error("Tournament name is required");
   }
 
-  if (data.season < 2020 || data.season > 2100) {
-    throw new Error("Invalid season year");
+  const parsedSeason = parseSeason(data.season);
+  if (isNaN(parsedSeason) || parsedSeason < 2020 || parsedSeason > 2100) {
+    throw new Error("Invalid season: please specify a valid season like 2026/2027 or 2025/2026");
   }
 
   const adminList = data.admins && data.admins.length > 0
@@ -101,10 +112,12 @@ export async function POST(request: NextRequest) {
     const primaryAdmin =
       normalizedAdmins.find((a) => a.isPrimary) || normalizedAdmins[0];
 
+    const parsedSeason = parseSeason(body.season);
+
     const tournament = await prisma.tournament.create({
       data: {
         name: body.name,
-        season: body.season,
+        season: parsedSeason,
         banner: body.banner ? String(body.banner).trim() : getDefaultBanner().path,
         adminFplId: primaryAdmin.fplId,
         allowBenchBoost: body.allowBenchBoost ?? true,
@@ -186,7 +199,7 @@ export async function PUT(request: NextRequest) {
         where: { id: body.id },
         data: {
           name: body.name,
-          season: body.season,
+          season: body.season !== undefined ? parseSeason(body.season) : undefined,
           banner:
             body.banner !== undefined
               ? body.banner

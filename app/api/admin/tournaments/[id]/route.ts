@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { getManager, FPLDeadlineError } from "@/lib/fpl";
 import { recalculateTournamentScores } from "@/lib/scoring";
 import { safeRevalidate } from "@/lib/safe-revalidate";
+import { parseSeason } from "@/app/api/admin/tournaments/route";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -107,7 +108,7 @@ export async function PATCH(
         where: { id },
         data: {
           name: body.name !== undefined ? body.name : undefined,
-          season: body.season !== undefined ? body.season : undefined,
+          season: body.season !== undefined ? parseSeason(body.season) : undefined,
           banner:
             body.banner !== undefined
               ? body.banner
