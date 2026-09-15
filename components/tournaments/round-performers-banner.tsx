@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Crown, Trophy } from "lucide-react";
+import React, { useState } from "react";
+import { Crown, Trophy, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
   RoundPerformersResult,
@@ -22,10 +22,12 @@ export function RoundPerformersBanner({
   onSelectTeam,
   className,
 }: RoundPerformersBannerProps) {
-  const { mvp, bestTeam, isLive, hasScores, roundNumber, gameweek } = performers;
+  const { mvp, bestTeam, isLive, hasScores, roundNumber, gameweek, roundName } = performers;
+  const [failedTeamLogos, setFailedTeamLogos] = useState<Record<string, boolean>>({});
 
   // If no scores recorded yet (scheduled round)
   if (!hasScores || (!mvp && !bestTeam)) {
+    const displayName = roundName || `Round ${roundNumber}`;
     return (
       <div
         className={cn(
@@ -34,7 +36,7 @@ export function RoundPerformersBanner({
         )}
       >
         <p className="text-xs text-gray-500 font-medium">
-          Round {roundNumber} MVP &amp; Best Team will appear once Gameweek {gameweek} matches kick off.
+          {displayName} MVP &amp; Best Team will appear once Gameweek {gameweek} matches kick off.
         </p>
       </div>
     );
@@ -91,7 +93,7 @@ export function RoundPerformersBanner({
                 }}
               />
               {mvp.tournamentTeamLogo && (
-                <div className="absolute -bottom-1 -right-1 h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-white p-0.5 border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden z-10">
+                <div className="absolute -bottom-1 -right-1 h-10 w-10 sm:h-7 sm:w-7 rounded-full bg-white p-0.5 border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden z-10">
                   <img
                     src={mvp.tournamentTeamLogo}
                     alt={mvp.tournamentTeamName}
@@ -152,26 +154,27 @@ export function RoundPerformersBanner({
             </span>
           </div>
 
-          {/* Center: Best Team Illustration (No border, no background, bigger size) */}
-          <div className="relative my-auto flex items-center justify-center">
-            <div className="relative group-hover:scale-105 transition-transform duration-200">
-              <img
-                src="/images/players/mvp team.png"
-                alt={bestTeam.teamName}
-                className="h-28 w-28 sm:h-32 sm:w-32 object-contain drop-shadow-md"
-                onError={(e) => {
-                  if (bestTeam.teamLogo) {
-                    e.currentTarget.src = bestTeam.teamLogo;
+          {/* Center: Team Logo */}
+          <div className="relative my-auto flex items-center justify-center py-1">
+            <div className="relative group-hover:scale-105 transition-transform duration-200 flex items-center justify-center">
+              {bestTeam.teamLogo && !failedTeamLogos[bestTeam.teamId] ? (
+                <img
+                  src={bestTeam.teamLogo}
+                  alt={bestTeam.teamName}
+                  className="h-24 w-24 sm:h-28 sm:w-28 object-contain drop-shadow-md"
+                  onError={() =>
+                    setFailedTeamLogos((prev) => ({
+                      ...prev,
+                      [bestTeam.teamId]: true,
+                    }))
                   }
-                }}
-              />
-              {bestTeam.teamLogo && (
-                <div className="absolute -bottom-1 -right-1 h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-white p-0.5 border border-gray-200 shadow-sm flex items-center justify-center overflow-hidden z-10">
-                  <img
-                    src={bestTeam.teamLogo}
-                    alt={bestTeam.teamName}
-                    className="h-full w-full object-contain"
-                  />
+                />
+              ) : (
+                <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex flex-col items-center justify-center text-emerald-700 shadow-2xs p-2">
+                  <Shield className="h-10 w-10 text-emerald-600 mb-1" />
+                  <span className="text-[10px] font-black uppercase tracking-wider text-center truncate max-w-full">
+                    {bestTeam.teamName}
+                  </span>
                 </div>
               )}
             </div>
