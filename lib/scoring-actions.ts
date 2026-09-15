@@ -1,13 +1,19 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import {
   calculateMatchScore,
   recalculateTournamentScores,
   recalculateRoundScores,
   determineMatchResult,
 } from "@/lib/scoring";
-import { isFPLDeadlineActive, FPLDeadlineError, getGameweekStatus } from "@/lib/fpl";
+import {
+  isFPLDeadlineActive,
+  FPLDeadlineError,
+  getGameweekStatus,
+  clearFPLCache,
+} from "@/lib/fpl";
 import { validateScheduleAction } from "@/lib/schedule-actions";
 import { safeRevalidate } from "@/lib/safe-revalidate";
 import { requireAdminSession } from "@/lib/auth-server";
@@ -28,6 +34,7 @@ export async function recalculateMatchAction(matchId: string, tournamentId: stri
       };
     }
 
+    clearFPLCache();
     const result = await calculateMatchScore(matchId, true);
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/matches`);
@@ -63,6 +70,7 @@ export async function recalculateAllScoresAction(tournamentId: string) {
       };
     }
 
+    clearFPLCache();
     const results = await recalculateTournamentScores(tournamentId, true);
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/matches`);
@@ -100,6 +108,7 @@ export async function recalculateRoundScoresAction(
       };
     }
 
+    clearFPLCache();
     const results = await recalculateRoundScores(roundId, true);
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/matches`);
@@ -137,24 +146,41 @@ export async function finalizeMatchAction(matchId: string, tournamentId: string)
       };
     }
 
-    // 1. Check if match's gameweek has started
+    // 1. Check if match exists and its gameweek has started
     const match = await prisma.match.findUnique({
       where: { id: matchId },
-      include: { round: true },
+      include: {
+        round: true,
+        homeGroup: true,
+        awayGroup: true,
+      },
     });
     if (!match) {
       return { success: false, error: "Match not found" };
     }
 
-    const gwInfo = await getGameweekStatus(match.round.gameweek);
-    if (gwInfo.status === "UPCOMING") {
-      return {
-        success: false,
-        error: `Cannot finalize match: Gameweek ${match.round.gameweek} has not started yet.`,
-      };
+    const isAllManualMatch = Boolean(
+      match.homeGroup?.isManual && match.awayGroup?.isManual
+    );
+
+    if (!isAllManualMatch) {
+      const gwInfo = await getGameweekStatus(match.round.gameweek);
+      if (gwInfo.status === "UPCOMING") {
+        return {
+          success: false,
+          error: `Cannot finalize match: Gameweek ${match.round.gameweek} has not started yet.`,
+        };
+      }
+      if (gwInfo.status === "LIVE") {
+        return {
+          success: false,
+          error: `Cannot finalize match: Gameweek ${match.round.gameweek} is currently live. Official points, bonus points, and auto-substitutions must be completed before finalizing.`,
+        };
+      }
     }
 
     // 2. Calculate score to ensure latest values are saved
+    clearFPLCache();
     await calculateMatchScore(matchId, true);
 
     // 3. Mark match and scores as finalized
@@ -169,7 +195,7 @@ export async function finalizeMatchAction(matchId: string, tournamentId: string)
       }),
     ]);
 
-    // 3. Recalculate downstream matches to forward winner
+    // 4. Recalculate downstream matches to forward winner
     await recalculateTournamentScores(tournamentId);
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
@@ -208,7 +234,8 @@ export async function publishTournamentWithValidationAction(tournamentId: string
 
     // Attempt to calculate initial scores for past/live rounds, but do not block publishing if external API fails
     try {
-      await recalculateTournamentScores(tournamentId);
+      clearFPLCache();
+      await recalculateTournamentScores(tournamentId, true);
     } catch (scoreErr) {
       console.warn("Non-fatal error recalculating scores on publish:", scoreErr);
     }
@@ -310,23 +337,37 @@ export async function saveManualMatchScoresAction(
       ])
     );
 
-    await prisma.$transaction(async (tx) => {
-      // 1. Upsert or update each submitted member score
-      for (const s of scores) {
-        const member =
-          match.homeGroup?.members.find((m) => m.id === s.memberId) ||
-          match.awayGroup?.members.find((m) => m.id === s.memberId);
+    const memberMap = new Map<string, { groupId: string | null; isExcluded: boolean }>();
+    for (const m of match.homeGroup?.members || []) {
+      const isExcluded = Boolean(m.isAdmin || adminFplIds.includes(m.fplId));
+      memberMap.set(m.id, { groupId: match.homeGroupId, isExcluded });
+    }
+    for (const m of match.awayGroup?.members || []) {
+      const isExcluded = Boolean(m.isAdmin || adminFplIds.includes(m.fplId));
+      memberMap.set(m.id, { groupId: match.awayGroupId, isExcluded });
+    }
 
-        const isExcluded = Boolean(
-          member?.isAdmin || (member && adminFplIds.includes(member.fplId))
-        );
+    // Map existing member scores
+    const currentScoresMap = new Map<string, number>();
+    for (const s of match.scores) {
+      currentScoresMap.set(s.memberId, s.gameweekPoints);
+    }
 
-        const points = Math.max(
-          -100,
-          Math.min(1000, Number(s.gameweekPoints) || 0)
-        );
+    const txOps: Prisma.PrismaPromise<unknown>[] = [];
 
-        await tx.matchMemberScore.upsert({
+    // 1. Upsert or update each submitted member score
+    for (const s of scores) {
+      const memberInfo = memberMap.get(s.memberId);
+      const isExcluded = memberInfo?.isExcluded ?? false;
+      const points = Math.max(
+        -100,
+        Math.min(1000, Number(s.gameweekPoints) || 0)
+      );
+
+      currentScoresMap.set(s.memberId, points);
+
+      txOps.push(
+        prisma.matchMemberScore.upsert({
           where: {
             matchId_memberId: {
               matchId: match.id,
@@ -345,37 +386,35 @@ export async function saveManualMatchScoresAction(
             activeChip: s.activeChip || null,
             isExcluded,
           },
-        });
-      }
+        })
+      );
+    }
 
-      // 2. Fetch all current scores for this match to compute group totals
-      const allScores = await tx.matchMemberScore.findMany({
-        where: { matchId: match.id },
-        include: { member: true },
-      });
+    // 2. Compute group totals in memory
+    let homeScore = 0;
+    let awayScore = 0;
 
-      let homeScore = 0;
-      let awayScore = 0;
-
-      for (const s of allScores) {
-        if (!s.isExcluded) {
-          if (match.homeGroupId && s.member.groupId === match.homeGroupId) {
-            homeScore += s.gameweekPoints;
-          } else if (match.awayGroupId && s.member.groupId === match.awayGroupId) {
-            awayScore += s.gameweekPoints;
-          }
+    for (const [memberId, points] of currentScoresMap.entries()) {
+      const memberInfo = memberMap.get(memberId);
+      if (memberInfo && !memberInfo.isExcluded) {
+        if (match.homeGroupId && memberInfo.groupId === match.homeGroupId) {
+          homeScore += points;
+        } else if (match.awayGroupId && memberInfo.groupId === match.awayGroupId) {
+          awayScore += points;
         }
       }
+    }
 
-      const result = determineMatchResult(homeScore, awayScore);
-      const winnerId =
-        result === "HOME_WIN"
-          ? match.homeGroupId
-          : result === "AWAY_WIN"
-            ? match.awayGroupId
-            : null;
+    const result = determineMatchResult(homeScore, awayScore);
+    const winnerId =
+      result === "HOME_WIN"
+        ? match.homeGroupId
+        : result === "AWAY_WIN"
+          ? match.awayGroupId
+          : null;
 
-      await tx.match.update({
+    txOps.push(
+      prisma.match.update({
         where: { id: match.id },
         data: {
           homeScore,
@@ -384,8 +423,10 @@ export async function saveManualMatchScoresAction(
           winnerId,
           status,
         },
-      });
-    });
+      })
+    );
+
+    await prisma.$transaction(txOps);
 
     // 3. Recalculate downstream bracket / standings
     try {

@@ -44,11 +44,27 @@ function getFromCache<T>(key: string): T | null {
   return entry.data as T;
 }
 
-function setInCache<T>(key: string, data: T): void {
+function setInCache<T>(key: string, data: T, ttlMs?: number): void {
   cache.set(key, {
     data,
-    expiresAt: Date.now() + CACHE_DURATION_MS,
+    expiresAt: Date.now() + (ttlMs ?? CACHE_DURATION_MS),
   });
+}
+
+/**
+ * Clear or invalidate in-memory FPL cache entries.
+ * If prefix is provided, only entries matching the prefix are invalidated.
+ */
+export function clearFPLCache(prefix?: string): void {
+  if (!prefix) {
+    cache.clear();
+  } else {
+    for (const key of Array.from(cache.keys())) {
+      if (key.includes(prefix)) {
+        cache.delete(key);
+      }
+    }
+  }
 }
 
 export interface FPLManager {
@@ -314,7 +330,12 @@ const MOCK_GW_CHIPS: Record<
   "888888_6": { activeChip: "wildcard" },
 };
 
-async function fetchFPL<T>(endpoint: string, retries = 2): Promise<T> {
+async function fetchFPL<T>(
+  endpoint: string,
+  retries = 2,
+  bypassCache = false,
+  ttlMs?: number
+): Promise<T> {
   // If FPL is known to be in deadline mode, fail fast immediately
   if (isFPLDeadlineActive()) {
     throw new FPLDeadlineError();
@@ -322,10 +343,12 @@ async function fetchFPL<T>(endpoint: string, retries = 2): Promise<T> {
 
   const cacheKey = getCacheKey("fpl", endpoint);
 
-  // Try cache first
-  const cached = getFromCache<T>(cacheKey);
-  if (cached) {
-    return cached;
+  // Try cache first unless bypass requested
+  if (!bypassCache) {
+    const cached = getFromCache<T>(cacheKey);
+    if (cached) {
+      return cached;
+    }
   }
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -384,7 +407,7 @@ async function fetchFPL<T>(endpoint: string, retries = 2): Promise<T> {
 
       const data = (await response.json()) as T;
       recordFPLSuccessSignal();
-      setInCache(cacheKey, data);
+      setInCache(cacheKey, data, ttlMs);
       return data;
     } catch (error) {
       if (error instanceof FPLDeadlineError) {
@@ -700,18 +723,20 @@ export function clearSimulatedGameweekStatuses(): void {
 /**
  * Fetch cached bootstrap-static events (all 38 Gameweeks)
  */
-export async function getBootstrapStaticEvents(): Promise<FPLEvent[]> {
+export async function getBootstrapStaticEvents(bypassCache = false): Promise<FPLEvent[]> {
   const cacheKey = "fpl::bootstrap_static_events";
-  const cached = getFromCache<FPLEvent[]>(cacheKey);
-  if (cached) return cached;
+  if (!bypassCache) {
+    const cached = getFromCache<FPLEvent[]>(cacheKey);
+    if (cached) return cached;
+  }
 
   try {
     const data = await fetchFPL<{
       events: FPLEvent[];
-    }>("/bootstrap-static/");
+    }>("/bootstrap-static/", 2, bypassCache, 5 * 60 * 1000);
 
     if (data && Array.isArray(data.events)) {
-      setInCache(cacheKey, data.events);
+      setInCache(cacheKey, data.events, 5 * 60 * 1000);
       return data.events;
     }
     return [];
@@ -823,13 +848,19 @@ export async function getGameweekStatus(gameweek: number): Promise<GameweekStatu
  * Get map of all player gameweek live points and performance stats
  */
 export async function getGameweekLiveElementsStatsMap(
-  gameweek: number
+  gameweek: number,
+  bypassCache = false
 ): Promise<Map<number, ElementLiveStats>> {
   const cacheKey = getCacheKey("fpl", "live_stats", gameweek);
-  const cached = getFromCache<Map<number, ElementLiveStats>>(cacheKey);
-  if (cached) return cached;
+  if (!bypassCache) {
+    const cached = getFromCache<Map<number, ElementLiveStats>>(cacheKey);
+    if (cached) return cached;
+  }
 
   try {
+    const gwStatus = await getGameweekStatus(gameweek);
+    const ttlMs = gwStatus.status === "LIVE" ? 60 * 1000 : CACHE_DURATION_MS;
+
     const liveData = await fetchFPL<{
       elements?: Array<{
         id: number;
@@ -844,7 +875,7 @@ export async function getGameweekLiveElementsStatsMap(
           red_cards?: number;
         };
       }>;
-    }>(`/event/${gameweek}/live/`);
+    }>(`/event/${gameweek}/live/`, 2, bypassCache, ttlMs);
 
     const map = new Map<number, ElementLiveStats>();
     if (liveData?.elements && Array.isArray(liveData.elements)) {
@@ -861,7 +892,7 @@ export async function getGameweekLiveElementsStatsMap(
         });
       }
     }
-    setInCache(cacheKey, map);
+    setInCache(cacheKey, map, ttlMs);
     return map;
   } catch {
     return new Map();
@@ -872,9 +903,10 @@ export async function getGameweekLiveElementsStatsMap(
  * Get map of all player points in a specific gameweek from live event data
  */
 export async function getGameweekLiveElementsMap(
-  gameweek: number
+  gameweek: number,
+  bypassCache = false
 ): Promise<Map<number, number>> {
-  const statsMap = await getGameweekLiveElementsStatsMap(gameweek);
+  const statsMap = await getGameweekLiveElementsStatsMap(gameweek, bypassCache);
   const pointsMap = new Map<number, number>();
   for (const [id, stats] of statsMap.entries()) {
     pointsMap.set(id, stats.points);
@@ -893,6 +925,12 @@ export async function getLivePlayerPoints(
   return map.get(elementId) || 0;
 }
 
+export interface ManagerGameweekPointsOptions {
+  allowBenchBoost?: boolean;
+  allowTripleCaptain?: boolean;
+  bypassCache?: boolean;
+}
+
 /**
  * Get a manager's gameweek score (points minus transfer costs, with separated chip rule adjustments).
  * RULES:
@@ -903,7 +941,7 @@ export async function getLivePlayerPoints(
 export async function getManagerGameweekPoints(
   entryId: number,
   gameweek: number,
-  options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true
+  options: ManagerGameweekPointsOptions | boolean = true
 ): Promise<FPLGameweekScore> {
   // If FPL is in deadline mode, strictly disallow calculating scores!
   if (isFPLDeadlineActive()) {
@@ -916,6 +954,8 @@ export async function getManagerGameweekPoints(
     typeof options === "boolean" ? options : options.allowBenchBoost ?? true;
   const allowTripleCaptain =
     typeof options === "boolean" ? options : options.allowTripleCaptain ?? true;
+  const bypassCache =
+    typeof options === "boolean" ? false : options.bypassCache ?? false;
 
   const key = `${entryId}_${gameweek}`;
 
@@ -935,7 +975,7 @@ export async function getManagerGameweekPoints(
     }
 
     const netPoints = rawPoints;
-    const adjustedNetPoints = Math.max(0, netPoints - chipDeduction);
+    const adjustedNetPoints = netPoints - chipDeduction;
 
     return {
       entryId,
@@ -969,6 +1009,9 @@ export async function getManagerGameweekPoints(
   let lastError: unknown = null;
 
   try {
+    // Shorter TTL for live gameweeks (60 seconds) so points refresh frequently during matchdays
+    const ttlMs = gwStatus.status === "LIVE" ? 60 * 1000 : undefined;
+
     // Try event picks endpoint first
     const picksData = await fetchFPL<{
       active_chip?: string | null;
@@ -985,7 +1028,7 @@ export async function getManagerGameweekPoints(
         is_captain: boolean;
         is_vice_captain: boolean;
       }>;
-    }>(`/entry/${entryId}/event/${gameweek}/picks/`);
+    }>(`/entry/${entryId}/event/${gameweek}/picks/`, 2, bypassCache, ttlMs);
 
     if (picksData?.entry_history) {
       const rawPoints = picksData.entry_history.points || 0;
@@ -997,7 +1040,7 @@ export async function getManagerGameweekPoints(
 
       if (activeChip === "bboost") {
         if (picksData.picks && picksData.picks.length > 0) {
-          const liveMap = await getGameweekLiveElementsMap(gameweek);
+          const liveMap = await getGameweekLiveElementsMap(gameweek, bypassCache);
           const benchPicks = picksData.picks.filter((p) => p.position > 11);
           const calculatedBench = benchPicks.reduce(
             (sum, p) => sum + (liveMap.get(p.element) || 0),
@@ -1016,14 +1059,14 @@ export async function getManagerGameweekPoints(
           (p) => p.multiplier === 3 || (p.is_captain && p.multiplier > 1)
         );
         if (captainPick) {
-          const liveMap = await getGameweekLiveElementsMap(gameweek);
+          const liveMap = await getGameweekLiveElementsMap(gameweek, bypassCache);
           const captainBasePoints = liveMap.get(captainPick.element) || 0;
           chipDeduction = captainBasePoints;
         }
       }
 
       const netPoints = rawPoints - transferCost;
-      const adjustedNetPoints = Math.max(0, netPoints - chipDeduction);
+      const adjustedNetPoints = netPoints - chipDeduction;
 
       return {
         entryId,
@@ -1045,6 +1088,7 @@ export async function getManagerGameweekPoints(
 
     // Try history endpoint as fallback
     try {
+      const ttlMs = gwStatus.status === "LIVE" ? 60 * 1000 : undefined;
       const historyData = await fetchFPL<{
         current?: Array<{
           event: number;
@@ -1057,7 +1101,7 @@ export async function getManagerGameweekPoints(
           time: string;
           event: number;
         }>;
-      }>(`/entry/${entryId}/history/`);
+      }>(`/entry/${entryId}/history/`, 2, bypassCache, ttlMs);
 
       const gwEntry = historyData?.current?.find((e) => e.event === gameweek);
       const gwChip = historyData?.chips?.find((c) => c.event === gameweek);
@@ -1073,7 +1117,7 @@ export async function getManagerGameweekPoints(
         }
 
         const netPoints = rawPoints - transferCost;
-        const adjustedNetPoints = Math.max(0, netPoints - chipDeduction);
+        const adjustedNetPoints = netPoints - chipDeduction;
 
         return {
           entryId,

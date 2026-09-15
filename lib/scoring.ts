@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import {
   getManagerGameweekPoints,
   getGameweekStatus,
   isFPLDeadlineActive,
   FPLDeadlineError,
   hasMockPoints,
+  type ManagerGameweekPointsOptions,
+  clearFPLCache,
 } from "@/lib/fpl";
 
 export interface MemberScoreBreakdown {
@@ -52,7 +55,7 @@ export async function calculateGroupScore(
   groupId: string,
   gameweek: number,
   adminFplIds: number | number[],
-  options: { allowBenchBoost?: boolean; allowTripleCaptain?: boolean } | boolean = true,
+  options: ManagerGameweekPointsOptions | boolean = true,
   matchId?: string
 ): Promise<GroupScoreResult> {
   const group = await prisma.group.findUnique({
@@ -133,40 +136,43 @@ export async function calculateGroupScore(
     );
   }
 
+  // Parallelize member score fetching for maximum performance and to avoid request timeouts
+  const memberScores: MemberScoreBreakdown[] = await Promise.all(
+    group.members.map(async (member) => {
+      const isExcluded = member.isAdmin || excludedAdminIds.includes(member.fplId);
+      const scoreData = await getManagerGameweekPoints(
+        member.fplId,
+        gameweek,
+        options
+      );
+      const countedPoints = scoreData.adjustedNetPoints;
+
+      return {
+        memberId: member.id,
+        fplName: member.fplName,
+        fplTeamName: member.fplTeamName,
+        fplId: member.fplId,
+        gameweekPoints: countedPoints,
+        rawPoints: scoreData.points,
+        isExcluded,
+        activeChip: scoreData.activeChip || null,
+        chipDeduction: scoreData.chipDeduction || 0,
+      };
+    })
+  );
+
   let totalScore = 0;
-  const members: MemberScoreBreakdown[] = [];
-
-  for (const member of group.members) {
-    const isExcluded = member.isAdmin || excludedAdminIds.includes(member.fplId);
-    const scoreData = await getManagerGameweekPoints(
-      member.fplId,
-      gameweek,
-      options
-    );
-    const countedPoints = scoreData.adjustedNetPoints;
-
-    if (!isExcluded) {
-      totalScore += countedPoints;
+  for (const m of memberScores) {
+    if (!m.isExcluded) {
+      totalScore += m.gameweekPoints;
     }
-
-    members.push({
-      memberId: member.id,
-      fplName: member.fplName,
-      fplTeamName: member.fplTeamName,
-      fplId: member.fplId,
-      gameweekPoints: countedPoints,
-      rawPoints: scoreData.points,
-      isExcluded,
-      activeChip: scoreData.activeChip || null,
-      chipDeduction: scoreData.chipDeduction || 0,
-    });
   }
 
   return {
     groupId: group.id,
     groupName: group.name,
     totalScore,
-    members,
+    members: memberScores,
   };
 }
 
@@ -334,9 +340,10 @@ export async function calculateMatchScore(
       ...(match.round.tournament.admins?.map((a) => a.fplId) || []),
     ])
   );
-  const chipOptions = {
+  const chipOptions: ManagerGameweekPointsOptions = {
     allowBenchBoost: match.round.tournament.allowBenchBoost ?? true,
     allowTripleCaptain: match.round.tournament.allowTripleCaptain ?? true,
+    bypassCache: forceRecalculate,
   };
   const gameweek = match.round.gameweek;
   const gwInfo = await getGameweekStatus(gameweek);
@@ -428,43 +435,44 @@ export async function calculateMatchScore(
       ? "IN_PROGRESS"
       : "COMPLETED";
 
-  // Persist Member Scores in transaction
-  await prisma.$transaction(async (tx) => {
-    // Delete existing scores for this match
-    await tx.matchMemberScore.deleteMany({
+  // Persist Member Scores and Match in atomic batch transaction (no interactive timeout)
+  const allScoresData = [
+    ...homeResult.members.map((m) => ({
+      matchId: match.id,
+      memberId: m.memberId,
+      gameweekPoints: m.gameweekPoints,
+      isExcluded: m.isExcluded,
+      activeChip: m.activeChip || null,
+      chipDeduction: m.chipDeduction || 0,
+      isFinal: matchStatus === "FINALIZED",
+    })),
+    ...awayResult.members.map((m) => ({
+      matchId: match.id,
+      memberId: m.memberId,
+      gameweekPoints: m.gameweekPoints,
+      isExcluded: m.isExcluded,
+      activeChip: m.activeChip || null,
+      chipDeduction: m.chipDeduction || 0,
+      isFinal: matchStatus === "FINALIZED",
+    })),
+  ];
+
+  const txOperations: Prisma.PrismaPromise<unknown>[] = [
+    prisma.matchMemberScore.deleteMany({
       where: { matchId: match.id },
-    });
+    }),
+  ];
 
-    // Batch insert member scores
-    const allScoresData = [
-      ...homeResult.members.map((m) => ({
-        matchId: match.id,
-        memberId: m.memberId,
-        gameweekPoints: m.gameweekPoints,
-        isExcluded: m.isExcluded,
-        activeChip: m.activeChip || null,
-        chipDeduction: m.chipDeduction || 0,
-        isFinal: matchStatus === "FINALIZED",
-      })),
-      ...awayResult.members.map((m) => ({
-        matchId: match.id,
-        memberId: m.memberId,
-        gameweekPoints: m.gameweekPoints,
-        isExcluded: m.isExcluded,
-        activeChip: m.activeChip || null,
-        chipDeduction: m.chipDeduction || 0,
-        isFinal: matchStatus === "FINALIZED",
-      })),
-    ];
-
-    if (allScoresData.length > 0) {
-      await tx.matchMemberScore.createMany({
+  if (allScoresData.length > 0) {
+    txOperations.push(
+      prisma.matchMemberScore.createMany({
         data: allScoresData,
-      });
-    }
+      })
+    );
+  }
 
-    // Update match record
-    await tx.match.update({
+  txOperations.push(
+    prisma.match.update({
       where: { id: match.id },
       data: {
         homeGroupId: resolvedHomeGroupId,
@@ -475,8 +483,10 @@ export async function calculateMatchScore(
         winnerId,
         status: matchStatus,
       },
-    });
-  });
+    })
+  );
+
+  await prisma.$transaction(txOperations);
 
   return {
     matchId: match.id,
@@ -503,6 +513,10 @@ export async function recalculateTournamentScores(
     throw new FPLDeadlineError(
       "Cannot recalculate tournament scores during an active FPL deadline. Please wait until the deadline window completes."
     );
+  }
+
+  if (forceRecalculate) {
+    clearFPLCache();
   }
 
   const rounds = await prisma.round.findMany({
@@ -619,28 +633,35 @@ async function processRoundMatches(
   }
 
   // For LIVE and FINISHED Gameweeks:
-  for (const match of round.matches) {
-    try {
-      const matchResult = await calculateMatchScore(match.id, forceRecalculate);
-      results.push(matchResult);
-    } catch (matchErr) {
-      console.error(
-        `Failed to calculate score for match ${match.id} (GW${round.gameweek}):`,
-        matchErr
-      );
-      results.push({
-        matchId: match.id,
-        matchNumber: match.matchNumber,
-        gameweek: round.gameweek,
-        homeGroup: null,
-        awayGroup: null,
-        homeScore: match.homeScore,
-        awayScore: match.awayScore,
-        result: match.result as "HOME_WIN" | "AWAY_WIN" | "DRAW" | null,
-        winnerGroupId: match.winnerId,
-        status: match.status,
-      });
-    }
+  // Process matches in chunks of 3 for optimal throughput and fast recalculation
+  const chunkSize = 3;
+  for (let i = 0; i < round.matches.length; i += chunkSize) {
+    const chunk = round.matches.slice(i, i + chunkSize);
+    const chunkResults = await Promise.all(
+      chunk.map(async (match) => {
+        try {
+          return await calculateMatchScore(match.id, forceRecalculate);
+        } catch (matchErr) {
+          console.error(
+            `Failed to calculate score for match ${match.id} (GW${round.gameweek}):`,
+            matchErr
+          );
+          return {
+            matchId: match.id,
+            matchNumber: match.matchNumber,
+            gameweek: round.gameweek,
+            homeGroup: null,
+            awayGroup: null,
+            homeScore: match.homeScore,
+            awayScore: match.awayScore,
+            result: match.result as "HOME_WIN" | "AWAY_WIN" | "DRAW" | null,
+            winnerGroupId: match.winnerId,
+            status: match.status,
+          };
+        }
+      })
+    );
+    results.push(...chunkResults);
   }
 
   return results;
@@ -657,6 +678,10 @@ export async function recalculateRoundScores(
     throw new FPLDeadlineError(
       "Cannot recalculate round scores during an active FPL deadline. Please wait until the deadline window completes."
     );
+  }
+
+  if (forceRecalculate) {
+    clearFPLCache();
   }
 
   const round = await prisma.round.findUnique({
