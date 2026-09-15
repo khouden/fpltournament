@@ -95,8 +95,8 @@ export default function AdminLoginPage() {
         <header className="flex flex-col items-center text-center mb-5 animate-fpl-fade-in">
           {/* Brand Logo Icon */}
           <div className="relative mb-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.06] shadow-xl shadow-[#00FF87]/15 border border-[#00FF87]/30 p-2 transition-transform duration-200 hover:scale-105 backdrop-blur-sm">
-              <FplLogoIcon size={56} className="w-full h-full" priority />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-xl shadow-[#00FF87]/20 p-2.5 transition-transform duration-200 hover:scale-105 ring-1 ring-black/5">
+              <FplLogoIcon size={56} className="w-full h-full" priority badge={false} />
             </div>
             {/* Live indicator dot */}
             <span

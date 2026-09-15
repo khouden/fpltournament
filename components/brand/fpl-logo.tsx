@@ -3,6 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
+import logoPic from "@/public/logo.png";
+
 interface FplLogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   showText?: boolean;
@@ -15,20 +17,28 @@ export function FplLogoIcon({
   className,
   size = 48,
   priority = false,
+  badge = true,
 }: {
   className?: string;
   size?: number;
   priority?: boolean;
+  badge?: boolean;
 }) {
   return (
-    <div className={cn("relative shrink-0 flex items-center justify-center", className)}>
+    <div
+      className={cn(
+        "relative shrink-0 flex items-center justify-center",
+        badge && "bg-white rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.3)] ring-1 ring-black/5",
+        className
+      )}
+    >
       <Image
-        src="/logo.png"
+        src={logoPic}
         alt="Platform Logo"
         width={size}
         height={size}
         priority={priority}
-        className="w-full h-full object-contain drop-shadow-[0_2px_8px_rgba(0,255,163,0.25)]"
+        className="w-full h-full object-contain"
       />
     </div>
   );
@@ -42,22 +52,28 @@ export function FplLogo({
   priority = false,
 }: FplLogoProps) {
   const iconDimensions = {
-    sm: { box: "w-8 h-8 sm:w-9 sm:h-9", px: 36 },
-    md: { box: "w-10 h-10 sm:w-11 sm:h-11", px: 44 },
-    lg: { box: "w-12 h-12 sm:w-14 sm:h-14", px: 56 },
-    xl: { box: "w-16 h-16 sm:w-20 sm:h-20", px: 80 },
+    sm: { box: "w-8 h-8 sm:w-9 sm:h-9", px: 32, p: "p-1", rounded: "rounded-lg" },
+    md: { box: "w-10 h-10 sm:w-11 sm:h-11", px: 40, p: "p-1.5", rounded: "rounded-xl" },
+    lg: { box: "w-12 h-12 sm:w-14 sm:h-14", px: 52, p: "p-2", rounded: "rounded-2xl" },
+    xl: { box: "w-16 h-16 sm:w-20 sm:h-20", px: 76, p: "p-2.5", rounded: "rounded-2xl" },
   }[size];
 
   const content = (
     <div className={cn("inline-flex items-center gap-2.5 sm:gap-3 group cursor-pointer select-none", className)}>
       <div className="relative flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
         <FplLogoIcon
-          className={iconDimensions.box}
+          className={cn(iconDimensions.box, iconDimensions.p, iconDimensions.rounded)}
           size={iconDimensions.px}
           priority={priority}
+          badge
         />
         {/* Ambient glow behind icon */}
-        <div className="absolute inset-0 bg-[#00FFA3]/20 rounded-full blur-md -z-10 group-hover:bg-[#00FFA3]/35 transition-all" />
+        <div
+          className={cn(
+            "absolute inset-0 bg-[#00FFA3]/20 blur-md -z-10 group-hover:bg-[#00FFA3]/35 transition-all",
+            iconDimensions.rounded
+          )}
+        />
       </div>
 
       {showText && (
