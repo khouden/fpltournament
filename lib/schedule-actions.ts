@@ -100,6 +100,7 @@ export async function generateRoundRobinScheduleAction(
           },
         });
 
+        const roundMatches = [];
         for (let m = 0; m < matchesPerRound; m++) {
           const home = currentTeams[m];
           const away = currentTeams[n - 1 - m];
@@ -110,16 +111,18 @@ export async function generateRoundRobinScheduleAction(
             const homeGroupId = r % 2 === 0 ? home : away;
             const awayGroupId = r % 2 === 0 ? away : home;
 
-            await tx.match.create({
-              data: {
-                roundId: round.id,
-                matchNumber: matchCounter++,
-                status: "SCHEDULED",
-                homeGroupId,
-                awayGroupId,
-              },
+            roundMatches.push({
+              roundId: round.id,
+              matchNumber: matchCounter++,
+              status: "SCHEDULED",
+              homeGroupId,
+              awayGroupId,
             });
           }
+        }
+
+        if (roundMatches.length > 0) {
+          await tx.match.createMany({ data: roundMatches });
         }
 
         // Rotate teams (keep first team fixed, rotate the rest clockwise)
@@ -128,7 +131,9 @@ export async function generateRoundRobinScheduleAction(
         const rest = currentTeams.slice(1, currentTeams.length - 1);
         currentTeams.splice(0, currentTeams.length, fixed, last, ...rest);
       }
-    });
+    },
+    { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
@@ -292,14 +297,17 @@ export async function createMatchAction(
     homeGroupId?: string | null;
     awayGroupId?: string | null;
     matchNumber?: number;
-  }
+  },
+  preloadedRound?: { id: string; tournamentId: string; matches?: unknown[] } | null
 ) {
   try {
     await requireAdminSession();
-    const round = await prisma.round.findUnique({
-      where: { id: roundId },
-      include: { matches: true },
-    });
+    const round =
+      preloadedRound ??
+      (await prisma.round.findUnique({
+        where: { id: roundId },
+        include: { matches: true },
+      }));
 
     if (!round) {
       return { success: false, error: "Round not found" };
@@ -523,32 +531,58 @@ export async function autoPairRemainingAction(
       }
     }
 
-    const createdMatches: any[] = [];
-    const byeGroup =
-      teamsToPair.length % 2 !== 0
-        ? teamsToPair[teamsToPair.length - 1].name
-        : null;
+    let createdCount = 0;
+    let byeGroup: string | null = null;
 
-    await prisma.$transaction(async (tx) => {
-      let currentMatchCount = await tx.match.count({
-        where: { round: { tournamentId } },
-      });
+    await prisma.$transaction(
+      async (tx) => {
+        // Re-query matches in this round inside transaction for concurrency & retry safety
+        const currentRoundMatches = await tx.match.findMany({
+          where: { roundId },
+          select: { homeGroupId: true, awayGroupId: true },
+        });
 
-      const limit = teamsToPair.length - (teamsToPair.length % 2);
-      for (let i = 0; i < limit; i += 2) {
-        currentMatchCount++;
-        const newMatch = await tx.match.create({
-          data: {
+        const assignedIds = new Set<string>();
+        for (const m of currentRoundMatches) {
+          if (m.homeGroupId) assignedIds.add(m.homeGroupId);
+          if (m.awayGroupId) assignedIds.add(m.awayGroupId);
+        }
+
+        const freshUnassigned = teamsToPair.filter((g) => !assignedIds.has(g.id));
+        if (freshUnassigned.length < 2) {
+          createdCount = 0;
+          return;
+        }
+
+        byeGroup =
+          freshUnassigned.length % 2 !== 0
+            ? freshUnassigned[freshUnassigned.length - 1].name
+            : null;
+
+        let currentMatchCount = await tx.match.count({
+          where: { round: { tournamentId } },
+        });
+
+        const limit = freshUnassigned.length - (freshUnassigned.length % 2);
+        const matchesData = [];
+        for (let i = 0; i < limit; i += 2) {
+          currentMatchCount++;
+          matchesData.push({
             roundId,
             matchNumber: currentMatchCount,
-            status: "SCHEDULED",
-            homeGroupId: teamsToPair[i].id,
-            awayGroupId: teamsToPair[i + 1].id,
-          },
-        });
-        createdMatches.push(newMatch);
-      }
-    });
+            status: "SCHEDULED" as const,
+            homeGroupId: freshUnassigned[i].id,
+            awayGroupId: freshUnassigned[i + 1].id,
+          });
+        }
+
+        if (matchesData.length > 0) {
+          await tx.match.createMany({ data: matchesData });
+          createdCount = matchesData.length;
+        }
+      },
+      { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
@@ -556,11 +590,11 @@ export async function autoPairRemainingAction(
 
     return {
       success: true,
-      count: createdMatches.length,
+      count: createdCount,
       byeGroup,
       message: byeGroup
-        ? `Created ${createdMatches.length} fixtures! Note: ${byeGroup} has a bye this round.`
-        : `Created ${createdMatches.length} fixtures successfully!`,
+        ? `Created ${createdCount} fixtures! Note: ${byeGroup} has a bye this round.`
+        : `Created ${createdCount} fixtures successfully!`,
     };
   } catch (error) {
     return {
@@ -643,24 +677,28 @@ export async function duplicateRoundAsReverseAction(
         },
       });
 
-      for (const m of sourceRound.matches) {
+      const reverseMatches = sourceRound.matches.map((m) => {
         currentMatchCount++;
-        await tx.match.create({
-          data: {
-            roundId: newRound.id,
-            matchNumber: currentMatchCount,
-            status: "SCHEDULED",
-            homeGroupId: m.awayGroupId, // Reversed!
-            awayGroupId: m.homeGroupId, // Reversed!
-          },
-        });
+        return {
+          roundId: newRound.id,
+          matchNumber: currentMatchCount,
+          status: "SCHEDULED",
+          homeGroupId: m.awayGroupId, // Reversed!
+          awayGroupId: m.homeGroupId, // Reversed!
+        };
+      });
+
+      if (reverseMatches.length > 0) {
+        await tx.match.createMany({ data: reverseMatches });
       }
 
       createdRound = await tx.round.findUnique({
         where: { id: newRound.id },
         include: { matches: true },
       });
-    });
+    },
+    { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
@@ -720,17 +758,22 @@ export async function fillRoundWithEmptyMatchesAction(
         where: { round: { tournamentId } },
       });
 
+      const emptyMatches = [];
       for (let i = 0; i < needed; i++) {
         currentMatchCount++;
-        await tx.match.create({
-          data: {
-            roundId,
-            matchNumber: currentMatchCount,
-            status: "SCHEDULED",
-          },
+        emptyMatches.push({
+          roundId,
+          matchNumber: currentMatchCount,
+          status: "SCHEDULED",
         });
       }
-    });
+
+      if (emptyMatches.length > 0) {
+        await tx.match.createMany({ data: emptyMatches });
+      }
+    },
+    { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/schedule`);
@@ -751,31 +794,59 @@ export async function fillRoundWithEmptyMatchesAction(
   }
 }
 
+export interface ValidateTournamentData {
+  id: string;
+  adminFplId: number;
+  admins?: Array<{ fplId: number }>;
+  groups: Array<{
+    name: string;
+    members: Array<{
+      fplId: number;
+      isAdmin: boolean;
+    }>;
+  }>;
+  rounds: Array<{
+    roundNumber: number;
+    name?: string | null;
+    gameweek: number;
+    matches: Array<{
+      matchNumber: number;
+      homeGroupId?: string | null;
+      awayGroupId?: string | null;
+      homeWinnerOfMatchId?: string | null;
+      awayWinnerOfMatchId?: string | null;
+    }>;
+  }>;
+}
+
 /**
  * Validate schedule integrity for publishing
  */
 export async function validateScheduleAction(
-  tournamentId: string
+  tournamentId: string,
+  preloadedTournament?: ValidateTournamentData | null
 ): Promise<ScheduleValidationResult> {
   await requireAdminSession();
 
   const issues: string[] = [];
 
-  const tournament = await prisma.tournament.findUnique({
-    where: { id: tournamentId },
-    include: {
-      admins: true,
-      groups: {
-        include: { members: true },
-      },
-      rounds: {
-        include: {
-          matches: true,
+  const tournament =
+    preloadedTournament ??
+    (await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: {
+        admins: true,
+        groups: {
+          include: { members: true },
         },
-        orderBy: { roundNumber: "asc" },
+        rounds: {
+          include: {
+            matches: true,
+          },
+          orderBy: { roundNumber: "asc" },
+        },
       },
-    },
-  });
+    }));
 
   if (!tournament) {
     return { isValid: false, issues: ["Tournament not found"] };
@@ -884,7 +955,9 @@ export async function clearScheduleAction(tournamentId: string) {
         where: { id: tournamentId, status: "PUBLISHED" },
         data: { status: "DRAFT" },
       });
-    });
+    },
+    { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
@@ -1226,18 +1299,20 @@ export async function createBatchMatchesFromTextAction(
           where: { round: { tournamentId } },
         });
 
-        for (const p of pairings) {
+        const matchesData = pairings.map((p) => {
           currentMatchCount++;
-          const match = await tx.match.create({
-            data: {
-              roundId,
-              matchNumber: currentMatchCount,
-              status: "SCHEDULED",
-              homeGroupId: p.homeGroupId,
-              awayGroupId: p.awayGroupId,
-            },
-          });
-          createdMatches.push(match);
+          return {
+            roundId,
+            matchNumber: currentMatchCount,
+            status: "SCHEDULED",
+            homeGroupId: p.homeGroupId,
+            awayGroupId: p.awayGroupId,
+          };
+        });
+
+        if (matchesData.length > 0) {
+          await tx.match.createMany({ data: matchesData });
+          createdMatches.push(...matchesData);
         }
       },
       { maxWait: 15000, timeout: 60000 }
@@ -1325,16 +1400,16 @@ export async function createBatchRoundsAction(
           createdCount++;
 
           if (emptyMatchesPerRound > 0) {
+            const emptyMatches = [];
             for (let m = 0; m < emptyMatchesPerRound; m++) {
               currentMatchCount++;
-              await tx.match.create({
-                data: {
-                  roundId: round.id,
-                  matchNumber: currentMatchCount,
-                  status: "SCHEDULED",
-                },
+              emptyMatches.push({
+                roundId: round.id,
+                matchNumber: currentMatchCount,
+                status: "SCHEDULED",
               });
             }
+            await tx.match.createMany({ data: emptyMatches });
           }
         }
       },

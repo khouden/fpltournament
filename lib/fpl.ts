@@ -330,6 +330,31 @@ const MOCK_GW_CHIPS: Record<
   "888888_6": { activeChip: "wildcard" },
 };
 
+const MAX_CONCURRENT_FPL_REQUESTS = 6;
+let activeFPLRequests = 0;
+const fplRequestQueue: Array<() => void> = [];
+
+async function acquireFPLSlot(): Promise<void> {
+  if (activeFPLRequests < MAX_CONCURRENT_FPL_REQUESTS) {
+    activeFPLRequests++;
+    return;
+  }
+  return new Promise<void>((resolve) => {
+    fplRequestQueue.push(() => {
+      activeFPLRequests++;
+      resolve();
+    });
+  });
+}
+
+function releaseFPLSlot(): void {
+  activeFPLRequests--;
+  if (fplRequestQueue.length > 0) {
+    const next = fplRequestQueue.shift();
+    if (next) next();
+  }
+}
+
 async function fetchFPL<T>(
   endpoint: string,
   retries = 2,
@@ -351,8 +376,10 @@ async function fetchFPL<T>(
     }
   }
 
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
+  await acquireFPLSlot();
+  try {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
       const url = `${FPL_API_BASE}${endpoint}`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -424,7 +451,10 @@ async function fetchFPL<T>(
     }
   }
 
-  throw new Error(`Failed to fetch from FPL API (${endpoint}): Max retries exceeded`);
+    throw new Error(`Failed to fetch from FPL API (${endpoint}): Max retries exceeded`);
+  } finally {
+    releaseFPLSlot();
+  }
 }
 
 /**

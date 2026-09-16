@@ -15,8 +15,8 @@ function createPool(): pg.Pool {
       rejectUnauthorized: false,
     },
     max: 5,
-    idleTimeoutMillis: 10000,
-    connectionTimeoutMillis: 15000,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 30000,
     keepAlive: true,
     keepAliveInitialDelayMillis: 5000,
   });
@@ -180,7 +180,7 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
                     );
                     await resetPrismaClient();
                     await new Promise((resolve) =>
-                      setTimeout(resolve, attempt * 150)
+                      setTimeout(resolve, attempt * 500)
                     );
                     continue;
                   }
@@ -213,7 +213,7 @@ export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
               );
               await resetPrismaClient();
               await new Promise((resolve) =>
-                setTimeout(resolve, attempt * 150)
+                setTimeout(resolve, attempt * 500)
               );
               continue;
             }

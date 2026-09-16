@@ -42,6 +42,26 @@ export interface MatchScoreResult {
   status: string;
 }
 
+export interface PreloadedGroupData {
+  id: string;
+  name: string;
+  isManual?: boolean;
+  members: Array<{
+    id: string;
+    fplName: string;
+    fplTeamName: string | null;
+    fplId: number;
+    isAdmin: boolean;
+  }>;
+}
+
+export interface PreloadedScoreData {
+  memberId: string;
+  gameweekPoints: number;
+  activeChip?: string | null;
+  chipDeduction?: number;
+}
+
 /**
  * Calculate a group's score for a given Gameweek.
  * CRITICAL BUSINESS RULES:
@@ -56,12 +76,16 @@ export async function calculateGroupScore(
   gameweek: number,
   adminFplIds: number | number[],
   options: ManagerGameweekPointsOptions | boolean = true,
-  matchId?: string
+  matchId?: string,
+  preloadedGroup?: PreloadedGroupData | null,
+  preloadedScores?: PreloadedScoreData[] | null
 ): Promise<GroupScoreResult> {
-  const group = await prisma.group.findUnique({
-    where: { id: groupId },
-    include: { members: true },
-  });
+  const group =
+    preloadedGroup ??
+    (await prisma.group.findUnique({
+      where: { id: groupId },
+      include: { members: true },
+    }));
 
   if (!group) {
     throw new Error(`Group ${groupId} not found`);
@@ -76,15 +100,15 @@ export async function calculateGroupScore(
     let totalScore = 0;
     const members: MemberScoreBreakdown[] = [];
 
-    // Query existing scores for this match if matchId is provided
+    // Query existing scores for this match if matchId is provided and not preloaded
     let existingScores: Array<{
       memberId: string;
       gameweekPoints: number;
-      activeChip: string | null;
-      chipDeduction: number;
-    }> = [];
+      activeChip?: string | null;
+      chipDeduction?: number;
+    }> = preloadedScores ?? [];
 
-    if (matchId) {
+    if (!preloadedScores && matchId) {
       existingScores = await prisma.matchMemberScore.findMany({
         where: {
           matchId,
@@ -188,35 +212,79 @@ export function determineMatchResult(
   return "DRAW";
 }
 
+export interface ScorableMatchWithDetails {
+  id: string;
+  matchNumber: number;
+  status: string;
+  homeGroupId: string | null;
+  awayGroupId: string | null;
+  homeWinnerOfMatchId?: string | null;
+  awayWinnerOfMatchId?: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+  result: string | null;
+  winnerId: string | null;
+  round: {
+    gameweek: number;
+    tournament: {
+      adminFplId: number;
+      admins?: Array<{ fplId: number }>;
+      allowBenchBoost?: boolean;
+      allowTripleCaptain?: boolean;
+    };
+  };
+  homeGroup?: PreloadedGroupData | null;
+  awayGroup?: PreloadedGroupData | null;
+  scores?: Array<{
+    id?: string;
+    memberId: string;
+    gameweekPoints: number;
+    isExcluded: boolean;
+    activeChip?: string | null;
+    chipDeduction?: number;
+    member: {
+      id: string;
+      groupId: string;
+      fplName: string;
+      fplTeamName: string | null;
+      fplId: number;
+      isAdmin?: boolean;
+    };
+  }>;
+}
+
 /**
  * Calculate score and determine result for a single match.
  * Resolves winner references, persists MatchMemberScore, and respects FINALIZED status.
  */
 export async function calculateMatchScore(
   matchId: string,
-  forceRecalculate = false
+  forceRecalculate = false,
+  preloadedMatch?: ScorableMatchWithDetails | null
 ): Promise<MatchScoreResult> {
-  const match = await prisma.match.findUnique({
-    where: { id: matchId },
-    include: {
-      round: {
-        include: {
-          tournament: {
-            include: { admins: true },
+  const match =
+    preloadedMatch ??
+    (await prisma.match.findUnique({
+      where: { id: matchId },
+      include: {
+        round: {
+          include: {
+            tournament: {
+              include: { admins: true },
+            },
           },
         },
+        homeGroup: {
+          include: { members: true },
+        },
+        awayGroup: {
+          include: { members: true },
+        },
+        scores: {
+          include: { member: true },
+        },
       },
-      homeGroup: {
-        include: { members: true },
-      },
-      awayGroup: {
-        include: { members: true },
-      },
-      scores: {
-        include: { member: true },
-      },
-    },
-  });
+    }));
 
   if (!match) {
     throw new Error(`Match ${matchId} not found`);
@@ -243,7 +311,7 @@ export async function calculateMatchScore(
             groupId: match.homeGroup.id,
             groupName: match.homeGroup.name,
             totalScore: match.homeScore || 0,
-            members: match.scores
+            members: (match.scores || [])
               .filter((s) => s.member.groupId === match.homeGroupId)
               .map((s) => ({
                 memberId: s.memberId,
@@ -263,7 +331,7 @@ export async function calculateMatchScore(
             groupId: match.awayGroup.id,
             groupName: match.awayGroup.name,
             totalScore: match.awayScore || 0,
-            members: match.scores
+            members: (match.scores || [])
               .filter((s) => s.member.groupId === match.awayGroupId)
               .map((s) => ({
                 memberId: s.memberId,
@@ -404,7 +472,9 @@ export async function calculateMatchScore(
     gameweek,
     adminFplIds,
     chipOptions,
-    match.id
+    match.id,
+    match.homeGroup && match.homeGroup.id === resolvedHomeGroupId ? match.homeGroup : null,
+    match.scores
   );
 
   const awayResult = await calculateGroupScore(
@@ -412,7 +482,9 @@ export async function calculateMatchScore(
     gameweek,
     adminFplIds,
     chipOptions,
-    match.id
+    match.id,
+    match.awayGroup && match.awayGroup.id === resolvedAwayGroupId ? match.awayGroup : null,
+    match.scores
   );
 
   // Determine Match Result
@@ -459,36 +531,33 @@ export async function calculateMatchScore(
     })),
   ];
 
-  const txOperations: Prisma.PrismaPromise<unknown>[] = [
-    prisma.matchMemberScore.deleteMany({
-      where: { matchId: match.id },
-    }),
-  ];
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.matchMemberScore.deleteMany({
+        where: { matchId: match.id },
+      });
 
-  if (allScoresData.length > 0) {
-    txOperations.push(
-      prisma.matchMemberScore.createMany({
-        data: allScoresData,
-      })
-    );
-  }
+      if (allScoresData.length > 0) {
+        await tx.matchMemberScore.createMany({
+          data: allScoresData,
+        });
+      }
 
-  txOperations.push(
-    prisma.match.update({
-      where: { id: match.id },
-      data: {
-        homeGroupId: resolvedHomeGroupId,
-        awayGroupId: resolvedAwayGroupId,
-        homeScore: homeResult.totalScore,
-        awayScore: awayResult.totalScore,
-        result,
-        winnerId,
-        status: matchStatus,
-      },
-    })
+      await tx.match.update({
+        where: { id: match.id },
+        data: {
+          homeGroupId: resolvedHomeGroupId,
+          awayGroupId: resolvedAwayGroupId,
+          homeScore: homeResult.totalScore,
+          awayScore: awayResult.totalScore,
+          result,
+          winnerId,
+          status: matchStatus,
+        },
+      });
+    },
+    { maxWait: 15000, timeout: 60000 }
   );
-
-  await prisma.$transaction(txOperations);
 
   return {
     matchId: match.id,
@@ -524,11 +593,15 @@ export async function recalculateTournamentScores(
   const rounds = await prisma.round.findMany({
     where: { tournamentId },
     include: {
+      tournament: {
+        include: { admins: true },
+      },
       matches: {
         orderBy: { matchNumber: "asc" },
         include: {
           homeGroup: { include: { members: true } },
           awayGroup: { include: { members: true } },
+          scores: { include: { member: true } },
         },
       },
     },
@@ -553,8 +626,20 @@ export async function recalculateTournamentScores(
         );
       });
 
+    const scorableRound: ScorableRound = {
+      gameweek: round.gameweek,
+      tournament: round.tournament,
+      matches: round.matches.map((m) => ({
+        ...m,
+        round: {
+          gameweek: round.gameweek,
+          tournament: round.tournament,
+        },
+      })),
+    };
+
     const roundResults = await processRoundMatches(
-      round,
+      scorableRound,
       gwInfo.status,
       allRoundMatchesMock,
       forceRecalculate
@@ -565,22 +650,16 @@ export async function recalculateTournamentScores(
   return results;
 }
 
-interface ScorableMatch {
-  id: string;
-  matchNumber: number;
-  status: string;
-  homeGroupId: string | null;
-  awayGroupId: string | null;
-  homeScore: number | null;
-  awayScore: number | null;
-  result: string | null;
-  winnerId: string | null;
-  homeGroup?: { isManual?: boolean; members?: Array<{ isAdmin: boolean; fplId: number }> } | null;
-  awayGroup?: { isManual?: boolean; members?: Array<{ isAdmin: boolean; fplId: number }> } | null;
-}
+interface ScorableMatch extends ScorableMatchWithDetails {}
 
 interface ScorableRound {
   gameweek: number;
+  tournament: {
+    adminFplId: number;
+    admins?: Array<{ fplId: number }>;
+    allowBenchBoost?: boolean;
+    allowTripleCaptain?: boolean;
+  };
   matches: ScorableMatch[];
 }
 
@@ -604,7 +683,7 @@ async function processRoundMatches(
 
       if (isMatchAllManual || hasManualScores) {
         try {
-          const matchResult = await calculateMatchScore(match.id, forceRecalculate);
+          const matchResult = await calculateMatchScore(match.id, forceRecalculate, match);
           results.push(matchResult);
           continue;
         } catch (e) {
@@ -642,7 +721,7 @@ async function processRoundMatches(
     const chunkResults = await Promise.all(
       chunk.map(async (match) => {
         try {
-          return await calculateMatchScore(match.id, forceRecalculate);
+          return await calculateMatchScore(match.id, forceRecalculate, match);
         } catch (matchErr) {
           console.error(
             `Failed to calculate score for match ${match.id} (GW${round.gameweek}):`,
@@ -689,11 +768,15 @@ export async function recalculateRoundScores(
   const round = await prisma.round.findUnique({
     where: { id: roundId },
     include: {
+      tournament: {
+        include: { admins: true },
+      },
       matches: {
         orderBy: { matchNumber: "asc" },
         include: {
           homeGroup: { include: { members: true } },
           awayGroup: { include: { members: true } },
+          scores: { include: { member: true } },
         },
       },
     },
@@ -716,8 +799,20 @@ export async function recalculateRoundScores(
       );
     });
 
+  const scorableRound: ScorableRound = {
+    gameweek: round.gameweek,
+    tournament: round.tournament,
+    matches: round.matches.map((m) => ({
+      ...m,
+      round: {
+        gameweek: round.gameweek,
+        tournament: round.tournament,
+      },
+    })),
+  };
+
   return processRoundMatches(
-    round,
+    scorableRound,
     gwInfo.status,
     allRoundMatchesMock,
     forceRecalculate
@@ -919,67 +1014,46 @@ export async function checkTournamentLiveStatus(
     matches: Array<{ id?: string; status: string }>;
   }>
 ): Promise<TournamentLiveInfo> {
-  // Check each round against official FPL Gameweek status
+  // 1. Check if any round currently has IN_PROGRESS or LIVE matches
   for (const round of rounds) {
-    if (!round.matches || round.matches.length === 0) continue;
-
-    const allMatchesDone = round.matches.every(
-      (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
+    const liveMatches = round.matches.filter(
+      (m) => m.status === "IN_PROGRESS" || m.status === "LIVE"
     );
-
-    let gwStatus: { status: string; isFinished: boolean };
-    try {
-      gwStatus = await getGameweekStatus(round.gameweek);
-    } catch {
-      gwStatus = {
-        status: allMatchesDone ? "FINISHED" : "UPCOMING",
-        isFinished: allMatchesDone,
-      };
-    }
-
-    // If the gameweek is FINISHED, any in-progress matches are obsolete!
-    // Auto-heal them to COMPLETED so live league styles disappear cleanly.
-    if (gwStatus.isFinished || gwStatus.status === "FINISHED") {
-      const inProgressMatches = round.matches.filter(
-        (m) => m.status === "IN_PROGRESS" || m.status === "LIVE"
-      );
-      if (inProgressMatches.length > 0) {
-        for (const m of inProgressMatches) {
-          m.status = "COMPLETED";
-        }
-        try {
-          await prisma.match.updateMany({
-            where: {
-              roundId: round.id,
-              status: { in: ["IN_PROGRESS", "LIVE"] },
-            },
-            data: {
-              status: "COMPLETED",
-            },
-          });
-        } catch (dbErr) {
-          console.error(
-            `[scoring] Error updating finished round ${round.id} matches to COMPLETED:`,
-            dbErr
-          );
-        }
-      }
-      continue;
-    }
-
-    // If gameweek is actively LIVE in FPL:
-    if (gwStatus.status === "LIVE") {
-      const liveMatches = round.matches.filter(
-        (m) => m.status === "IN_PROGRESS" || m.status === "LIVE"
-      );
+    if (liveMatches.length > 0) {
       return {
         isLive: true,
         liveRoundNumber: round.roundNumber,
         liveGameweek: round.gameweek,
         liveRoundId: round.id,
-        liveMatchCount:
-          liveMatches.length > 0 ? liveMatches.length : round.matches.length,
+        liveMatchCount: liveMatches.length,
       };
+    }
+  }
+
+  // 2. Check if there is an active round where FPL matches are not completed yet
+  // i.e., gameweek is LIVE in FPL and the round's matches are not all completed/finalized
+  for (const round of rounds) {
+    const allMatchesDone =
+      round.matches.length > 0 &&
+      round.matches.every(
+        (m) => m.status === "COMPLETED" || m.status === "FINALIZED"
+      );
+
+    if (!allMatchesDone && round.matches.length > 0) {
+      try {
+        const gwStatus = await getGameweekStatus(round.gameweek);
+        if (gwStatus.status === "LIVE") {
+          return {
+            isLive: true,
+            liveRoundNumber: round.roundNumber,
+            liveGameweek: round.gameweek,
+            liveRoundId: round.id,
+            liveMatchCount: round.matches.length,
+          };
+        }
+      } catch {
+        // Continue fallback
+      }
     }
   }
 

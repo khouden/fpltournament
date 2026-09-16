@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { TournamentActions } from "@/components/tournament-actions";
-import { calculateLeagueStandings } from "@/lib/scoring";
+import { computeStandingsFromData } from "@/lib/scoring";
 import { LeagueTable } from "@/components/league-table";
 import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import {
@@ -64,7 +64,7 @@ export default async function TournamentManagementPage({
     notFound();
   }
 
-  const standings = await calculateLeagueStandings(tournament.id);
+  const standings = computeStandingsFromData(tournament.groups, tournament.rounds);
   const allMatches = tournament.rounds.flatMap((r) => r.matches);
   const completedMatches = allMatches.filter(
     (m) => m.status === "COMPLETED" || m.status === "FINALIZED"

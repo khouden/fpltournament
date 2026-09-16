@@ -18,11 +18,16 @@ export async function POST(
       return NextResponse.json({ error: "Round not found" }, { status: 404 });
     }
 
-    const result = await createMatchAction(id, round.tournamentId, {
-      homeGroupId: body.homeGroupId,
-      awayGroupId: body.awayGroupId,
-      matchNumber: body.matchNumber ? Number(body.matchNumber) : undefined,
-    });
+    const result = await createMatchAction(
+      id,
+      round.tournamentId,
+      {
+        homeGroupId: body.homeGroupId,
+        awayGroupId: body.awayGroupId,
+        matchNumber: body.matchNumber ? Number(body.matchNumber) : undefined,
+      },
+      round
+    );
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });

@@ -21,26 +21,29 @@ export async function deleteTournamentAction(id: string) {
 
     const matchIds = tournament.rounds.flatMap((r) => r.matches.map((m) => m.id));
 
-    await prisma.$transaction([
-      prisma.matchMemberScore.deleteMany({
-        where: { matchId: { in: matchIds } },
-      }),
-      prisma.match.deleteMany({
-        where: { id: { in: matchIds } },
-      }),
-      prisma.round.deleteMany({
-        where: { tournamentId: id },
-      }),
-      prisma.groupMember.deleteMany({
-        where: { group: { tournamentId: id } },
-      }),
-      prisma.group.deleteMany({
-        where: { tournamentId: id },
-      }),
-      prisma.tournament.delete({
-        where: { id },
-      }),
-    ]);
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.matchMemberScore.deleteMany({
+          where: { matchId: { in: matchIds } },
+        });
+        await tx.match.deleteMany({
+          where: { id: { in: matchIds } },
+        });
+        await tx.round.deleteMany({
+          where: { tournamentId: id },
+        });
+        await tx.groupMember.deleteMany({
+          where: { group: { tournamentId: id } },
+        });
+        await tx.group.deleteMany({
+          where: { tournamentId: id },
+        });
+        await tx.tournament.delete({
+          where: { id },
+        });
+      },
+      { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate("/");
     safeRevalidate("/admin");

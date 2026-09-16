@@ -37,7 +37,7 @@ export default async function PublishTournamentPage(
     notFound();
   }
 
-  const validationResult = await validateScheduleAction(tournament.id);
+  const validationResult = await validateScheduleAction(tournament.id, tournament);
 
   return (
     <div className="max-w-5xl mx-auto">

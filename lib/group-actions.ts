@@ -440,7 +440,9 @@ export async function deleteGroupAction(
       await tx.group.delete({
         where: { id: groupId },
       });
-    });
+    },
+    { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
@@ -645,23 +647,23 @@ export async function addMemberToGroupAction(input: AddMemberInput) {
       });
 
       if (groupMatches.length > 0) {
-        for (const m of groupMatches) {
-          await tx.matchMemberScore.create({
-            data: {
-              matchId: m.id,
-              memberId: created.id,
-              gameweekPoints: 0,
-              isExcluded: isMemberAdmin,
-              activeChip: null,
-              chipDeduction: 0,
-              isFinal: m.status === "FINALIZED",
-            },
-          });
-        }
+        await tx.matchMemberScore.createMany({
+          data: groupMatches.map((m) => ({
+            matchId: m.id,
+            memberId: created.id,
+            gameweekPoints: 0,
+            isExcluded: isMemberAdmin,
+            activeChip: null,
+            chipDeduction: 0,
+            isFinal: m.status === "FINALIZED",
+          })),
+        });
       }
 
       return created;
-    });
+    },
+    { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
@@ -727,7 +729,9 @@ export async function updateGroupMemberAction(input: UpdateMemberInput) {
       }
 
       return res;
-    });
+    },
+    { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);
@@ -760,7 +764,9 @@ export async function deleteGroupMemberAction(
       await tx.groupMember.delete({
         where: { id: memberId },
       });
-    });
+    },
+    { maxWait: 15000, timeout: 60000 }
+    );
 
     safeRevalidate(`/admin/tournaments/${tournamentId}`);
     safeRevalidate(`/admin/tournaments/${tournamentId}/groups`);

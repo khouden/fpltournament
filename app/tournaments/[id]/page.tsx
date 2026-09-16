@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { after } from "next/server";
-import { calculateLeagueStandings, checkTournamentLiveStatus } from "@/lib/scoring";
+import { computeStandingsFromData, checkTournamentLiveStatus } from "@/lib/scoring";
 import { triggerTournamentScoreSync } from "@/lib/live-sync";
 import { getTournamentBannerOrDefault } from "@/lib/tournament-banners";
 import { Header } from "@/components/navigation/header";
@@ -85,8 +85,8 @@ export default async function TournamentPage(
   // Calculate live tournament status (round matches not completed yet / FPL gameweek live)
   const liveInfo = await checkTournamentLiveStatus(tournament.rounds);
 
-  // Calculate live league standings (+3 Win, +1 Draw, 0 Loss)
-  const standings = await calculateLeagueStandings(tournament.id);
+  // Calculate live league standings (+3 Win, +1 Draw, 0 Loss) in-memory without extra DB roundtrip
+  const standings = computeStandingsFromData(tournament.groups, tournament.rounds);
 
   // Helper to resolve group details for a match
   const resolveGroup = (

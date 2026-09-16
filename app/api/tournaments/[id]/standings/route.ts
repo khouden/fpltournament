@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { calculateLeagueStandings } from "@/lib/scoring";
+import { computeStandingsFromData } from "@/lib/scoring";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -11,6 +11,17 @@ export async function GET(
 
     const tournament = await prisma.tournament.findUnique({
       where: { id },
+      include: {
+        groups: true,
+        rounds: {
+          include: {
+            matches: {
+              orderBy: { matchNumber: "asc" },
+            },
+          },
+          orderBy: { roundNumber: "asc" },
+        },
+      },
     });
 
     if (!tournament || tournament.status === "DRAFT") {
@@ -20,7 +31,7 @@ export async function GET(
       );
     }
 
-    const standings = await calculateLeagueStandings(id);
+    const standings = computeStandingsFromData(tournament.groups, tournament.rounds);
 
     return NextResponse.json({ standings });
   } catch (error) {

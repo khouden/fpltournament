@@ -184,16 +184,19 @@ export async function finalizeMatchAction(matchId: string, tournamentId: string)
     await calculateMatchScore(matchId, true);
 
     // 3. Mark match and scores as finalized
-    await prisma.$transaction([
-      prisma.match.update({
-        where: { id: matchId },
-        data: { status: "FINALIZED" },
-      }),
-      prisma.matchMemberScore.updateMany({
-        where: { matchId },
-        data: { isFinal: true },
-      }),
-    ]);
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.match.update({
+          where: { id: matchId },
+          data: { status: "FINALIZED" },
+        });
+        await tx.matchMemberScore.updateMany({
+          where: { matchId },
+          data: { isFinal: true },
+        });
+      },
+      { maxWait: 15000, timeout: 60000 }
+    );
 
     // 4. Recalculate downstream matches to forward winner
     await recalculateTournamentScores(tournamentId);
@@ -353,41 +356,13 @@ export async function saveManualMatchScoresAction(
       currentScoresMap.set(s.memberId, s.gameweekPoints);
     }
 
-    const txOps: Prisma.PrismaPromise<unknown>[] = [];
-
-    // 1. Upsert or update each submitted member score
+    // 1. Record scores in memory map
     for (const s of scores) {
-      const memberInfo = memberMap.get(s.memberId);
-      const isExcluded = memberInfo?.isExcluded ?? false;
       const points = Math.max(
         -100,
         Math.min(1000, Number(s.gameweekPoints) || 0)
       );
-
       currentScoresMap.set(s.memberId, points);
-
-      txOps.push(
-        prisma.matchMemberScore.upsert({
-          where: {
-            matchId_memberId: {
-              matchId: match.id,
-              memberId: s.memberId,
-            },
-          },
-          update: {
-            gameweekPoints: points,
-            activeChip: s.activeChip || null,
-            isExcluded,
-          },
-          create: {
-            matchId: match.id,
-            memberId: s.memberId,
-            gameweekPoints: points,
-            activeChip: s.activeChip || null,
-            isExcluded,
-          },
-        })
-      );
     }
 
     // 2. Compute group totals in memory
@@ -413,20 +388,51 @@ export async function saveManualMatchScoresAction(
           ? match.awayGroupId
           : null;
 
-    txOps.push(
-      prisma.match.update({
-        where: { id: match.id },
-        data: {
-          homeScore,
-          awayScore,
-          result,
-          winnerId,
-          status,
-        },
-      })
-    );
+    await prisma.$transaction(
+      async (tx) => {
+        for (const s of scores) {
+          const memberInfo = memberMap.get(s.memberId);
+          const isExcluded = memberInfo?.isExcluded ?? false;
+          const points = Math.max(
+            -100,
+            Math.min(1000, Number(s.gameweekPoints) || 0)
+          );
 
-    await prisma.$transaction(txOps);
+          await tx.matchMemberScore.upsert({
+            where: {
+              matchId_memberId: {
+                matchId: match.id,
+                memberId: s.memberId,
+              },
+            },
+            update: {
+              gameweekPoints: points,
+              activeChip: s.activeChip || null,
+              isExcluded,
+            },
+            create: {
+              matchId: match.id,
+              memberId: s.memberId,
+              gameweekPoints: points,
+              activeChip: s.activeChip || null,
+              isExcluded,
+            },
+          });
+        }
+
+        await tx.match.update({
+          where: { id: match.id },
+          data: {
+            homeScore,
+            awayScore,
+            result,
+            winnerId,
+            status,
+          },
+        });
+      },
+      { maxWait: 15000, timeout: 60000 }
+    );
 
     // 3. Recalculate downstream bracket / standings
     try {
